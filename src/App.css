@@ -1894,6 +1894,13 @@
   justify-content: space-between;
   gap: 16px;
   padding-bottom: 0;
+  position: relative;
+  z-index: 4;
+}
+
+.product-card__footer .icon-button {
+  position: relative;
+  z-index: 5;
 }
 
 .product-card__action-row {
