@@ -302,6 +302,9 @@
   justify-content: center;
   color: var(--color-text-muted);
   transition: color var(--transition-fast);
+  padding: 5px;
+  border-radius: 1000px;
+  background: var(--color-main);
 }
 
 .icon-button:hover {
