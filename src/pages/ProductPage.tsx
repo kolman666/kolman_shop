@@ -17,6 +17,7 @@ export default function ProductPage() {
   const [questionContact, setQuestionContact] = useState('')
   const [questionText, setQuestionText] = useState('')
   const [added, setAdded] = useState(false)
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
   const [qty, setQty] = useState(() => getCart()[String(product?.id)] ?? 0)
 
   useEffect(() => {
@@ -24,6 +25,18 @@ export default function ProductPage() {
     window.addEventListener('cart:update', sync)
     return () => window.removeEventListener('cart:update', sync)
   }, [product?.id])
+
+  useEffect(() => {
+    if (!product?.variantGroups?.length) {
+      setSelectedVariants({})
+      return
+    }
+    const defaults: Record<string, string> = {}
+    for (const group of product.variantGroups) {
+      defaults[group.name] = group.options[0] ?? ''
+    }
+    setSelectedVariants(defaults)
+  }, [product?.id, product?.variantGroups])
 
   if (!product) {
     return (
@@ -133,6 +146,28 @@ export default function ProductPage() {
                   <span key={spec} className="product-page__spec">
                     {spec}
                   </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {product.variantGroups && product.variantGroups.length > 0 && (
+            <div className="product-page__specs-block">
+              <h2 className="product-page__section-title">Вариативности</h2>
+              <div className="admin__two-col">
+                {product.variantGroups.map((group) => (
+                  <label key={group.name} className="admin__field">
+                    <span className="admin__label">{group.name}</span>
+                    <select
+                      className="admin__select"
+                      value={selectedVariants[group.name] ?? ''}
+                      onChange={(e) => setSelectedVariants((prev) => ({ ...prev, [group.name]: e.target.value }))}
+                    >
+                      {group.options.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                  </label>
                 ))}
               </div>
             </div>

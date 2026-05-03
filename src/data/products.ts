@@ -1,6 +1,7 @@
 export type Product = {
   id: number
   dbId?: number
+  variantGroups?: VariantGroup[]
   slug: string
   brand: string
   price: number
@@ -18,6 +19,11 @@ export type Product = {
   descriptionDirect?: string
   quantity?: number
   isAdminCreated?: boolean
+}
+
+export type VariantGroup = {
+  name: string
+  options: string[]
 }
 
 export const products: Product[] = [

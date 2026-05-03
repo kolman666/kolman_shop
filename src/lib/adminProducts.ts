@@ -1,5 +1,6 @@
 import type { Product } from '../data/products'
 import { rowToProduct } from './supabaseProducts'
+import type { VariantGroup } from '../data/products'
 
 function getAdminSecret(): string {
   return sessionStorage.getItem('admin_secret') ?? ''
@@ -30,6 +31,7 @@ export type ProductInput = {
   availability: 'inStock' | 'preorder'
   category_key: string
   specs: string[]
+  variant_groups: VariantGroup[]
   is_featured: boolean
   quantity: number
 }

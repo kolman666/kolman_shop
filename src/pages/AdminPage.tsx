@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import type { Product } from '../data/products'
+import type { Product, VariantGroup } from '../data/products'
 import { useProducts } from '../hooks/useProducts'
 import {
   createProduct,
@@ -35,6 +35,7 @@ type FormValues = {
   availability: 'inStock' | 'preorder'
   quantity: string
   specs: string[]
+  variantGroups: VariantGroup[]
   price: string
   isFeatured: boolean
 }
@@ -49,6 +50,7 @@ const BLANK: FormValues = {
   availability: 'inStock',
   quantity: '0',
   specs: [],
+  variantGroups: [],
   price: '',
   isFeatured: false,
 }
@@ -64,6 +66,7 @@ function productToValues(p: Product): FormValues {
     availability: p.availability,
     quantity: String(p.quantity ?? 0),
     specs: p.specs ?? [],
+    variantGroups: p.variantGroups ?? [],
     price: String(p.price),
     isFeatured: p.isFeatured ?? false,
   }
@@ -83,6 +86,7 @@ function formToInput(form: FormValues): ProductInput {
     availability: form.availability,
     category_key: form.categoryKey,
     specs: form.specs,
+    variant_groups: form.variantGroups,
     is_featured: form.isFeatured,
     quantity: parseInt(form.quantity, 10) || 0,
   }
@@ -188,6 +192,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormValues>(BLANK)
   const [specInput, setSpecInput] = useState('')
+  const [variantGroupName, setVariantGroupName] = useState('')
+  const [variantOptionInputs, setVariantOptionInputs] = useState<Record<number, string>>({})
   const [galleryInput, setGalleryInput] = useState('')
   const [search, setSearch] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
@@ -213,6 +219,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     setEditingId(null)
     setForm(BLANK)
     setSpecInput('')
+    setVariantGroupName('')
+    setVariantOptionInputs({})
     setGalleryInput('')
     setSaveError('')
     setShowForm(true)
@@ -222,6 +230,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     setEditingId(product.id)
     setForm(productToValues(product))
     setSpecInput('')
+    setVariantGroupName('')
+    setVariantOptionInputs({})
     setGalleryInput('')
     setSaveError('')
     setShowForm(true)
@@ -247,6 +257,42 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
   function removeSpec(spec: string) {
     setField('specs', form.specs.filter((s) => s !== spec))
+  }
+
+  function addVariantGroup() {
+    const name = variantGroupName.trim()
+    if (!name) return
+    if (form.variantGroups.some((g) => g.name.toLowerCase() === name.toLowerCase())) return
+    setField('variantGroups', [...form.variantGroups, { name, options: [] }])
+    setVariantGroupName('')
+  }
+
+  function removeVariantGroup(groupName: string) {
+    setField('variantGroups', form.variantGroups.filter((g) => g.name !== groupName))
+  }
+
+  function renameVariantGroup(index: number, name: string) {
+    const next = [...form.variantGroups]
+    next[index] = { ...next[index], name }
+    setField('variantGroups', next)
+  }
+
+  function addVariantOption(index: number) {
+    const raw = (variantOptionInputs[index] ?? '').trim().replace(/,$/, '')
+    if (!raw) return
+    const next = [...form.variantGroups]
+    const options = next[index].options
+    if (!options.includes(raw)) {
+      next[index] = { ...next[index], options: [...options, raw] }
+      setField('variantGroups', next)
+    }
+    setVariantOptionInputs((prev) => ({ ...prev, [index]: '' }))
+  }
+
+  function removeVariantOption(index: number, option: string) {
+    const next = [...form.variantGroups]
+    next[index] = { ...next[index], options: next[index].options.filter((o) => o !== option) }
+    setField('variantGroups', next)
   }
 
   function addGallery() {
@@ -597,6 +643,65 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     />
                     <button type="button" className="admin__spec-add-btn" onClick={addSpec}>+ Добавить</button>
                   </div>
+                </div>
+              </div>
+
+              <div className="admin__form-section">
+                <p className="admin__form-section-title">Вариативности товара</p>
+                <p className="admin__label-hint">Примеры: Color, Size, Switches, Microswitches, Surface. Значения ты задаешь сам.</p>
+                {form.variantGroups.length > 0 && (
+                  <div className="admin__gallery-list">
+                    {form.variantGroups.map((group, index) => (
+                      <div key={`${group.name}-${index}`} className="admin__field">
+                        <div className="admin__gallery-row">
+                          <input
+                            className="admin__input"
+                            type="text"
+                            value={group.name}
+                            onChange={(e) => renameVariantGroup(index, e.target.value)}
+                            placeholder="Название вариативности"
+                          />
+                          <button type="button" className="admin__icon-btn admin__icon-btn--danger" onClick={() => removeVariantGroup(group.name)}>×</button>
+                        </div>
+                        {group.options.length > 0 && (
+                          <div className="admin__specs">
+                            {group.options.map((option) => (
+                              <span key={`${group.name}-${option}`} className="admin__spec-tag">
+                                {option}
+                                <button type="button" className="admin__spec-remove" onClick={() => removeVariantOption(index, option)}>×</button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="admin__spec-input-row">
+                          <input
+                            className="admin__input"
+                            type="text"
+                            placeholder="Добавить вариант"
+                            value={variantOptionInputs[index] ?? ''}
+                            onChange={(e) => setVariantOptionInputs((prev) => ({ ...prev, [index]: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addVariantOption(index) }
+                            }}
+                          />
+                          <button type="button" className="admin__spec-add-btn" onClick={() => addVariantOption(index)}>+ Добавить</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="admin__spec-input-row">
+                  <input
+                    className="admin__input"
+                    type="text"
+                    placeholder="Новая вариативность (например, Color)"
+                    value={variantGroupName}
+                    onChange={(e) => setVariantGroupName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); addVariantGroup() }
+                    }}
+                  />
+                  <button type="button" className="admin__spec-add-btn" onClick={addVariantGroup}>+ Добавить группу</button>
                 </div>
               </div>
 

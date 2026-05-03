@@ -24,7 +24,7 @@ function slugify(brand, title) {
 const VALID_AVAILABILITY = ['inStock', 'preorder']
 
 function validateProductFields(fields) {
-  const { brand, title, price, availability, image, gallery, specs, quantity } = fields
+  const { brand, title, price, availability, image, gallery, specs, quantity, variant_groups } = fields
 
   if (brand !== undefined) {
     if (typeof brand !== 'string' || brand.trim().length === 0 || brand.length > 100) {
@@ -64,6 +64,20 @@ function validateProductFields(fields) {
       return 'quantity must be a non-negative integer'
     }
   }
+  if (variant_groups !== undefined) {
+    if (!Array.isArray(variant_groups)) return 'variant_groups must be an array'
+    if (variant_groups.length > 20) return 'variant_groups cannot exceed 20 groups'
+    for (const group of variant_groups) {
+      if (!group || typeof group !== 'object') return 'each variant group must be an object'
+      if (typeof group.name !== 'string' || group.name.trim().length === 0 || group.name.length > 80) {
+        return 'each variant group must have a non-empty name (max 80 chars)'
+      }
+      if (!Array.isArray(group.options) || group.options.some((o) => typeof o !== 'string' || !o.trim())) {
+        return 'each variant group must contain a non-empty options array of strings'
+      }
+      if (group.options.length > 50) return 'variant options per group cannot exceed 50 items'
+    }
+  }
   return null
 }
 
@@ -81,20 +95,20 @@ export default async function handler(req, res) {
 
   // CREATE
   if (req.method === 'POST') {
-    const { brand, title, description, price, image, gallery, availability, category_key, specs, is_featured, quantity } = req.body ?? {}
+    const { brand, title, description, price, image, gallery, availability, category_key, specs, variant_groups, is_featured, quantity } = req.body ?? {}
 
     if (!brand || !title || price === undefined) {
       return res.status(400).json({ error: 'brand, title, and price are required' })
     }
 
-    const validationError = validateProductFields({ brand, title, price, availability, image, gallery, specs, quantity })
+    const validationError = validateProductFields({ brand, title, price, availability, image, gallery, specs, quantity, variant_groups })
     if (validationError) return res.status(400).json({ error: validationError })
 
     const slug = slugify(brand ?? '', title ?? '') + '-' + Date.now()
 
     const { data, error } = await supabase
       .from('admin_products')
-      .insert([{ slug, brand, title, description, price, image, gallery: gallery ?? [], availability, category_key, specs: specs ?? [], is_featured: is_featured ?? false, quantity: quantity ?? 0 }])
+      .insert([{ slug, brand, title, description, price, image, gallery: gallery ?? [], availability, category_key, specs: specs ?? [], variant_groups: variant_groups ?? [], is_featured: is_featured ?? false, quantity: quantity ?? 0 }])
       .select()
       .single()
 
@@ -107,7 +121,7 @@ export default async function handler(req, res) {
     const { id, ...updates } = req.body ?? {}
     if (!id || typeof id !== 'number') return res.status(400).json({ error: 'missing or invalid id' })
 
-    const allowedFields = ['brand', 'title', 'description', 'price', 'image', 'gallery', 'availability', 'category_key', 'specs', 'is_featured', 'quantity']
+    const allowedFields = ['brand', 'title', 'description', 'price', 'image', 'gallery', 'availability', 'category_key', 'specs', 'variant_groups', 'is_featured', 'quantity']
     const safeUpdates = Object.fromEntries(
       Object.entries(updates).filter(([k]) => allowedFields.includes(k))
     )
