@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import type { Product, VariantGroup } from '../data/products'
 import { useProducts } from '../hooks/useProducts'
+import { variantGroupLabel, VARIANT_GROUP_PRESETS } from '../lib/variantGroups'
 import {
   createProduct,
   updateProduct,
@@ -265,6 +266,11 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     if (form.variantGroups.some((g) => g.name.toLowerCase() === name.toLowerCase())) return
     setField('variantGroups', [...form.variantGroups, { name, options: [] }])
     setVariantGroupName('')
+  }
+
+  function addVariantPreset(name: string, options: string[]) {
+    if (form.variantGroups.some((g) => g.name.toLowerCase() === name.toLowerCase())) return
+    setField('variantGroups', [...form.variantGroups, { name, options }])
   }
 
   function removeVariantGroup(groupName: string) {
@@ -648,7 +654,19 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
               <div className="admin__form-section">
                 <p className="admin__form-section-title">Вариативности товара</p>
-                <p className="admin__label-hint">Примеры: Color, Size, Switches, Microswitches, Surface. Значения ты задаешь сам.</p>
+                <p className="admin__label-hint">Примеры: Color → {variantGroupLabel('color')}, Size → {variantGroupLabel('size')}, Switches → {variantGroupLabel('switches')}.</p>
+                <div className="admin__specs">
+                  {VARIANT_GROUP_PRESETS.map((preset) => (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      className="admin__spec-tag"
+                      onClick={() => addVariantPreset(preset.name, preset.options)}
+                    >
+                      + {variantGroupLabel(preset.name)}
+                    </button>
+                  ))}
+                </div>
                 {form.variantGroups.length > 0 && (
                   <div className="admin__gallery-list">
                     {form.variantGroups.map((group, index) => (

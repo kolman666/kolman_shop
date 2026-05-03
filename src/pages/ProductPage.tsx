@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import ProductCard from '../components/ProductCard'
 import { useProducts } from '../hooks/useProducts'
 import { addToCart, updateQuantity, getCart } from '../lib/cart'
+import { variantGroupLabel } from '../lib/variantGroups'
 
 export default function ProductPage() {
   const { t } = useTranslation()
@@ -157,7 +158,7 @@ export default function ProductPage() {
               <div className="admin__two-col">
                 {product.variantGroups.map((group) => (
                   <label key={group.name} className="admin__field">
-                    <span className="admin__label">{group.name}</span>
+                    <span className="admin__label">{variantGroupLabel(group.name)}</span>
                     <select
                       className="admin__select"
                       value={selectedVariants[group.name] ?? ''}
