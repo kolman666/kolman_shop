@@ -44,8 +44,14 @@ export async function fetchSupabaseProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('admin_products')
     .select('*')
-    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
 
-  if (error || !data) return []
+  if (error) {
+    console.error('[supabase] fetch admin_products failed:', error.message, error)
+    return []
+  }
+
+  if (!data) return []
+
   return (data as ProductRow[]).map(rowToProduct)
 }
