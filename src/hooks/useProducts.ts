@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { Product } from '../data/products'
-import { products as staticProducts } from '../data/products'
 import { fetchSupabaseProducts } from '../lib/supabaseProducts'
 
 export function useProducts() {
@@ -24,7 +23,7 @@ export function useProducts() {
     return () => window.removeEventListener('admin:update', handler)
   }, [load])
 
-  const products = useMemo(() => [...staticProducts, ...supabaseProducts] as Product[], [supabaseProducts])
+  const products = useMemo(() => [...supabaseProducts] as Product[], [supabaseProducts])
 
   return {
     products,

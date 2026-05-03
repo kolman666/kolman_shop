@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import type { Product } from '../data/products'
-import { products as staticProducts } from '../data/products'
 import { useProducts } from '../hooks/useProducts'
 import {
   createProduct,
@@ -269,9 +268,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
     try {
       const input = formToInput(form)
-      const isStatic = editingId !== null && staticProducts.some((p) => p.id === editingId)
-
-      if (editingId !== null && !isStatic) {
+      if (editingId !== null) {
         const editingProduct = allProducts.find((p) => p.id === editingId)
         await updateProduct(editingProduct?.dbId ?? editingId, input)
       } else {
@@ -302,7 +299,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   }
 
   const editingProduct = editingId !== null ? allProducts.find((p) => p.id === editingId) : null
-  const isEditingStatic = editingId !== null && staticProducts.some((p) => p.id === editingId)
+  const isEditingStatic = false
 
   return (
     <div className="admin">
