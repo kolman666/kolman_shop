@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { Product, VariantGroup } from '../data/products'
+import { normalizeVariantGroups } from './variantGroups'
 
 const SUPABASE_ID_OFFSET = 1_000_000
 
@@ -37,7 +38,7 @@ export function rowToProduct(row: ProductRow): Product {
     descriptionKey: 'admin.placeholder.description',
     descriptionDirect: row.description,
     specs: (row.specs as unknown as string[]) ?? [],
-    variantGroups: (row.variant_groups as unknown as VariantGroup[]) ?? [],
+    variantGroups: normalizeVariantGroups(row.variant_groups),
     isFeatured: row.is_featured,
     quantity: row.quantity,
     isAdminCreated: true,

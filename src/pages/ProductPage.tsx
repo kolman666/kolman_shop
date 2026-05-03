@@ -34,7 +34,9 @@ export default function ProductPage() {
     }
     const defaults: Record<string, string> = {}
     for (const group of product.variantGroups) {
-      defaults[group.name] = group.options[0] ?? ''
+      const groupKey = group.key || group.name || ''
+      if (!groupKey) continue
+      defaults[groupKey] = group.options[0] ?? ''
     }
     setSelectedVariants(defaults)
   }, [product?.id, product?.variantGroups])
@@ -157,12 +159,12 @@ export default function ProductPage() {
               <h2 className="product-page__section-title">Вариативности</h2>
               <div className="admin__two-col">
                 {product.variantGroups.map((group) => (
-                  <label key={group.name} className="admin__field">
-                    <span className="admin__label">{variantGroupLabel(group.name)}</span>
+                  <label key={group.key || group.name} className="admin__field">
+                    <span className="admin__label">{group.label || variantGroupLabel(group.key || group.name || '')}</span>
                     <select
                       className="admin__select"
-                      value={selectedVariants[group.name] ?? ''}
-                      onChange={(e) => setSelectedVariants((prev) => ({ ...prev, [group.name]: e.target.value }))}
+                      value={selectedVariants[group.key || group.name || ''] ?? ''}
+                      onChange={(e) => setSelectedVariants((prev) => ({ ...prev, [group.key || group.name || '']: e.target.value }))}
                     >
                       {group.options.map((option) => (
                         <option key={option} value={option}>{option}</option>

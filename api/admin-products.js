@@ -69,8 +69,17 @@ function validateProductFields(fields) {
     if (variant_groups.length > 20) return 'variant_groups cannot exceed 20 groups'
     for (const group of variant_groups) {
       if (!group || typeof group !== 'object') return 'each variant group must be an object'
-      if (typeof group.name !== 'string' || group.name.trim().length === 0 || group.name.length > 80) {
-        return 'each variant group must have a non-empty name (max 80 chars)'
+      const key = typeof group.key === 'string' ? group.key.trim() : ''
+      const label = typeof group.label === 'string' ? group.label.trim() : ''
+      const legacyName = typeof group.name === 'string' ? group.name.trim() : ''
+      if (!key && !legacyName) {
+        return 'each variant group must have a non-empty key'
+      }
+      if (key && key.length > 80) {
+        return 'variant group key must be max 80 chars'
+      }
+      if (label && label.length > 120) {
+        return 'variant group label must be max 120 chars'
       }
       if (!Array.isArray(group.options) || group.options.some((o) => typeof o !== 'string' || !o.trim())) {
         return 'each variant group must contain a non-empty options array of strings'
@@ -79,6 +88,26 @@ function validateProductFields(fields) {
     }
   }
   return null
+}
+
+function normalizeVariantGroups(variantGroups) {
+  if (!Array.isArray(variantGroups)) return []
+  return variantGroups
+    .filter((group) => group && typeof group === 'object')
+    .map((group) => {
+      const keySource = typeof group.key === 'string' && group.key.trim()
+        ? group.key
+        : (typeof group.name === 'string' ? group.name : '')
+      const key = keySource.trim().toLowerCase().replace(/\s+/g, '_')
+      const label = (typeof group.label === 'string' && group.label.trim())
+        ? group.label.trim()
+        : (typeof group.name === 'string' && group.name.trim() ? group.name.trim() : key)
+      const options = Array.isArray(group.options)
+        ? group.options.filter((o) => typeof o === 'string').map((o) => o.trim()).filter(Boolean)
+        : []
+      return { key, label, options }
+    })
+    .filter((group) => group.key && group.options.length > 0)
 }
 
 export default async function handler(req, res) {
@@ -103,12 +132,13 @@ export default async function handler(req, res) {
 
     const validationError = validateProductFields({ brand, title, price, availability, image, gallery, specs, quantity, variant_groups })
     if (validationError) return res.status(400).json({ error: validationError })
+    const normalizedVariantGroups = normalizeVariantGroups(variant_groups)
 
     const slug = slugify(brand ?? '', title ?? '') + '-' + Date.now()
 
     const { data, error } = await supabase
       .from('admin_products')
-      .insert([{ slug, brand, title, description, price, image, gallery: gallery ?? [], availability, category_key, specs: specs ?? [], variant_groups: variant_groups ?? [], is_featured: is_featured ?? false, quantity: quantity ?? 0 }])
+      .insert([{ slug, brand, title, description, price, image, gallery: gallery ?? [], availability, category_key, specs: specs ?? [], variant_groups: normalizedVariantGroups, is_featured: is_featured ?? false, quantity: quantity ?? 0 }])
       .select()
       .single()
 
@@ -132,6 +162,9 @@ export default async function handler(req, res) {
 
     const validationError = validateProductFields(safeUpdates)
     if (validationError) return res.status(400).json({ error: validationError })
+    if (safeUpdates.variant_groups !== undefined) {
+      safeUpdates.variant_groups = normalizeVariantGroups(safeUpdates.variant_groups)
+    }
 
     const { data, error } = await supabase
       .from('admin_products')

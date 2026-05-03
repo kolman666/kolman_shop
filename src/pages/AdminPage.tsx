@@ -263,14 +263,14 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   function addVariantGroup() {
     const name = variantGroupName.trim()
     if (!name) return
-    if (form.variantGroups.some((g) => g.name.toLowerCase() === name.toLowerCase())) return
-    setField('variantGroups', [...form.variantGroups, { name, options: [] }])
+    if (form.variantGroups.some((g) => (g.name ?? g.key).toLowerCase() === name.toLowerCase())) return
+    setField('variantGroups', [...form.variantGroups, { key: name.toLowerCase().replace(/\s+/g, '_'), label: variantGroupLabel(name), name, options: [] }])
     setVariantGroupName('')
   }
 
   function addVariantPreset(name: string, options: string[]) {
-    if (form.variantGroups.some((g) => g.name.toLowerCase() === name.toLowerCase())) return
-    setField('variantGroups', [...form.variantGroups, { name, options }])
+    if (form.variantGroups.some((g) => (g.name ?? g.key).toLowerCase() === name.toLowerCase())) return
+    setField('variantGroups', [...form.variantGroups, { key: name.toLowerCase().replace(/\s+/g, '_'), label: variantGroupLabel(name), name, options }])
   }
 
   function removeVariantGroup(groupName: string) {
@@ -658,33 +658,33 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                 <div className="admin__specs">
                   {VARIANT_GROUP_PRESETS.map((preset) => (
                     <button
-                      key={preset.name}
+                      key={preset.key}
                       type="button"
                       className="admin__spec-tag"
-                      onClick={() => addVariantPreset(preset.name, preset.options)}
+                      onClick={() => addVariantPreset(preset.name ?? preset.key, preset.options)}
                     >
-                      + {variantGroupLabel(preset.name)}
+                      + {variantGroupLabel(preset.name ?? preset.key)}
                     </button>
                   ))}
                 </div>
                 {form.variantGroups.length > 0 && (
                   <div className="admin__gallery-list">
                     {form.variantGroups.map((group, index) => (
-                      <div key={`${group.name}-${index}`} className="admin__field">
+                      <div key={`${group.name ?? group.key}-${index}`} className="admin__field">
                         <div className="admin__gallery-row">
                           <input
                             className="admin__input"
                             type="text"
-                            value={group.name}
+                            value={group.name ?? group.key}
                             onChange={(e) => renameVariantGroup(index, e.target.value)}
                             placeholder="Название вариативности"
                           />
-                          <button type="button" className="admin__icon-btn admin__icon-btn--danger" onClick={() => removeVariantGroup(group.name)}>×</button>
+                          <button type="button" className="admin__icon-btn admin__icon-btn--danger" onClick={() => removeVariantGroup(group.name ?? group.key)}>×</button>
                         </div>
                         {group.options.length > 0 && (
                           <div className="admin__specs">
                             {group.options.map((option) => (
-                              <span key={`${group.name}-${option}`} className="admin__spec-tag">
+                              <span key={`${group.name ?? group.key}-${option}`} className="admin__spec-tag">
                                 {option}
                                 <button type="button" className="admin__spec-remove" onClick={() => removeVariantOption(index, option)}>×</button>
                               </span>
@@ -810,3 +810,4 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     </div>
   )
 }
+

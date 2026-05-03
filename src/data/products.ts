@@ -22,7 +22,9 @@ export type Product = {
 }
 
 export type VariantGroup = {
-  name: string
+  key: string
+  label: string
+  name?: string
   options: string[]
 }
 
