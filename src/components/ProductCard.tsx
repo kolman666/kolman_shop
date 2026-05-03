@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { Product } from '../data/products'
@@ -10,9 +11,19 @@ type ProductCardProps = {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { t } = useTranslation()
+  const [isAdded, setIsAdded] = useState(false)
   const statusLabel =
     product.availability === 'inStock' ? t('ui.catalog.statusInStock') : t('ui.catalog.statusPreorder')
   const title = product.titleDirect ?? t(product.titleKey)
+
+  const handleQuickAdd = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    addToCart(product.id, 1)
+    window.dispatchEvent(new CustomEvent('cart:item-added'))
+    setIsAdded(true)
+    window.setTimeout(() => setIsAdded(false), 260)
+  }
 
   return (
     <article className="product-card">
@@ -44,9 +55,9 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
           <button
             type="button"
-            className="icon-button"
+            className={`icon-button ${isAdded ? 'icon-button--added' : ''}`}
             aria-label="add to cart"
-            onClick={() => addToCart(product.id, 1)}
+            onClick={handleQuickAdd}
             style={{ width: 34, height: 34, minWidth: 34 }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">

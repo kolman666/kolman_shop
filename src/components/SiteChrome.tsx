@@ -59,6 +59,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
   const navigate = useNavigate()
   const [cartCount, setCartCount] = useState(0)
   const [isCartOpen, setIsCartOpen] = useState(false)
+  const [showCartToast, setShowCartToast] = useState(false)
   const [searchValue, setSearchValue] = useState('')
   const { products: allProducts } = useProducts()
 
@@ -95,6 +96,20 @@ export default function SiteChrome({ children }: SiteChromeProps) {
     return () => {
       window.removeEventListener('cart:update', syncCart)
       window.removeEventListener('storage', syncCart)
+    }
+  }, [])
+
+  useEffect(() => {
+    let toastTimer: number | null = null
+    const onItemAdded = () => {
+      setShowCartToast(true)
+      if (toastTimer) window.clearTimeout(toastTimer)
+      toastTimer = window.setTimeout(() => setShowCartToast(false), 1400)
+    }
+    window.addEventListener('cart:item-added', onItemAdded as EventListener)
+    return () => {
+      window.removeEventListener('cart:item-added', onItemAdded as EventListener)
+      if (toastTimer) window.clearTimeout(toastTimer)
     }
   }, [])
 
@@ -251,6 +266,10 @@ export default function SiteChrome({ children }: SiteChromeProps) {
       </header>
 
       {children}
+
+      <div className={`cart-toast ${showCartToast ? 'cart-toast--visible' : ''}`}>
+        Добавлено в корзину
+      </div>
 
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
 
