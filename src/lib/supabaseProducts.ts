@@ -39,6 +39,8 @@ export function rowToProduct(row: ProductRow): Product {
 }
 
 export async function fetchSupabaseProducts(): Promise<Product[]> {
+  if (!supabase) return []
+
   const { data, error } = await supabase
     .from('admin_products')
     .select('*')
