@@ -35,6 +35,7 @@ type Category = {
 
 type FeaturedProduct = {
   id: number
+  slug: string
   title: string
   subtitle: string
   tag: string
@@ -256,6 +257,7 @@ function HomePage() {
     .slice(0, 2)
     .map((product) => ({
       id: product.id,
+      slug: product.slug,
       title: product.titleDirect ?? t(product.titleKey),
       subtitle: product.descriptionDirect ?? t(product.descriptionKey),
       price: `${product.price} RUB`,
@@ -547,7 +549,7 @@ function HomePage() {
           <div className="featured-products">
             {featuredProducts.map((product) => (
               <article key={product.title} className="featured-card">
-                <Link className="featured-card__cover" to={`/product/${product.id}`} aria-label={product.title} />
+                <Link className="featured-card__cover" to={`/product/${product.slug}`} aria-label={product.title} />
                 <div className="featured-card__media" style={{ backgroundImage: `url(${product.image})` }} />
                 <div className="featured-card__overlay" />
 
@@ -707,7 +709,7 @@ export default function App() {
           }
         />
         <Route
-          path="/product/:id"
+          path="/product/:slug"
           element={
             <SiteChrome>
               <ProductPage />

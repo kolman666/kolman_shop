@@ -1,6 +1,8 @@
 import { supabase } from './supabase'
 import type { Product } from '../data/products'
 
+const SUPABASE_ID_OFFSET = 1_000_000
+
 export type ProductRow = {
   id: number
   slug: string
@@ -19,7 +21,9 @@ export type ProductRow = {
 
 export function rowToProduct(row: ProductRow): Product {
   return {
-    id: row.id,
+    // Keep client-side ids unique to avoid collisions with static catalog ids.
+    id: SUPABASE_ID_OFFSET + row.id,
+    dbId: row.id,
     slug: row.slug,
     brand: row.brand,
     price: row.price,

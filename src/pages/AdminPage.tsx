@@ -272,7 +272,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       const isStatic = editingId !== null && staticProducts.some((p) => p.id === editingId)
 
       if (editingId !== null && !isStatic) {
-        await updateProduct(editingId, input)
+        const editingProduct = allProducts.find((p) => p.id === editingId)
+        await updateProduct(editingProduct?.dbId ?? editingId, input)
       } else {
         await createProduct(input)
       }
@@ -289,7 +290,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
   async function handleDeleteConfirm(id: number) {
     try {
-      await deleteProduct(id)
+      const target = allProducts.find((p) => p.id === id)
+      await deleteProduct(target?.dbId ?? id)
       setDeleteConfirm(null)
       if (editingId === id) closeForm()
       await refresh()

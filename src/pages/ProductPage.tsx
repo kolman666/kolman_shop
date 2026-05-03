@@ -7,9 +7,9 @@ import { addToCart, updateQuantity, getCart } from '../lib/cart'
 
 export default function ProductPage() {
   const { t } = useTranslation()
-  const { id } = useParams()
+  const { slug } = useParams()
   const { products } = useProducts()
-  const product = products.find((item) => item.id === Number(id))
+  const product = products.find((item) => item.slug === slug) ?? products.find((item) => String(item.id) === slug)
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'faq'>('description')
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [isAskModalOpen, setIsAskModalOpen] = useState(false)

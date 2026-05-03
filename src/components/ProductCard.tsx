@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { Product } from '../data/products'
+import { productPath } from '../lib/productRoute'
 
 type ProductCardProps = {
   product: Product
@@ -14,7 +15,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   return (
     <article className="product-card">
-      <Link className="product-card__cover" to={`/product/${product.id}`} aria-label={title} />
+      <Link className="product-card__cover" to={productPath(product)} aria-label={title} />
       <div className="product-card__visual">
         <div className="product-card__badges">
           <span className={`product-card__status product-card__status--${product.availability}`}>{statusLabel}</span>

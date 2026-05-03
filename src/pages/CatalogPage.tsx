@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
 import { useProducts } from '../hooks/useProducts'
+import { productPath } from '../lib/productRoute'
 
 type PriceFilter = 'all' | 'budget' | 'mid' | 'premium'
 type SortFilter = 'featured' | 'priceAsc' | 'priceDesc' | 'title'
@@ -170,7 +171,7 @@ export default function CatalogPage() {
 
       {filteredProducts.length > 0 && (
         <section className="catalog-banner container" aria-label="featured catalog banner">
-          <Link to={`/product/${filteredProducts[0].id}`} className="catalog-banner__link">
+          <Link to={productPath(filteredProducts[0])} className="catalog-banner__link">
             <div className="catalog-banner__image" style={{ backgroundImage: `url(${filteredProducts[0].image})` }} />
             <div className="catalog-banner__overlay" />
             <div className="catalog-banner__content">

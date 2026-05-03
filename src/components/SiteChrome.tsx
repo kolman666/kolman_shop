@@ -133,8 +133,8 @@ export default function SiteChrome({ children }: SiteChromeProps) {
 
   if (pathParts[0] === 'product') {
     breadcrumbs.push({ to: '/catalog', label: t('ui.breadcrumbs.catalog') })
-    const productId = Number(pathParts[1])
-    const product = allProducts.find((item) => item.id === productId)
+    const productKey = decodeURIComponent(pathParts[1] ?? '')
+    const product = allProducts.find((item) => item.slug === productKey) ?? allProducts.find((item) => String(item.id) === productKey)
     breadcrumbs.push({ label: product ? (product.titleDirect ?? t(product.titleKey)) : t('ui.breadcrumbs.product') })
   }
 
