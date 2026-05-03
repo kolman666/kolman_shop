@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { products } from '../data/products'
+import { useProducts } from '../hooks/useProducts'
 import { getCart, updateQuantity, removeFromCart, clearCart } from '../lib/cart'
 import { sendTelegramMessage } from '../lib/telegram'
 
@@ -14,7 +14,7 @@ type View = 'cart' | 'checkout' | 'success'
 
 type CartEntry = {
   id: number
-  titleKey: string
+  title: string
   price: number
   image: string
   quantity: number
@@ -42,7 +42,7 @@ function buildOrderMessage(
   contact: string,
   delivery: string,
   comment: string,
-  titleFn: (key: string) => string,
+  _titleFn: (key: string) => string,
 ): string {
   const lines: string[] = [
     '🛒 *новый заказ*',
@@ -52,7 +52,7 @@ function buildOrderMessage(
 
   for (const entry of entries) {
     const itemTotal = entry.price * entry.quantity
-    lines.push(`- ${escapeMd(titleFn(entry.titleKey))} × ${entry.quantity} — ${itemTotal.toLocaleString('ru-RU')} ₽`)
+    lines.push(`- ${escapeMd(entry.title)} × ${entry.quantity} — ${itemTotal.toLocaleString('ru-RU')} ₽`)
   }
 
   lines.push('')
@@ -68,6 +68,7 @@ function buildOrderMessage(
 
 export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const { t } = useTranslation()
+  const { products } = useProducts()
   const [view, setView] = useState<View>('cart')
   const [cartEntries, setCartEntries] = useState<CartEntry[]>([])
 
@@ -89,7 +90,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       if (product && qty > 0) {
         entries.push({
           id: product.id,
-          titleKey: product.titleKey,
+          title: product.titleDirect ?? t(product.titleKey),
           price: product.price,
           image: product.image,
           quantity: qty,
@@ -107,7 +108,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       window.removeEventListener('cart:update', syncCart)
       window.removeEventListener('storage', syncCart)
     }
-  }, [])
+  }, [products, t])
 
   // Reset view to 'cart' when drawer closes (but not after success)
   useEffect(() => {
@@ -209,7 +210,6 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             onQtyChange={handleQtyChange}
             onRemove={removeFromCart}
             onCheckout={() => setView('checkout')}
-            t={t}
           />
         )}
 
@@ -247,10 +247,9 @@ type CartViewProps = {
   onQtyChange: (id: number, delta: number, currentQty: number) => void
   onRemove: (id: number) => void
   onCheckout: () => void
-  t: (key: string) => string
 }
 
-function CartView({ entries, total, onClose, onQtyChange, onRemove, onCheckout, t }: CartViewProps) {
+function CartView({ entries, total, onClose, onQtyChange, onRemove, onCheckout }: CartViewProps) {
   return (
     <>
       <div
@@ -316,7 +315,7 @@ function CartView({ entries, total, onClose, onQtyChange, onRemove, onCheckout, 
               <li key={entry.id} className="cart-item">
                 <img
                   src={entry.image}
-                  alt={t(entry.titleKey)}
+                  alt={entry.title}
                   className="cart-item__img"
                 />
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -331,7 +330,7 @@ function CartView({ entries, total, onClose, onQtyChange, onRemove, onCheckout, 
                       color: 'var(--color-text-soft)',
                     }}
                   >
-                    {t(entry.titleKey)}
+                    {entry.title}
                   </span>
                   <span style={{ fontSize: 13, color: 'var(--color-text-dim)' }}>
                     {(entry.price * entry.quantity).toLocaleString('ru-RU')} ₽
