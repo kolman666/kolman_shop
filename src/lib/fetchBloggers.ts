@@ -13,32 +13,42 @@ export type BloggerRow = {
 
 export type FetchBloggersResult = {
   data: BloggerRow[]
-  error: string | null
+  needsMigration: boolean
 }
 
+/** Used by the homepage — returns rows or empty array */
 export async function fetchBloggers(activeOnly = true): Promise<BloggerRow[]> {
-  if (!supabase) return []
-  let query = supabase.from('bloggers').select('*').order('sort_order', { ascending: true })
-  if (activeOnly) query = query.eq('is_active', true)
-  const { data, error } = await query
-  if (error) return []
-  return (data as BloggerRow[]) ?? []
+  const result = await fetchBloggersAdmin(activeOnly)
+  return result.data
 }
 
-export async function fetchBloggersWithError(activeOnly = true): Promise<FetchBloggersResult> {
-  if (!supabase) return { data: [], error: 'Supabase not configured' }
+/** Used by admin panel — also surfaces migration flag */
+export async function fetchBloggersAdmin(activeOnly = false): Promise<FetchBloggersResult> {
+  try {
+    const res = await fetch('/api/bloggers')
+    if (res.ok) {
+      const rows = (await res.json()) as BloggerRow[]
+      return { data: activeOnly ? rows.filter((r) => r.is_active) : rows, needsMigration: false }
+    }
+    if (res.status === 503) {
+      return { data: [], needsMigration: true }
+    }
+  } catch {
+    // API not available (local dev) — fall through to Supabase client
+  }
+
+  if (!supabase) return { data: [], needsMigration: false }
   let query = supabase.from('bloggers').select('*').order('sort_order', { ascending: true })
   if (activeOnly) query = query.eq('is_active', true)
   const { data, error } = await query
   if (error) {
-    return { data: [], error: error.message }
+    const missing = error.message.includes('does not exist') || error.code === '42P01'
+    return { data: [], needsMigration: missing }
   }
-  return { data: (data as BloggerRow[]) ?? [], error: null }
+  return { data: (data as BloggerRow[]) ?? [], needsMigration: false }
 }
 
-export async function createBlogger(
-  input: Omit<BloggerRow, 'id'>
-): Promise<BloggerRow> {
+export async function createBlogger(input: Omit<BloggerRow, 'id'>): Promise<BloggerRow> {
   const secret = sessionStorage.getItem('admin_secret') ?? ''
   const res = await fetch('/api/bloggers', {
     method: 'POST',
@@ -52,10 +62,7 @@ export async function createBlogger(
   return res.json() as Promise<BloggerRow>
 }
 
-export async function updateBlogger(
-  id: number,
-  updates: Partial<Omit<BloggerRow, 'id'>>
-): Promise<BloggerRow> {
+export async function updateBlogger(id: number, updates: Partial<Omit<BloggerRow, 'id'>>): Promise<BloggerRow> {
   const secret = sessionStorage.getItem('admin_secret') ?? ''
   const res = await fetch('/api/bloggers', {
     method: 'PATCH',

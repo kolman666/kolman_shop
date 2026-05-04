@@ -14,7 +14,7 @@ import {
 } from '../lib/adminProducts'
 import { fetchSiteContent, updateSiteContent } from '../lib/siteContent'
 import {
-  fetchBloggersWithError,
+  fetchBloggersAdmin,
   createBlogger,
   updateBlogger,
   deleteBlogger,
@@ -850,20 +850,71 @@ const DEFAULT_SLIDES: HeroSlide[] = [
   { tag: 'лимитка', title: 'logitech g pro superlight 2 yellow edition', subtitle: 'создана вместе с киберспортсменами со всего мира', accent: 'сенсор hero 25600 внутри', image: 'https://images.unsplash.com/photo-1563297007-0686b7003af7?w=800&q=80' },
 ]
 
+const MIGRATION_SQL = `-- Запустите этот SQL в Supabase → SQL Editor
+CREATE TABLE IF NOT EXISTS site_content (
+  key TEXT PRIMARY KEY,
+  value JSONB NOT NULL DEFAULT '{}',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS bloggers (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  image TEXT NOT NULL DEFAULT '',
+  social_url TEXT NOT NULL DEFAULT '',
+  gear_product_ids INTEGER[] NOT NULL DEFAULT '{}',
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);`
+
+function MigrationNotice() {
+  const [copied, setCopied] = useState(false)
+  function copy() {
+    void navigator.clipboard.writeText(MIGRATION_SQL)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <div className="admin__migration-notice">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-main)" strokeWidth="1.5">
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <div>
+        <p className="admin__migration-title">Таблицы не созданы</p>
+        <p className="admin__migration-text">
+          Запустите SQL миграцию в{' '}
+          <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="admin__migration-link">
+            Supabase → SQL Editor
+          </a>
+          , после чего обновите страницу.
+        </p>
+        <pre className="admin__migration-sql">{MIGRATION_SQL}</pre>
+        <button type="button" className="admin__save-btn" style={{ marginTop: 10 }} onClick={copy}>
+          {copied ? 'Скопировано ✓' : 'Скопировать SQL'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ContentTab() {
   const [slides, setSlides] = useState<HeroSlide[]>(DEFAULT_SLIDES)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [needsMigration, setNeedsMigration] = useState(false)
 
   useEffect(() => {
     fetchSiteContent<HeroSlide[]>('hero_slides').then((result) => {
-      if (!result.error && result.data && result.data.length > 0) {
+      if (result.needsMigration) {
+        setNeedsMigration(true)
+      } else if (!result.error && result.data && result.data.length > 0) {
         setSlides(result.data)
       }
-      // if error or empty — keep DEFAULT_SLIDES so admin always has something to edit
-      if (result.error) setError(result.error)
+      if (result.error && !result.needsMigration) setError(result.error)
       setLoading(false)
     })
   }, [])
@@ -905,16 +956,8 @@ function ContentTab() {
     )
   }
 
-  if (error && slides.length === 0) {
-    return (
-      <div className="admin__content-tab admin__content-tab--empty">
-        <svg className="admin__empty-icon admin__empty-icon--error" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-        </svg>
-        <p className="admin__empty-text">Ошибка загрузки</p>
-        <p style={{ color: 'var(--color-text-dim)', fontSize: 13, marginTop: 8 }}>{error}</p>
-      </div>
-    )
+  if (needsMigration) {
+    return <div className="admin__content-tab"><MigrationNotice /></div>
   }
 
   return (
@@ -1032,7 +1075,7 @@ function bloggerToForm(b: BloggerRow): BloggerForm {
 function BloggersTab({ allProducts }: { allProducts: Product[] }) {
   const [bloggers, setBloggers] = useState<BloggerRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [needsMigration, setNeedsMigration] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<BloggerForm>(BLANK_BLOGGER)
@@ -1043,10 +1086,9 @@ function BloggersTab({ allProducts }: { allProducts: Product[] }) {
 
   const loadBloggers = async () => {
     setLoading(true)
-    setError('')
-    const result = await fetchBloggersWithError(false)
-    if (result.error) {
-      setError(result.error)
+    const result = await fetchBloggersAdmin(false)
+    if (result.needsMigration) {
+      setNeedsMigration(true)
     } else {
       setBloggers(result.data)
     }
@@ -1125,19 +1167,16 @@ function BloggersTab({ allProducts }: { allProducts: Product[] }) {
     }
   }
 
+  if (needsMigration) {
+    return <div className="admin__content-tab"><MigrationNotice /></div>
+  }
+
   return (
     <div className="admin__body">
       <aside className="admin__sidebar">
         <div className="admin__sidebar-top">
           <button type="button" className="admin__new-btn" onClick={openNew}>+ Новый блогер</button>
         </div>
-        
-        {error && (
-          <div style={{ padding: '12px 16px', background: 'rgba(225, 29, 29, 0.1)', borderRadius: '8px', margin: '0 0 12px', border: '1px solid rgba(225, 29, 29, 0.3)' }}>
-            <p style={{ margin: 0, color: 'var(--color-main)', fontSize: 12, fontWeight: 500 }}>Ошибка загрузки:</p>
-            <p style={{ margin: '4px 0 0', color: 'var(--color-text-dim)', fontSize: 11 }}>{error}</p>
-          </div>
-        )}
 
         <div className="admin__stats">
           <div className="admin__stat"><span className="admin__stat-label">Всего</span><strong className="admin__stat-value">{bloggers.length}</strong></div>

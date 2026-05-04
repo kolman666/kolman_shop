@@ -31,7 +31,13 @@ export default async function handler(req, res) {
       .select('value, updated_at')
       .eq('key', key)
       .single()
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // row not found — table exists but key missing, that's fine
+        return res.status(200).json({ key, value: null, updated_at: null })
+      }
+      const isTableMissing = error.message.includes('does not exist') || error.code === '42P01'
+      if (isTableMissing) return res.status(503).json({ error: 'table_not_found', message: error.message })
       return res.status(500).json({ error: error.message })
     }
     return res.status(200).json({ key, value: data?.value ?? null, updated_at: data?.updated_at ?? null })

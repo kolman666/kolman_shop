@@ -49,7 +49,11 @@ export default async function handler(req, res) {
       .from('bloggers')
       .select('*')
       .order('sort_order', { ascending: true })
-    if (error) return res.status(500).json({ error: error.message })
+    if (error) {
+      const isTableMissing = error.message.includes('does not exist') || error.code === '42P01'
+      if (isTableMissing) return res.status(503).json({ error: 'table_not_found', message: error.message })
+      return res.status(500).json({ error: error.message })
+    }
     return res.status(200).json(data ?? [])
   }
 
