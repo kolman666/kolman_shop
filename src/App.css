@@ -2775,6 +2775,38 @@
   gap: 16px;
 }
 
+.admin__tab-bar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+}
+
+.admin__tab-btn {
+  padding: 9px 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-soft);
+  color: var(--color-text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  font-family: var(--font-base);
+}
+
+.admin__tab-btn:hover {
+  color: var(--color-text);
+  border-color: var(--color-main);
+}
+
+.admin__tab-btn.active {
+  background: color-mix(in srgb, var(--color-main) 12%, var(--color-bg-soft));
+  border-color: rgba(225, 29, 29, 0.35);
+  color: var(--color-text);
+}
+
 .admin__back-link {
   font-size: 13px;
   color: var(--color-text-faint);
@@ -3450,6 +3482,99 @@
   margin-top: 4px;
 }
 
+.admin__content-tab {
+  max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.admin__content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.admin__content-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: -0.02em;
+}
+
+.admin__slides-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin__slide-card {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+
+.admin__slide-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.admin__slide-num {
+  font-size: 12px;
+  color: var(--color-text-ghost);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.admin__gear-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin__gear-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-soft);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.admin__gear-item:hover {
+  border-color: var(--color-main);
+}
+
+.admin__gear-item.selected {
+  background: color-mix(in srgb, var(--color-main) 10%, var(--color-bg-soft));
+  border-color: rgba(225, 29, 29, 0.4);
+}
+
+.admin__gear-thumb {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 7px;
+  background: #101114;
+  flex-shrink: 0;
+}
+
+.admin__gear-name {
+  min-width: 0;
+  font-size: 12px;
+  color: var(--color-text-soft);
+  line-height: 1.3;
+}
+
 /* ─── Burger Menu ──────────────────────────────────────────────────────────── */
 
 .burger-btn {
@@ -3584,6 +3709,42 @@
 /* ─── Mobile overrides ─────────────────────────────────────────────────────── */
 
 @media (max-width: 720px) {
+  .admin__tab-bar {
+    padding: 10px 12px;
+    overflow-x: auto;
+  }
+
+  .admin__tab-btn {
+    flex-shrink: 0;
+  }
+
+  .admin__content-tab {
+    padding: 14px 12px 20px;
+  }
+
+  .admin__content-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin__gear-list {
+    grid-template-columns: 1fr;
+  }
+
+  .admin__body {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .admin__sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .admin__main {
+    min-height: 55vh;
+  }
+
   .burger-btn {
     display: flex;
   }
