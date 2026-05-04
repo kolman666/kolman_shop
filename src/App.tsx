@@ -255,6 +255,28 @@ function HomePage() {
     })
   }, [])
 
+  const topLinkTargets = ['/about', '/partnership', '/support', '/help-choose', '/delivery']
+  const navCategoryTargets = [
+    'products.categories.mice',
+    'products.categories.mousepads',
+    'products.categories.keyboards',
+    '',
+    '',
+    'products.categories.glides',
+    'products.categories.headsets',
+    '',
+    'products.categories.accessories',
+    '',
+  ]
+  const homepageCategoryTargets = [
+    'products.categories.mice',
+    'products.categories.mousepads',
+    'products.categories.keyboards',
+    'products.categories.headsets',
+    'products.categories.glides',
+    'products.categories.accessories',
+  ]
+
   const i18nSlides = (t('slides', { returnObjects: true }) as SlideText[]).map((slide, index) => ({
     ...slide,
     img: slideImages[index] ?? '',
@@ -331,28 +353,6 @@ function HomePage() {
     const q = searchValue.trim()
     navigate(q ? `/catalog?q=${encodeURIComponent(q)}` : '/catalog')
   }
-
-  const topLinkTargets = ['/about', '/partnership', '/support', '/help-choose', '/delivery']
-  const navCategoryTargets = [
-    'products.categories.mice',
-    'products.categories.mousepads',
-    'products.categories.keyboards',
-    '',
-    '',
-    'products.categories.glides',
-    'products.categories.headsets',
-    '',
-    'products.categories.accessories',
-    '',
-  ]
-  const homepageCategoryTargets = [
-    'products.categories.mice',
-    'products.categories.mousepads',
-    'products.categories.keyboards',
-    'products.categories.headsets',
-    'products.categories.glides',
-    'products.categories.accessories',
-  ]
 
   return (
     <div className="app-shell">
