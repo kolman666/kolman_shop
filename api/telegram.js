@@ -1,4 +1,3 @@
-// Vercel serverless function — бот-токен живёт только здесь, в браузер не попадает
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'method not allowed' })

@@ -1,1 +1,321 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="46" fill="none" viewBox="0 0 48 46"><path fill="#863bff" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z" style="fill:#863bff;fill:color(display-p3 .5252 .23 1);fill-opacity:1"/><mask id="a" width="48" height="46" x="0" y="0" maskUnits="userSpaceOnUse" style="mask-type:alpha"><path fill="#000" d="M25.842 44.938c-.664.844-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.183c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.498 0-3.579-1.842-3.579H1.133c-.92 0-1.456-1.04-.92-1.787L9.91.473c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.578 1.842 3.578h11.377c.943 0 1.473 1.088.89 1.832L25.843 44.94z" style="fill:#000;fill-opacity:1"/></mask><g mask="url(#a)"><g filter="url(#b)"><ellipse cx="5.508" cy="14.704" fill="#ede6ff" rx="5.508" ry="14.704" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -4.47 31.516)"/></g><g filter="url(#c)"><ellipse cx="10.399" cy="29.851" fill="#ede6ff" rx="10.399" ry="29.851" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -39.328 7.883)"/></g><g filter="url(#d)"><ellipse cx="5.508" cy="30.487" fill="#7e14ff" rx="5.508" ry="30.487" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.814 -25.913 -14.639)scale(1 -1)"/></g><g filter="url(#e)"><ellipse cx="5.508" cy="30.599" fill="#7e14ff" rx="5.508" ry="30.599" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.814 -32.644 -3.334)scale(1 -1)"/></g><g filter="url(#f)"><ellipse cx="5.508" cy="30.599" fill="#7e14ff" rx="5.508" ry="30.599" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -34.34 30.47)"/></g><g filter="url(#g)"><ellipse cx="14.072" cy="22.078" fill="#ede6ff" rx="14.072" ry="22.078" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="rotate(93.35 24.506 48.493)scale(-1 1)"/></g><g filter="url(#h)"><ellipse cx="3.47" cy="21.501" fill="#7e14ff" rx="3.47" ry="21.501" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.009 28.708 47.59)scale(-1 1)"/></g><g filter="url(#i)"><ellipse cx="3.47" cy="21.501" fill="#7e14ff" rx="3.47" ry="21.501" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.009 28.708 47.59)scale(-1 1)"/></g><g filter="url(#j)"><ellipse cx=".387" cy="8.972" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(39.51 .387 8.972)"/></g><g filter="url(#k)"><ellipse cx="47.523" cy="-6.092" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 47.523 -6.092)"/></g><g filter="url(#l)"><ellipse cx="41.412" cy="6.333" fill="#47bfff" rx="5.971" ry="9.665" style="fill:#47bfff;fill:color(display-p3 .2799 .748 1);fill-opacity:1" transform="rotate(37.892 41.412 6.333)"/></g><g filter="url(#m)"><ellipse cx="-1.879" cy="38.332" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 -1.88 38.332)"/></g><g filter="url(#n)"><ellipse cx="-1.879" cy="38.332" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 -1.88 38.332)"/></g><g filter="url(#o)"><ellipse cx="35.651" cy="29.907" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 35.651 29.907)"/></g><g filter="url(#p)"><ellipse cx="38.418" cy="32.4" fill="#47bfff" rx="5.971" ry="15.297" style="fill:#47bfff;fill:color(display-p3 .2799 .748 1);fill-opacity:1" transform="rotate(37.892 38.418 32.4)"/></g></g><defs><filter id="b" width="60.045" height="41.654" x="-19.77" y="16.149" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="c" width="90.34" height="51.437" x="-54.613" y="-7.533" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="d" width="79.355" height="29.4" x="-49.64" y="2.03" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="e" width="79.579" height="29.4" x="-45.045" y="20.029" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="f" width="79.579" height="29.4" x="-43.513" y="21.178" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="g" width="74.749" height="58.852" x="15.756" y="-17.901" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="h" width="61.377" height="25.362" x="23.548" y="2.284" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="i" width="61.377" height="25.362" x="23.548" y="2.284" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="j" width="56.045" height="63.649" x="-27.636" y="-22.853" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="k" width="54.814" height="64.646" x="20.116" y="-38.415" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="l" width="33.541" height="35.313" x="24.641" y="-11.323" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="m" width="54.814" height="64.646" x="-29.286" y="6.009" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="n" width="54.814" height="64.646" x="-29.286" y="6.009" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="o" width="54.814" height="64.646" x="8.244" y="-2.416" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="p" width="39.409" height="43.623" x="18.713" y="10.588" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter></defs></svg>
+<svg width="100%" viewBox="0 0 690 690" role="img" xmlns="http://www.w3.org/2000/svg" style="">
+  <title style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">Lycoris radiata detailed</title>
+  <desc style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">Детальный объёмный цветок Lycoris radiata с крупными лепестками</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#1a0000"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+
+    <!-- Each petal: 3-stop gradient simulating curved surface -->
+    <linearGradient id="pa" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2a0000"/>
+      <stop offset="20%" stop-color="#990000"/>
+      <stop offset="50%" stop-color="#ee3333"/>
+      <stop offset="72%" stop-color="#ff6666"/>
+      <stop offset="100%" stop-color="#ffbbbb"/>
+    </linearGradient>
+    <linearGradient id="pb" x1="100%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#220000"/>
+      <stop offset="22%" stop-color="#880000"/>
+      <stop offset="52%" stop-color="#dd2222"/>
+      <stop offset="74%" stop-color="#ff5555"/>
+      <stop offset="100%" stop-color="#ffaaaa"/>
+    </linearGradient>
+    <linearGradient id="pc" x1="50%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#1e0000"/>
+      <stop offset="25%" stop-color="#880000"/>
+      <stop offset="55%" stop-color="#dd2020"/>
+      <stop offset="78%" stop-color="#ff5050"/>
+      <stop offset="100%" stop-color="#ffaaaa"/>
+    </linearGradient>
+    <linearGradient id="pd" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffbbbb"/>
+      <stop offset="28%" stop-color="#ff6060"/>
+      <stop offset="55%" stop-color="#cc1111"/>
+      <stop offset="78%" stop-color="#880000"/>
+      <stop offset="100%" stop-color="#220000"/>
+    </linearGradient>
+    <linearGradient id="pe" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#ffaaaa"/>
+      <stop offset="30%" stop-color="#ff4444"/>
+      <stop offset="58%" stop-color="#bb0000"/>
+      <stop offset="80%" stop-color="#770000"/>
+      <stop offset="100%" stop-color="#1e0000"/>
+    </linearGradient>
+    <linearGradient id="pf" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffbbbb"/>
+      <stop offset="28%" stop-color="#ff5555"/>
+      <stop offset="55%" stop-color="#cc1111"/>
+      <stop offset="80%" stop-color="#880000"/>
+      <stop offset="100%" stop-color="#220000"/>
+    </linearGradient>
+    <!-- Shadow petal (behind) -->
+    <linearGradient id="ps" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#660000"/>
+      <stop offset="50%" stop-color="#440000"/>
+      <stop offset="100%" stop-color="#110000"/>
+    </linearGradient>
+
+    <!-- Stamen filament -->
+    <linearGradient id="stL" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#550000"/>
+      <stop offset="45%" stop-color="#cc1818"/>
+      <stop offset="80%" stop-color="#ff4444"/>
+      <stop offset="100%" stop-color="#ff8888"/>
+    </linearGradient>
+    <linearGradient id="stR" x1="100%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#550000"/>
+      <stop offset="45%" stop-color="#cc1818"/>
+      <stop offset="80%" stop-color="#ff4444"/>
+      <stop offset="100%" stop-color="#ff8888"/>
+    </linearGradient>
+
+    <!-- Anther -->
+    <radialGradient id="anth" cx="30%" cy="25%" r="70%">
+      <stop offset="0%" stop-color="#ffe680"/>
+      <stop offset="40%" stop-color="#ddaa22"/>
+      <stop offset="100%" stop-color="#664400"/>
+    </radialGradient>
+
+    <!-- Stem -->
+    <linearGradient id="stmG" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#110000"/>
+      <stop offset="35%" stop-color="#440000"/>
+      <stop offset="55%" stop-color="#661111"/>
+      <stop offset="100%" stop-color="#110000"/>
+    </linearGradient>
+
+    <!-- Center -->
+    <radialGradient id="ctr" cx="32%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#cc3333"/>
+      <stop offset="45%" stop-color="#550000"/>
+      <stop offset="100%" stop-color="#0d0000"/>
+    </radialGradient>
+
+    <filter id="petal_blur" x="-8%" y="-8%" width="116%" height="116%">
+      <feGaussianBlur stdDeviation="1.2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="stamen_glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="center_glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="amb" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
+  </defs>
+
+  <rect width="680" height="680" fill="url(#bg)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Ambient bloom -->
+  <ellipse cx="340" cy="330" rx="170" ry="140" fill="#660000" opacity="0.14" filter="url(#amb)" style="fill:rgb(102, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.14;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Stem -->
+  <path d="M 340 440 Q 337 500 334 560 Q 332 595 330 625" stroke="url(#stmG)" stroke-width="8" fill="none" stroke-linecap="round" style="fill:none;color:rgb(255, 255, 255);stroke-width:8px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 342 442 Q 339 502 336 562 Q 334 596 332 625" stroke="#882222" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.3" style="fill:none;stroke:rgb(136, 34, 34);color:rgb(255, 255, 255);stroke-width:1.8px;stroke-linecap:round;stroke-linejoin:miter;opacity:0.3;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SHADOW PETALS — dark layer behind           -->
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- These sit behind main petals giving depth -->
+
+  <!-- shadow petal UL -->
+  <path d="M 330 338 C 305 315 272 288 240 258 C 216 234 198 208 194 184 C 192 172 196 162 204 160 C 210 166 212 178 218 192 C 228 212 248 236 268 256 C 292 280 316 308 332 332 Z" fill="url(#ps)" opacity="0.7" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.7;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- shadow petal UR -->
+  <path d="M 350 338 C 375 315 408 288 440 258 C 464 234 482 208 486 184 C 488 172 484 162 476 160 C 470 166 468 178 462 192 C 452 212 432 236 412 256 C 388 280 364 308 348 332 Z" fill="url(#ps)" opacity="0.7" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.7;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- shadow petal L -->
+  <path d="M 326 350 C 300 342 266 336 232 334 C 206 332 182 336 170 344 C 163 350 163 358 170 362 C 178 360 188 354 204 350 C 224 346 252 344 278 348 C 306 352 326 358 326 350 Z" fill="url(#ps)" opacity="0.65" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.65;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- shadow petal R -->
+  <path d="M 354 350 C 380 342 414 336 448 334 C 474 332 498 336 510 344 C 517 350 517 358 510 362 C 502 360 492 354 476 350 C 456 346 428 344 402 348 C 374 352 354 358 354 350 Z" fill="url(#ps)" opacity="0.65" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.65;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- shadow petal BL -->
+  <path d="M 326 364 C 314 378 300 396 286 416 C 274 432 264 450 266 466 C 268 476 278 480 288 474 C 298 466 306 448 314 428 C 320 408 326 386 326 368 Z" fill="url(#ps)" opacity="0.7"/>
+  <!-- shadow petal BC -->
+  <path d="M 340 370 C 337 390 333 416 332 440 C 331 458 334 472 338 476 C 340 477 342 474 344 464 C 346 448 345 428 344 406 C 343 386 341 372 340 370 Z" fill="url(#ps)" opacity="0.7"/>
+  <!-- shadow petal BR -->
+  <path d="M 360 366 C 380 376 406 392 428 414 C 448 434 462 456 458 474 C 456 484 444 486 430 478 C 414 468 404 446 390 424 C 374 400 364 378 360 368 Z" fill="url(#ps)" opacity="0.7"/>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- MAIN PETALS — 9 large reflexed wavy petals  -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <!-- PETAL 1 — upper-left primary -->
+  <path d="M 328 342&#10;    C 314 324 292 302 266 276&#10;    C 246 256 226 232 214 206&#10;    C 206 188 206 170 214 162&#10;    C 222 158 232 164 240 176&#10;    C 250 192 258 214 270 236&#10;    C 284 260 302 284 318 308&#10;    C 326 320 334 334 328 342 Z" fill="url(#pa)" filter="url(#petal_blur)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- wavy edge crinkles -->
+  <path d="M 266 276 C 258 268 252 260 254 250 C 256 242 264 240 268 248 C 272 258 268 268 266 276 Z" fill="#ff7777" opacity="0.4" style="fill:rgb(255, 119, 119);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.4;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 240 236 C 234 226 228 216 232 206 C 235 198 243 198 245 206 C 248 216 244 228 240 236 Z" fill="#ff8888" opacity="0.35" style="fill:rgb(255, 136, 136);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.35;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 214 176 C 210 168 210 158 216 154 C 220 158 218 168 214 176 Z" fill="#ffaaaa" opacity="0.3" style="fill:rgb(255, 170, 170);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.3;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- midrib -->
+  <path d="M 330 340 C 310 316 284 288 256 260 C 236 240 218 214 212 186 C 210 174 212 164 216 158" stroke="#ff4444" stroke-width="1.4" fill="none" opacity="0.55" stroke-linecap="round" style="fill:none;stroke:rgb(255, 68, 68);color:rgb(255, 255, 255);stroke-width:1.4px;stroke-linecap:round;stroke-linejoin:miter;opacity:0.55;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- side veins -->
+  <path d="M 296 300 C 286 290 276 278 268 264" stroke="#ff5555" stroke-width="0.8" fill="none" opacity="0.35" style="fill:none;stroke:rgb(255, 85, 85);color:rgb(255, 255, 255);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.35;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 266 268 C 256 256 248 242 244 226" stroke="#ff5555" stroke-width="0.8" fill="none" opacity="0.35" style="fill:none;stroke:rgb(255, 85, 85);color:rgb(255, 255, 255);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.35;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 238 228 C 230 214 224 200 220 184" stroke="#ff5555" stroke-width="0.7" fill="none" opacity="0.3" style="fill:none;stroke:rgb(255, 85, 85);color:rgb(255, 255, 255);stroke-width:0.7px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.3;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- specular highlight -->
+  <path d="M 316 316 C 296 292 270 264 246 238 C 228 216 216 192 212 170" stroke="#ffcccc" stroke-width="3" fill="none" opacity="0.15" stroke-linecap="round" style="fill:none;stroke:rgb(255, 204, 204);color:rgb(255, 255, 255);stroke-width:3px;stroke-linecap:round;stroke-linejoin:miter;opacity:0.15;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- PETAL 2 — upper-left secondary (offset) -->
+  <path d="M 322 336&#10;    C 310 316 290 292 266 264&#10;    C 248 242 232 216 226 190&#10;    C 222 174 224 160 232 154&#10;    C 240 152 250 160 258 174&#10;    C 268 192 276 216 286 240&#10;    C 298 266 312 292 322 316&#10;    C 326 326 328 336 322 336 Z" fill="url(#pb)" filter="url(#petal_blur)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 266 264 C 260 254 256 244 260 236 C 263 228 270 228 272 236 C 274 246 270 256 266 264 Z" fill="#ff8888" opacity="0.35" style="fill:rgb(255, 136, 136);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.35;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 320 318 C 302 292 278 264 258 236 C 242 212 232 186 228 164" stroke="#ff5555" stroke-width="1.3" fill="none" opacity="0.45" stroke-linecap="round" style="fill:none;stroke:rgb(255, 85, 85);color:rgb(255, 255, 255);stroke-width:1.3px;stroke-linecap:round;stroke-linejoin:miter;opacity:0.45;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- PETAL 3 — top center -->
+  <path d="M 335 334&#10;    C 330 312 324 286 316 260&#10;    C 308 236 296 214 284 202&#10;    C 276 194 268 190 266 196&#10;    C 268 204 276 214 284 228&#10;    C 294 246 304 270 312 296&#10;    C 320 320 330 340 338 344&#10;    C 342 344 340 336 335 334 Z" fill="url(#pc)" filter="url(#petal_blur)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- wide version right side of top petal -->
+  <path d="M 345 334&#10;    C 350 312 356 286 364 260&#10;    C 372 236 384 214 396 202&#10;    C 404 194 412 190 414 196&#10;    C 412 204 404 214 396 228&#10;    C 386 246 376 270 368 296&#10;    C 360 320 350 340 342 344&#10;    C 338 344 340 336 345 334 Z" fill="url(#pc)" filter="url(#petal_blur)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- crinkle top -->
+  <path d="M 316 260 C 312 248 310 236 314 228 C 318 220 326 220 328 228 C 330 238 326 250 316 260 Z" fill="#ff8888" opacity="0.35" style="fill:rgb(255, 136, 136);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.35;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- midrib -->
+  <path d="M 340 340 C 336 314 328 284 318 256 C 308 230 294 208 282 196" stroke="#ff4444" stroke-width="1.4" fill="none" opacity="0.5" stroke-linecap="round" style="fill:none;stroke:rgb(255, 68, 68);color:rgb(255, 255, 255);stroke-width:1.4px;stroke-linecap:round;stroke-linejoin:miter;opacity:0.5;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- PETAL 4 — upper-right secondary -->
+  <path d="M 358 336&#10;    C 370 316 390 292 414 264&#10;    C 432 242 448 216 454 190&#10;    C 458 174 456 160 448 154&#10;    C 440 152 430 160 422 174&#10;    C 412 192 404 216 394 240&#10;    C 382 266 368 292 358 316&#10;    C 354 326 352 336 358 336 Z" fill="url(#pb)" filter="url(#petal_blur)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 414 264 C 420 254 424 244 420 236 C 417 228 410 228 408 236 C 406 246 410 256 414 264 Z" fill="#ff8888" opacity="0.35" style="fill:rgb(255, 136, 136);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.35;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 360 318 C 378 292 402 264 422 236 C 438 212 448 186 452 164" stroke="#ff5555" stroke-width="1.3" fill="none" opacity="0.45" stroke-linecap="round" style="fill:none;stroke:rgb(255, 85, 85);color:rgb(255, 255, 255);stroke-width:1.3px;stroke-linecap:round;stroke-linejoin:miter;opacity:0.45;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- PETAL 5 — upper-right primary -->
+  <path d="M 352 342&#10;    C 366 324 388 302 414 276&#10;    C 434 256 454 232 466 206&#10;    C 474 188 474 170 466 162&#10;    C 458 158 448 164 440 176&#10;    C 430 192 422 214 410 236&#10;    C 396 260 378 284 362 308&#10;    C 354 320 346 334 352 342 Z" fill="url(#pa)" filter="url(#petal_blur)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 414 276 C 422 268 428 260 426 250 C 424 242 416 240 412 248 C 408 258 412 268 414 276 Z" fill="#ff7777" opacity="0.4" style="fill:rgb(255, 119, 119);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.4;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 350 340 C 370 316 396 288 424 260 C 444 240 462 214 468 186 C 470 174 468 164 464 158" stroke="#ff4444" stroke-width="1.4" fill="none" opacity="0.55" stroke-linecap="round" style="fill:none;stroke:rgb(255, 68, 68);color:rgb(255, 255, 255);stroke-width:1.4px;stroke-linecap:round;stroke-linejoin:miter;opacity:0.55;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 364 316 C 384 292 408 264 432 238 C 450 216 462 192 466 170" stroke="#ffcccc" stroke-width="3" fill="none" opacity="0.14" stroke-linecap="round" style="fill:none;stroke:rgb(255, 204, 204);color:rgb(255, 255, 255);stroke-width:3px;stroke-linecap:round;stroke-linejoin:miter;opacity:0.14;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- PETAL 6 — right -->
+  <path d="M 358 352&#10;    C 380 344 408 340 438 342&#10;    C 462 344 484 352 496 364&#10;    C 504 374 502 386 494 390&#10;    C 485 386 474 376 458 370&#10;    C 438 362 412 356 384 354&#10;    C 364 352 350 356 358 352 Z" fill="url(#pd)" filter="url(#petal_blur)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 438 342 C 450 338 464 336 472 342 C 478 348 476 356 468 356 C 460 356 450 348 438 342 Z" fill="#ff9999" opacity="0.35" style="fill:rgb(255, 153, 153);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.35;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 360 353 C 386 347 416 344 446 348 C 468 352 484 362 494 374" stroke="#ff4444" stroke-width="1.3" fill="none" opacity="0.45" stroke-linecap="round" style="fill:none;stroke:rgb(255, 68, 68);color:rgb(255, 255, 255);stroke-width:1.3px;stroke-linecap:round;stroke-linejoin:miter;opacity:0.45;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- PETAL 7 — lower-right -->
+  <path d="M 354 366&#10;    C 368 382 380 406 382 430&#10;    C 384 450 378 468 368 474&#10;    C 358 476 348 466 344 452&#10;    C 340 434 340 410 340 386&#10;    C 340 370 346 360 354 366 Z" fill="url(#pe)" filter="url(#petal_blur)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 382 430 C 384 444 382 456 374 462 C 366 466 360 462 362 452 C 364 442 374 436 382 430 Z" fill="#ff7777" opacity="0.35" style="fill:rgb(255, 119, 119);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.35;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 350 368 C 360 386 372 410 374 434 C 376 450 372 466 364 474" stroke="#ff4444" stroke-width="1.3" fill="none" opacity="0.45" stroke-linecap="round" style="fill:none;stroke:rgb(255, 68, 68);color:rgb(255, 255, 255);stroke-width:1.3px;stroke-linecap:round;stroke-linejoin:miter;opacity:0.45;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- PETAL 8 — bottom -->
+  <path d="M 340 368&#10;    C 336 386 330 410 328 432&#10;    C 326 452 330 470 340 474&#10;    C 350 470 354 452 352 432&#10;    C 350 410 344 386 340 368 Z" fill="url(#pe)" filter="url(#petal_blur)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- PETAL 9 — left -->
+  <path d="M 322 352&#10;    C 300 344 272 340 242 342&#10;    C 218 344 196 352 184 364&#10;    C 176 374 178 386 186 390&#10;    C 195 386 206 376 222 370&#10;    C 242 362 268 356 296 354&#10;    C 316 352 330 356 322 352 Z" fill="url(#pf)" filter="url(#petal_blur)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 242 342 C 230 338 216 336 208 342 C 202 348 204 356 212 356 C 220 356 230 348 242 342 Z" fill="#ff9999" opacity="0.35" style="fill:rgb(255, 153, 153);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.35;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <path d="M 320 353 C 294 347 264 344 234 348 C 212 352 196 362 186 374" stroke="#ff4444" stroke-width="1.3" fill="none" opacity="0.45" stroke-linecap="round" style="fill:none;stroke:rgb(255, 68, 68);color:rgb(255, 255, 255);stroke-width:1.3px;stroke-linecap:round;stroke-linejoin:miter;opacity:0.45;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- PETAL 10 — bottom-left -->
+  <path d="M 326 364
+    C 314 378 300 396 286 416
+    C 274 432 264 450 266 466
+    C 268 476 278 480 288 474
+    C 298 466 306 448 314 428
+    C 320 408 326 386 326 368
+    Z" fill="url(#pf)" filter="url(#petal_blur)"/>
+  <path d="M 266 466 C 264 474 266 480 272 480 C 276 480 278 476 278 468 C 276 460 270 460 266 466 Z" fill="#ff7777" opacity="0.35"/>
+  <path d="M 326 364 C 314 378 300 396 288 416 C 276 432 268 450 268 468" stroke="#ff4444" stroke-width="1.3" fill="none" opacity="0.48" stroke-linecap="round"/>
+  <path d="M 320 372 C 308 386 296 402 284 420 C 274 436 266 454 268 468" stroke="#ffcccc" stroke-width="3" fill="none" opacity="0.13" stroke-linecap="round"/>
+  <path d="M 308 396 C 298 410 290 428 286 446" stroke="#ff5555" stroke-width="0.8" fill="none" opacity="0.32"/>
+
+  <!-- PETAL 11 — bottom-center thin -->
+  <path d="M 340 370
+    C 337 390 333 416 332 440
+    C 331 458 334 472 338 476
+    C 340 477 342 474 344 464
+    C 346 448 345 428 344 406
+    C 343 386 341 372 340 370
+    Z" fill="url(#pe)" filter="url(#petal_blur)"/>
+  <path d="M 332 440 C 331 452 333 464 337 470 C 339 473 341 470 341 462 C 340 452 334 446 332 440 Z" fill="#ff8888" opacity="0.32"/>
+  <path d="M 340 370 C 336 390 332 416 332 440 C 331 458 334 472 338 476" stroke="#ff4444" stroke-width="1.2" fill="none" opacity="0.5" stroke-linecap="round"/>
+  <path d="M 340 370 C 343 388 346 410 346 434 C 346 452 344 468 341 474" stroke="#ff5555" stroke-width="0.7" fill="none" opacity="0.32" stroke-linecap="round"/>
+  <path d="M 339 378 C 335 396 332 418 332 440 C 331 456 334 470 338 476" stroke="#ffcccc" stroke-width="2" fill="none" opacity="0.13" stroke-linecap="round"/>
+
+  <!-- PETAL 12 — bottom-right (shifted right) -->
+  <path d="M 360 366
+    C 380 376 406 392 428 414
+    C 448 434 462 456 458 474
+    C 456 484 444 486 430 478
+    C 414 468 404 446 390 424
+    C 374 400 364 378 360 368
+    Z" fill="url(#pe)" filter="url(#petal_blur)"/>
+  <path d="M 458 474 C 460 482 458 490 450 490 C 444 490 442 484 446 476 C 450 468 456 468 458 474 Z" fill="#ff7777" opacity="0.35"/>
+  <path d="M 360 366 C 380 376 406 392 428 414 C 448 434 462 456 458 476" stroke="#ff4444" stroke-width="1.3" fill="none" opacity="0.48" stroke-linecap="round"/>
+  <path d="M 366 374 C 386 384 410 400 432 422 C 450 440 462 460 458 476" stroke="#ffcccc" stroke-width="3" fill="none" opacity="0.13" stroke-linecap="round"/>
+  <path d="M 390 400 C 408 416 422 436 430 456" stroke="#ff5555" stroke-width="0.8" fill="none" opacity="0.32"/>
+
+  <!-- ═══════════════════════════ -->
+  <!-- STAMENS — 18 long filaments -->
+  <!-- ═══════════════════════════ -->
+
+  <!-- LEFT upper arc -->
+  <path d="M 326 340 Q 280 302 232 258 Q 200 226 174 190" stroke="url(#stL)" stroke-width="1.7" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.7px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="171" cy="186" r="4.2" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <path d="M 328 336 Q 286 294 246 252 Q 220 224 200 190" stroke="url(#stL)" stroke-width="1.6" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.6px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="197" cy="186" r="4" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <path d="M 330 333 Q 294 296 260 260 Q 238 236 222 204" stroke="url(#stL)" stroke-width="1.6" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.6px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="219" cy="200" r="3.8" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <path d="M 332 331 Q 302 300 276 268 Q 256 244 244 212" stroke="url(#stL)" stroke-width="1.5" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.5px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="242" cy="208" r="3.6" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <path d="M 334 330 Q 310 304 290 276 Q 272 252 262 222" stroke="url(#stL)" stroke-width="1.5" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.5px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="260" cy="218" r="3.5" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- LEFT flat -->
+  <path d="M 328 342 Q 290 328 248 316 Q 214 308 178 302" stroke="url(#stL)" stroke-width="1.6" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.6px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="174" cy="301" r="4" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <path d="M 328 348 Q 292 340 254 336 Q 222 332 190 328" stroke="url(#stL)" stroke-width="1.5" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.5px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="186" cy="327" r="3.8" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- LEFT lower arc -->
+  <path d="M 328 358 Q 296 358 262 370 Q 234 380 206 398" stroke="url(#stL)" stroke-width="1.5" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.5px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="203" cy="400" r="3.6" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <path d="M 332 366 Q 304 376 276 394 Q 250 412 228 436" stroke="url(#stL)" stroke-width="1.5" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.5px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="225" cy="439" r="3.5" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- RIGHT upper arc (mirror) -->
+  <path d="M 354 340 Q 400 302 448 258 Q 480 226 506 190" stroke="url(#stR)" stroke-width="1.7" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.7px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="509" cy="186" r="4.2" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <path d="M 352 336 Q 394 294 434 252 Q 460 224 480 190" stroke="url(#stR)" stroke-width="1.6" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.6px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="483" cy="186" r="4" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <path d="M 350 333 Q 386 296 420 260 Q 442 236 458 204" stroke="url(#stR)" stroke-width="1.6" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.6px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="461" cy="200" r="3.8" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <path d="M 348 331 Q 378 300 404 268 Q 424 244 436 212" stroke="url(#stR)" stroke-width="1.5" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.5px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="438" cy="208" r="3.6" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <path d="M 346 330 Q 370 304 390 276 Q 408 252 418 222" stroke="url(#stR)" stroke-width="1.5" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.5px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="420" cy="218" r="3.5" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- RIGHT flat -->
+  <path d="M 352 342 Q 390 328 432 316 Q 466 308 502 302" stroke="url(#stR)" stroke-width="1.6" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.6px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="506" cy="301" r="4" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <path d="M 352 348 Q 388 340 426 336 Q 458 332 490 328" stroke="url(#stR)" stroke-width="1.5" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.5px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="494" cy="327" r="3.8" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- RIGHT lower arc -->
+  <path d="M 352 358 Q 384 358 418 370 Q 446 380 474 398" stroke="url(#stR)" stroke-width="1.5" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.5px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="477" cy="400" r="3.6" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <path d="M 348 366 Q 376 376 404 394 Q 430 412 452 436" stroke="url(#stR)" stroke-width="1.5" fill="none" stroke-linecap="round" filter="url(#stamen_glow)" style="fill:none;color:rgb(255, 255, 255);stroke-width:1.5px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="455" cy="439" r="3.5" fill="url(#anth)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- ═══════════════ -->
+  <!-- FLOWER CENTER   -->
+  <!-- ═══════════════ -->
+  <circle cx="340" cy="348" r="30" fill="#440000" opacity="0.6" filter="url(#center_glow)" style="fill:rgb(68, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.6;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="340" cy="348" r="24" fill="url(#ctr)" style="stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="340" cy="348" r="15" fill="#1a0000" style="fill:rgb(26, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- inner texture -->
+  <circle cx="334" cy="342" r="6" fill="#881818" opacity="0.55" style="fill:rgb(136, 24, 24);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.55;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="334" cy="342" r="3" fill="#cc3333" opacity="0.45" style="fill:rgb(204, 51, 51);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.45;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="347" cy="345" r="3" fill="#660000" opacity="0.6" style="fill:rgb(102, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.6;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="338" cy="354" r="2.5" fill="#770000" opacity="0.5" style="fill:rgb(119, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.5;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="343" cy="343" r="1.5" fill="#aa2222" opacity="0.7" style="fill:rgb(170, 34, 34);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.7;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <!-- specular -->
+  <ellipse cx="332" cy="340" rx="5" ry="3" fill="#dd4444" opacity="0.25" transform="rotate(-20,332,340)" style="fill:rgb(221, 68, 68);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.25;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+</svg>
