@@ -12,6 +12,14 @@ import {
   clearAdminSecret,
   type ProductInput,
 } from '../lib/adminProducts'
+import { fetchSiteContent, updateSiteContent } from '../lib/siteContent'
+import {
+  fetchBloggers,
+  createBlogger,
+  updateBlogger,
+  deleteBlogger,
+  type BloggerRow,
+} from '../lib/fetchBloggers'
 
 const CATEGORIES = [
   { key: 'products.categories.mice', label: 'Мышки' },
@@ -185,9 +193,12 @@ export default function AdminPage() {
   return <AdminPanel onLogout={() => { clearAdminSecret(); setIsAuthed(false) }} />
 }
 
+type AdminTab = 'products' | 'content' | 'bloggers'
+
 // ── Admin panel inner ─────────────────────────────────────────────────────────
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const { products: allProducts, loading: productsLoading, refresh } = useProducts()
+  const [activeTab, setActiveTab] = useState<AdminTab>('products')
 
   const [editingId, setEditingId] = useState<number | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -366,6 +377,22 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         </div>
       </header>
 
+      <div className="admin__tab-bar">
+        <button type="button" className={`admin__tab-btn${activeTab === 'products' ? ' active' : ''}`} onClick={() => setActiveTab('products')}>
+          Товары
+        </button>
+        <button type="button" className={`admin__tab-btn${activeTab === 'content' ? ' active' : ''}`} onClick={() => setActiveTab('content')}>
+          Контент
+        </button>
+        <button type="button" className={`admin__tab-btn${activeTab === 'bloggers' ? ' active' : ''}`} onClick={() => setActiveTab('bloggers')}>
+          Блогеры
+        </button>
+      </div>
+
+      {activeTab === 'content' && <ContentTab />}
+      {activeTab === 'bloggers' && <BloggersTab allProducts={allProducts} />}
+
+      {activeTab === 'products' && (
       <div className="admin__body">
         {/* SIDEBAR */}
         <aside className="admin__sidebar">
@@ -794,6 +821,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         </main>
       </div>
 
+      )} {/* end products tab */}
+
       {deleteConfirm !== null && (
         <div className="admin__confirm">
           <div className="admin__confirm-overlay" onClick={() => setDeleteConfirm(null)} />
@@ -803,6 +832,409 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
             <div className="admin__confirm-actions">
               <button type="button" className="admin__cancel-btn" onClick={() => setDeleteConfirm(null)}>Отмена</button>
               <button type="button" className="admin__confirm-delete" onClick={() => void handleDeleteConfirm(deleteConfirm)}>Удалить</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Content Tab ───────────────────────────────────────────────────────────────
+type HeroSlide = { tag: string; title: string; subtitle: string; accent: string; image: string }
+const BLANK_SLIDE: HeroSlide = { tag: '', title: '', subtitle: '', accent: '', image: '' }
+
+function ContentTab() {
+  const [slides, setSlides] = useState<HeroSlide[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetchSiteContent<HeroSlide[]>('hero_slides').then((val) => {
+      if (val && val.length > 0) setSlides(val)
+      setLoading(false)
+    })
+  }, [])
+
+  function updateSlide(index: number, field: keyof HeroSlide, value: string) {
+    setSlides((prev) => prev.map((s, i) => i === index ? { ...s, [field]: value } : s))
+  }
+
+  function addSlide() {
+    setSlides((prev) => [...prev, { ...BLANK_SLIDE }])
+  }
+
+  function removeSlide(index: number) {
+    setSlides((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  async function save() {
+    setSaving(true)
+    setError('')
+    try {
+      await updateSiteContent('hero_slides', slides)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка сохранения')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return <div className="admin__content-tab"><p style={{ color: 'var(--color-text-dim)' }}>Загрузка...</p></div>
+
+  return (
+    <div className="admin__content-tab">
+      <div className="admin__content-header">
+        <h2 className="admin__content-title">Главный баннер</h2>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          {saved && <span className="admin__saved-toast">Сохранено ✓</span>}
+          {error && <span style={{ color: 'var(--color-main)', fontSize: 13 }}>{error}</span>}
+          <button type="button" className="admin__save-btn" onClick={() => void save()} disabled={saving}>
+            {saving ? 'Сохраняем...' : 'Сохранить'}
+          </button>
+        </div>
+      </div>
+
+      <div className="admin__slides-list">
+        {slides.map((slide, index) => (
+          <div key={index} className="admin__slide-card">
+            <div className="admin__slide-card-header">
+              <span className="admin__slide-num">Слайд {index + 1}</span>
+              <button type="button" className="admin__icon-btn admin__icon-btn--danger" onClick={() => removeSlide(index)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                  <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                </svg>
+              </button>
+            </div>
+            <div className="admin__two-col">
+              <div className="admin__field">
+                <label className="admin__label">Тег</label>
+                <input className="admin__input" value={slide.tag} onChange={(e) => updateSlide(index, 'tag', e.target.value)} placeholder="новинка" />
+              </div>
+              <div className="admin__field">
+                <label className="admin__label">Заголовок</label>
+                <input className="admin__input" value={slide.title} onChange={(e) => updateSlide(index, 'title', e.target.value)} placeholder="название продукта" />
+              </div>
+            </div>
+            <div className="admin__field">
+              <label className="admin__label">Подзаголовок</label>
+              <input className="admin__input" value={slide.subtitle} onChange={(e) => updateSlide(index, 'subtitle', e.target.value)} placeholder="краткое описание" />
+            </div>
+            <div className="admin__field">
+              <label className="admin__label">Акцентный текст</label>
+              <input className="admin__input" value={slide.accent} onChange={(e) => updateSlide(index, 'accent', e.target.value)} placeholder="короткая фраза-акцент" />
+            </div>
+            <div className="admin__field">
+              <label className="admin__label">Фото (URL)</label>
+              <div className="admin__image-field">
+                <input className="admin__input" type="url" value={slide.image} onChange={(e) => updateSlide(index, 'image', e.target.value)} placeholder="https://..." />
+                {slide.image ? (
+                  <img className="admin__image-preview" src={slide.image} alt="preview" />
+                ) : (
+                  <div className="admin__image-preview admin__image-preview--empty">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button type="button" className="admin__spec-add-btn" style={{ marginTop: 4 }} onClick={addSlide}>
+        + Добавить слайд
+      </button>
+    </div>
+  )
+}
+
+// ── Bloggers Tab ──────────────────────────────────────────────────────────────
+type BloggerForm = {
+  name: string
+  description: string
+  image: string
+  social_url: string
+  gear_product_ids: number[]
+  is_active: boolean
+  sort_order: string
+}
+
+const BLANK_BLOGGER: BloggerForm = {
+  name: '', description: '', image: '', social_url: '', gear_product_ids: [], is_active: true, sort_order: '0',
+}
+
+function bloggerToForm(b: BloggerRow): BloggerForm {
+  return {
+    name: b.name,
+    description: b.description,
+    image: b.image,
+    social_url: b.social_url,
+    gear_product_ids: b.gear_product_ids,
+    is_active: b.is_active,
+    sort_order: String(b.sort_order),
+  }
+}
+
+function BloggersTab({ allProducts }: { allProducts: Product[] }) {
+  const [bloggers, setBloggers] = useState<BloggerRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState<BloggerForm>(BLANK_BLOGGER)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [saved, setSaved] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
+
+  const loadBloggers = async () => {
+    setLoading(true)
+    const rows = await fetchBloggers(false)
+    setBloggers(rows)
+    setLoading(false)
+  }
+
+  useEffect(() => { void loadBloggers() }, [])
+
+  function openNew() {
+    setEditingId(null)
+    setForm(BLANK_BLOGGER)
+    setSaveError('')
+    setShowForm(true)
+  }
+
+  function openEdit(b: BloggerRow) {
+    setEditingId(b.id)
+    setForm(bloggerToForm(b))
+    setSaveError('')
+    setShowForm(true)
+  }
+
+  function setField<K extends keyof BloggerForm>(key: K, value: BloggerForm[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function toggleGearProduct(dbId: number) {
+    setForm((prev) => {
+      const ids = prev.gear_product_ids.includes(dbId)
+        ? prev.gear_product_ids.filter((id) => id !== dbId)
+        : [...prev.gear_product_ids, dbId]
+      return { ...prev, gear_product_ids: ids }
+    })
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    setSaveError('')
+    try {
+      const input = {
+        name: form.name,
+        description: form.description,
+        image: form.image,
+        social_url: form.social_url,
+        gear_product_ids: form.gear_product_ids,
+        is_active: form.is_active,
+        sort_order: parseInt(form.sort_order, 10) || 0,
+      }
+      if (editingId !== null) {
+        await updateBlogger(editingId, input)
+      } else {
+        await createBlogger(input)
+      }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+      setShowForm(false)
+      setEditingId(null)
+      await loadBloggers()
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Ошибка сохранения')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete(id: number) {
+    try {
+      await deleteBlogger(id)
+      setDeleteConfirm(null)
+      if (editingId === id) { setShowForm(false); setEditingId(null) }
+      await loadBloggers()
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Ошибка удаления')
+      setDeleteConfirm(null)
+    }
+  }
+
+  return (
+    <div className="admin__body">
+      <aside className="admin__sidebar">
+        <div className="admin__sidebar-top">
+          <button type="button" className="admin__new-btn" onClick={openNew}>+ Новый блогер</button>
+        </div>
+        <div className="admin__stats">
+          <div className="admin__stat"><span className="admin__stat-label">Всего</span><strong className="admin__stat-value">{bloggers.length}</strong></div>
+          <div className="admin__stat"><span className="admin__stat-label">Активных</span><strong className="admin__stat-value">{bloggers.filter((b) => b.is_active).length}</strong></div>
+        </div>
+        <ul className="admin__list">
+          {loading && <li className="admin__list-loading">Загрузка...</li>}
+          {bloggers.map((b) => (
+            <li
+              key={b.id}
+              className={`admin__list-item${editingId === b.id ? ' active' : ''}`}
+              onClick={() => openEdit(b)}
+            >
+              {b.image ? (
+                <img className="admin__list-thumb" src={b.image} alt={b.name} onError={(e) => { ;(e.target as HTMLImageElement).style.opacity = '0' }} />
+              ) : (
+                <div className="admin__list-thumb admin__list-thumb--empty" />
+              )}
+              <div className="admin__list-info">
+                <span className="admin__list-name">{b.name}</span>
+                <span className="admin__list-meta">{b.is_active ? 'активен' : 'скрыт'} · сортировка: {b.sort_order}</span>
+              </div>
+              <div className="admin__list-actions" onClick={(e) => e.stopPropagation()}>
+                <button type="button" className="admin__icon-btn" onClick={() => openEdit(b)} title="Редактировать">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </button>
+                <button type="button" className="admin__icon-btn admin__icon-btn--danger" onClick={() => setDeleteConfirm(b.id)} title="Удалить">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                    <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                  </svg>
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </aside>
+
+      <main className="admin__main">
+        {showForm ? (
+          <form className="admin__form" onSubmit={(e) => { void handleSubmit(e) }}>
+            <h2 className="admin__form-title">{editingId !== null ? 'Редактировать блогера' : 'Новый блогер'}</h2>
+            {saved && <span className="admin__saved-toast" style={{ display: 'block', marginBottom: 12 }}>Сохранено ✓</span>}
+
+            <div className="admin__form-section">
+              <p className="admin__form-section-title">Основная информация</p>
+              <div className="admin__two-col">
+                <div className="admin__field">
+                  <label className="admin__label">Имя / Ник *</label>
+                  <input className="admin__input" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="shadowkekw" required />
+                </div>
+                <div className="admin__field">
+                  <label className="admin__label">Ссылка (соцсети / канал)</label>
+                  <input className="admin__input" type="url" value={form.social_url} onChange={(e) => setField('social_url', e.target.value)} placeholder="https://t.me/..." />
+                </div>
+              </div>
+              <div className="admin__field">
+                <label className="admin__label">Описание</label>
+                <textarea className="admin__textarea" rows={3} value={form.description} onChange={(e) => setField('description', e.target.value)} placeholder="Краткое описание блогера..." />
+              </div>
+            </div>
+
+            <div className="admin__form-section">
+              <p className="admin__form-section-title">Фото</p>
+              <div className="admin__field">
+                <label className="admin__label">URL фото <span className="admin__label-hint">(фон карточки, рекомендуется 600×400 px)</span></label>
+                <div className="admin__image-field">
+                  <input className="admin__input" type="url" value={form.image} onChange={(e) => setField('image', e.target.value)} placeholder="https://..." />
+                  {form.image ? (
+                    <img className="admin__image-preview" src={form.image} alt="preview" />
+                  ) : (
+                    <div className="admin__image-preview admin__image-preview--empty">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="admin__form-section">
+              <p className="admin__form-section-title">Сетап блогера</p>
+              <p className="admin__label-hint">Отметьте товары из каталога, которые использует этот блогер. Они появятся в карточке на главной.</p>
+              {allProducts.length === 0 ? (
+                <p style={{ color: 'var(--color-text-ghost)', fontSize: 13 }}>Нет товаров в каталоге</p>
+              ) : (
+                <div className="admin__gear-list">
+                  {allProducts.map((p) => {
+                    const isSelected = p.dbId !== undefined && form.gear_product_ids.includes(p.dbId)
+                    return (
+                      <label key={p.id} className={`admin__gear-item${isSelected ? ' selected' : ''}`}>
+                        <input
+                          type="checkbox"
+                          className="admin__checkbox-input"
+                          checked={isSelected}
+                          onChange={() => p.dbId !== undefined && toggleGearProduct(p.dbId)}
+                        />
+                        {p.image && <img src={p.image} alt="" className="admin__gear-thumb" onError={(e) => { ;(e.target as HTMLImageElement).style.display = 'none' }} />}
+                        <span className="admin__gear-name">{p.brand} {p.titleDirect}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="admin__form-section">
+              <p className="admin__form-section-title">Настройки отображения</p>
+              <div className="admin__two-col">
+                <div className="admin__field">
+                  <label className="admin__label">Порядок сортировки</label>
+                  <input className="admin__input" type="number" min="0" value={form.sort_order} onChange={(e) => setField('sort_order', e.target.value)} />
+                </div>
+                <div className="admin__field">
+                  <label className="admin__label">Видимость</label>
+                  <label className="admin__checkbox-field">
+                    <input type="checkbox" className="admin__checkbox-input" checked={form.is_active} onChange={(e) => setField('is_active', e.target.checked)} />
+                    <span className="admin__checkbox-label">Показывать на сайте</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {saveError && <div className="admin__save-error">{saveError}</div>}
+            <div className="admin__form-actions">
+              <button type="button" className="admin__cancel-btn" onClick={() => { setShowForm(false); setEditingId(null) }}>Отмена</button>
+              {editingId !== null && (
+                <button type="button" className="admin__delete-btn" onClick={() => setDeleteConfirm(editingId)}>Удалить</button>
+              )}
+              <button type="submit" className="admin__save-btn" disabled={saving}>
+                {saving ? 'Сохраняем...' : editingId !== null ? 'Сохранить' : 'Создать'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="admin__empty">
+            <svg className="admin__empty-icon" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+              <circle cx="12" cy="8" r="4" /><path d="M4 20a8 8 0 0116 0" />
+            </svg>
+            <p className="admin__empty-text">Выберите блогера или создайте нового</p>
+            <button type="button" className="admin__new-btn admin__new-btn--auto" onClick={openNew}>+ Создать блогера</button>
+          </div>
+        )}
+      </main>
+
+      {deleteConfirm !== null && (
+        <div className="admin__confirm">
+          <div className="admin__confirm-overlay" onClick={() => setDeleteConfirm(null)} />
+          <div className="admin__confirm-box">
+            <h3>Удалить блогера?</h3>
+            <p>Блогер будет удалён из базы данных.</p>
+            <div className="admin__confirm-actions">
+              <button type="button" className="admin__cancel-btn" onClick={() => setDeleteConfirm(null)}>Отмена</button>
+              <button type="button" className="admin__confirm-delete" onClick={() => void handleDelete(deleteConfirm)}>Удалить</button>
             </div>
           </div>
         </div>

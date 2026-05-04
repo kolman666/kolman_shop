@@ -5,6 +5,8 @@ import './App.css'
 import { useProducts } from './hooks/useProducts'
 import SiteChrome from './components/SiteChrome'
 import CartDrawer from './components/CartDrawer'
+import BrandSpotlight from './components/BrandSpotlight'
+import BloggersBlock from './components/BloggersBlock'
 import AboutPage from './pages/AboutPage'
 import AdminPage from './pages/AdminPage'
 import CatalogPage from './pages/CatalogPage'
@@ -609,6 +611,16 @@ function HomePage() {
           </div>
         </section>
       </main>
+
+      <BrandSpotlight
+        products={products}
+        brandSlug="wlmouse"
+        brandLabel="wlmouse"
+        tagline="топовая периферия для серьёзных игроков — лёгкие мыши, точные коврики, быстрые клавиатуры"
+        bannerImage="https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1400&q=80"
+      />
+
+      <BloggersBlock products={products} />
 
       {isBurgerOpen && (
         <div className="burger-overlay" onClick={() => setIsBurgerOpen(false)} />
