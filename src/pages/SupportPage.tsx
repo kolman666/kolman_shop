@@ -121,16 +121,7 @@ export default function SupportPage() {
         </div>
       </div>
 
-      <div
-        style={{
-          width: 'min(1280px, calc(100% - 32px))',
-          margin: '0 auto',
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 320px',
-          gap: 20,
-          alignItems: 'start',
-        }}
-      >
+      <div className="support-layout">
         <form
           onSubmit={(e) => { void handleSubmit(e) }}
           style={{
@@ -168,7 +159,7 @@ export default function SupportPage() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="support-fields-row">
             <div className="catalog-field" style={{ gap: 10 }}>
               <label className="catalog-field__label" htmlFor="support-name">
                 {t('support.nameLabel')}

@@ -61,6 +61,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [showCartToast, setShowCartToast] = useState(false)
   const [searchValue, setSearchValue] = useState('')
+  const [isBurgerOpen, setIsBurgerOpen] = useState(false)
   const { products: allProducts } = useProducts()
 
   useEffect(() => {
@@ -224,6 +225,14 @@ export default function SiteChrome({ children }: SiteChromeProps) {
                 <circle cx="12" cy="7" r="4" />
               </svg>
             </button>
+
+            <button type="button" className="burger-btn" aria-label="menu" onClick={() => setIsBurgerOpen(true)}>
+              <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="0" y1="1" x2="18" y2="1" />
+                <line x1="0" y1="7" x2="18" y2="7" />
+                <line x1="0" y1="13" x2="18" y2="13" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -269,6 +278,72 @@ export default function SiteChrome({ children }: SiteChromeProps) {
 
       <div className={`cart-toast ${showCartToast ? 'cart-toast--visible' : ''}`}>
         Добавлено в корзину
+      </div>
+
+      {isBurgerOpen && (
+        <div className="burger-overlay" onClick={() => setIsBurgerOpen(false)} />
+      )}
+      <div className={`burger-panel ${isBurgerOpen ? 'burger-panel--open' : ''}`}>
+        <div className="burger-panel__head">
+          <BrandLogo />
+          <button type="button" className="burger-panel__close" onClick={() => setIsBurgerOpen(false)} aria-label="close menu">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="1" y1="1" x2="13" y2="13" />
+              <line x1="13" y1="1" x2="1" y2="13" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="burger-panel__search">
+          <form role="search" onSubmit={handleSearchSubmit}>
+            <div style={{ position: 'relative' }}>
+              <button type="submit" className="search__icon-btn" aria-label="search">
+                <svg className="search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" />
+                </svg>
+              </button>
+              <input
+                className="search__input"
+                placeholder={t('ui.searchPlaceholder')}
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+              />
+            </div>
+          </form>
+        </div>
+
+        <nav className="burger-panel__links">
+          {topLinks.map((link, index) => (
+            <Link
+              key={link}
+              to={topLinkTargets[index] ?? '/catalog'}
+              className="burger-panel__link"
+              onClick={() => setIsBurgerOpen(false)}
+            >
+              {link}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="burger-panel__footer">
+          <div className="language-switch" aria-label={t('ui.language')}>
+            <button
+              type="button"
+              className={`language-switch__button ${i18n.language.startsWith('en') ? 'active' : ''}`}
+              onClick={() => handleLanguageChange('en')}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              className={`language-switch__button ${i18n.language.startsWith('ru') ? 'active' : ''}`}
+              onClick={() => handleLanguageChange('ru')}
+            >
+              RU
+            </button>
+          </div>
+        </div>
       </div>
 
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
