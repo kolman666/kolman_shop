@@ -844,8 +844,14 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 type HeroSlide = { tag: string; title: string; subtitle: string; accent: string; image: string }
 const BLANK_SLIDE: HeroSlide = { tag: '', title: '', subtitle: '', accent: '', image: '' }
 
+const DEFAULT_SLIDES: HeroSlide[] = [
+  { tag: 'новинка', title: 'atk gear ghost ultimate', subtitle: 'бескомпромиссная игровая мышь с уникальным дизайном', accent: 'никаких компромиссов в производительности', image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&q=80' },
+  { tag: 'хит продаж', title: 'razer viper v4 pro', subtitle: 'ультралегкая беспроводная имба', accent: 'оптический сенсор 50k dpi', image: 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=800&q=80' },
+  { tag: 'лимитка', title: 'logitech g pro superlight 2 yellow edition', subtitle: 'создана вместе с киберспортсменами со всего мира', accent: 'сенсор hero 25600 внутри', image: 'https://images.unsplash.com/photo-1563297007-0686b7003af7?w=800&q=80' },
+]
+
 function ContentTab() {
-  const [slides, setSlides] = useState<HeroSlide[]>([])
+  const [slides, setSlides] = useState<HeroSlide[]>(DEFAULT_SLIDES)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -853,11 +859,11 @@ function ContentTab() {
 
   useEffect(() => {
     fetchSiteContent<HeroSlide[]>('hero_slides').then((result) => {
-      if (result.error) {
-        setError(result.error)
-      } else if (result.data && result.data.length > 0) {
+      if (!result.error && result.data && result.data.length > 0) {
         setSlides(result.data)
       }
+      // if error or empty — keep DEFAULT_SLIDES so admin always has something to edit
+      if (result.error) setError(result.error)
       setLoading(false)
     })
   }, [])

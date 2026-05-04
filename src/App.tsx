@@ -7,6 +7,7 @@ import SiteChrome from './components/SiteChrome'
 import CartDrawer from './components/CartDrawer'
 import BrandSpotlight from './components/BrandSpotlight'
 import BloggersBlock from './components/BloggersBlock'
+import { fetchSiteContent } from './lib/siteContent'
 import AboutPage from './pages/AboutPage'
 import AdminPage from './pages/AdminPage'
 import CatalogPage from './pages/CatalogPage'
@@ -236,12 +237,22 @@ function HomePage() {
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [searchValue, setSearchValue] = useState('')
   const [isBurgerOpen, setIsBurgerOpen] = useState(false)
+  const [dbSlides, setDbSlides] = useState<Array<{ tag: string; title: string; subtitle: string; accent: string; img: string }> | null>(null)
   const { products } = useProducts()
 
-  const slides = (t('slides', { returnObjects: true }) as SlideText[]).map((slide, index) => ({
+  useEffect(() => {
+    fetchSiteContent<Array<{ tag: string; title: string; subtitle: string; accent: string; image: string }>>('hero_slides').then((result) => {
+      if (!result.error && result.data && result.data.length > 0) {
+        setDbSlides(result.data.map((s) => ({ tag: s.tag, title: s.title, subtitle: s.subtitle, accent: s.accent, img: s.image })))
+      }
+    })
+  }, [])
+
+  const i18nSlides = (t('slides', { returnObjects: true }) as SlideText[]).map((slide, index) => ({
     ...slide,
-    img: slideImages[index],
+    img: slideImages[index] ?? '',
   }))
+  const slides = dbSlides ?? i18nSlides
   const navLinks = t('navLinks', { returnObjects: true }) as string[]
   const topLinks = t('topLinks', { returnObjects: true }) as string[]
   const footerNavigation = t('footerNavigation', { returnObjects: true }) as string[]
@@ -616,7 +627,6 @@ function HomePage() {
         products={products}
         brandSlug="wlmouse"
         brandLabel="wlmouse"
-        tagline="топовая периферия для серьёзных игроков — лёгкие мыши, точные коврики, быстрые клавиатуры"
         bannerImage="https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1400&q=80"
       />
 

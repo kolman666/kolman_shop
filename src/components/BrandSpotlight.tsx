@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Product } from '../data/products'
 import { productPath } from '../lib/productRoute'
@@ -6,71 +7,101 @@ type Props = {
   products: Product[]
   brandSlug: string
   brandLabel: string
-  tagline: string
   bannerImage?: string
 }
 
-export default function BrandSpotlight({ products, brandSlug, brandLabel, tagline, bannerImage }: Props) {
+const VISIBLE = 4
+
+export default function BrandSpotlight({ products, brandSlug, brandLabel, bannerImage }: Props) {
+  const [offset, setOffset] = useState(0)
+
   const brandProducts = products.filter(
     (p) => p.brand.toLowerCase().replace(/\s+/g, '') === brandSlug.toLowerCase().replace(/\s+/g, '')
   )
   if (brandProducts.length === 0) return null
 
+  const maxOffset = Math.max(0, brandProducts.length - VISIBLE)
+  const visible = brandProducts.slice(offset, offset + VISIBLE)
+
+  const prev = () => setOffset((o) => Math.max(0, o - 1))
+  const next = () => setOffset((o) => Math.min(maxOffset, o + 1))
+
   return (
-    <section className="brand-spotlight">
-      <div className="brand-spotlight__inner">
-        <div className="brand-spotlight__top">
-          <h2 className="brand-spotlight__name">{brandLabel}</h2>
+    <section className="bsp">
+      <div className="bsp__inner">
+
+        {/* ── Brand name centered ── */}
+        <h2 className="bsp__name">{brandLabel}</h2>
+
+        {/* ── Full-width banner ── */}
+        <div
+          className="bsp__banner"
+          style={bannerImage ? { backgroundImage: `url(${bannerImage})` } : undefined}
+        >
+          <div className="bsp__banner-overlay" />
           <Link
             to={`/catalog?q=${encodeURIComponent(brandSlug)}`}
-            className="brand-spotlight__cta"
+            className="bsp__banner-cta"
           >
             перейти к бренду →
           </Link>
         </div>
 
-        <div
-          className="brand-spotlight__banner"
-          style={bannerImage ? { backgroundImage: `url(${bannerImage})` } : undefined}
-        >
-          <div className="brand-spotlight__banner-overlay" />
-          <p className="brand-spotlight__tagline">{tagline}</p>
+        {/* ── Product strip overlapping banner ── */}
+        <div className="bsp__strip-outer">
+          <button
+            type="button"
+            className="bsp__arrow bsp__arrow--prev"
+            onClick={prev}
+            disabled={offset === 0}
+            aria-label="previous"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+
+          <div className="bsp__strip">
+            {visible.map((product) => (
+              <Link
+                key={product.id}
+                to={productPath(product)}
+                className="bsp__card"
+              >
+                <div className="bsp__card-img-wrap">
+                  {product.availability === 'inStock' && (
+                    <span className="bsp__card-badge">в наличии</span>
+                  )}
+                  <img
+                    className="bsp__card-img"
+                    src={product.image}
+                    alt={product.titleDirect ?? product.brand}
+                  />
+                </div>
+                <div className="bsp__card-body">
+                  {product.specs && product.specs.length > 0 && (
+                    <p className="bsp__card-category">{product.specs.slice(0, 2).join(' · ')}</p>
+                  )}
+                  <p className="bsp__card-title">{product.brand} {product.titleDirect}</p>
+                  <strong className="bsp__card-price">{product.price.toLocaleString('ru-RU')} ₽</strong>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            className="bsp__arrow bsp__arrow--next"
+            onClick={next}
+            disabled={offset >= maxOffset}
+            aria-label="next"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
         </div>
 
-        <div className="brand-spotlight__products">
-          {brandProducts.map((product) => (
-            <Link
-              key={product.id}
-              to={productPath(product)}
-              className="brand-spotlight__card"
-            >
-              <div className="brand-spotlight__card-img-wrap">
-                <img
-                  className="brand-spotlight__card-img"
-                  src={product.image}
-                  alt={product.titleDirect ?? product.brand}
-                />
-                {product.availability === 'inStock' && (
-                  <span className="brand-spotlight__card-badge">в наличии</span>
-                )}
-              </div>
-              <div className="brand-spotlight__card-body">
-                <p className="brand-spotlight__card-meta">{product.brand}</p>
-                <p className="brand-spotlight__card-title">{product.titleDirect ?? product.brand}</p>
-                {product.specs && product.specs.length > 0 && (
-                  <div className="brand-spotlight__card-specs">
-                    {product.specs.slice(0, 2).map((s) => (
-                      <span key={s} className="brand-spotlight__card-spec">{s}</span>
-                    ))}
-                  </div>
-                )}
-                <strong className="brand-spotlight__card-price">
-                  {product.price.toLocaleString('ru-RU')} rub
-                </strong>
-              </div>
-            </Link>
-          ))}
-        </div>
       </div>
     </section>
   )

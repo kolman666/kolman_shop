@@ -4,12 +4,35 @@ import type { Product } from '../data/products'
 import { productPath } from '../lib/productRoute'
 import { fetchBloggers, type BloggerRow } from '../lib/fetchBloggers'
 
+const FALLBACK_BLOGGERS: BloggerRow[] = [
+  {
+    id: -1,
+    name: 'shadowkekw',
+    description: 'стример-миллионник с онлайн-аудиторией более 2М. играет на топовых сетапах и тестирует новейшую периферию',
+    image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80',
+    social_url: 'https://t.me/kolman_shop_bot',
+    gear_product_ids: [],
+    is_active: true,
+    sort_order: 1,
+  },
+  {
+    id: -2,
+    name: 'kolman picks',
+    description: 'наш собственный выбор — лучшая периферия после многочасового тестирования. только то, во что верим',
+    image: 'https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=800&q=80',
+    social_url: 'https://t.me/kolman_shop_bot',
+    gear_product_ids: [],
+    is_active: true,
+    sort_order: 2,
+  },
+]
+
 type Props = {
   products: Product[]
 }
 
 export default function BloggersBlock({ products }: Props) {
-  const [bloggers, setBloggers] = useState<BloggerRow[]>([])
+  const [bloggers, setBloggers] = useState<BloggerRow[]>(FALLBACK_BLOGGERS)
   const [current, setCurrent] = useState(0)
 
   useEffect(() => {
@@ -17,8 +40,6 @@ export default function BloggersBlock({ products }: Props) {
       if (rows.length > 0) setBloggers(rows)
     })
   }, [])
-
-  if (bloggers.length === 0) return null
 
   const blogger = bloggers[current]
   const gearProducts = products.filter(
