@@ -899,25 +899,79 @@ function MigrationNotice() {
   )
 }
 
+type ContentCategory = { catalogKey: string; title: string; image: string }
+type ContentPerk = { title: string; desc: string }
+
+const CATEGORY_KEYS = [
+  'products.categories.mice',
+  'products.categories.mousepads',
+  'products.categories.keyboards',
+  'products.categories.headsets',
+  'products.categories.glides',
+  'products.categories.accessories',
+]
+const CATEGORY_KEY_LABELS: Record<string, string> = {
+  'products.categories.mice': 'мышки',
+  'products.categories.mousepads': 'коврики',
+  'products.categories.keyboards': 'клавиатуры',
+  'products.categories.headsets': 'наушники',
+  'products.categories.glides': 'глайды / грипсы',
+  'products.categories.accessories': 'аксессуары',
+}
+const DEFAULT_CATEGORIES: ContentCategory[] = [
+  { catalogKey: 'products.categories.mice', title: 'мышки', image: 'https://polzarium.ru/content/images/2025/05/0-7.jpg' },
+  { catalogKey: 'products.categories.mousepads', title: 'коврики', image: 'https://ae01.alicdn.com/kf/Sdf5307d2047f4386b59dde83ff7df080r.png' },
+  { catalogKey: 'products.categories.keyboards', title: 'клавиатуры', image: 'https://iqunix.com/cdn/shop/files/07_ef9ac2e6-4b41-471b-af02-4b537819110b.jpg?v=1765951802&width=1946' },
+  { catalogKey: 'products.categories.headsets', title: 'наушники', image: 'https://i.ytimg.com/vi/AbOziOlBiMk/maxresdefault.jpg' },
+  { catalogKey: 'products.categories.glides', title: 'глайды / грипсы', image: 'https://www.deltamechanics.ru/pictures/product/big/20100_big.jpg' },
+  { catalogKey: 'products.categories.accessories', title: 'аксессуары', image: 'https://fbi.cults3d.com/uploaders/14107503/illustration-file/1080cada-90f7-4eef-a8fe-a112bfde6460/cyberpunk_edgerunners_keycaps_04.jpg' },
+]
+const DEFAULT_PERKS: ContentPerk[] = [
+  { title: 'гарантия качества', desc: 'каждая позиция в каталоге проходит тщательное тестирование перед тем, как попасть к вам. гарантийное обслуживание и поддержка специалистов включены.' },
+  { title: 'быстрая доставка по стране', desc: 'средний срок доставки составляет 3 рабочих дня. отправляем через CDEK с трекингом и уведомлениями на каждом этапе.' },
+  { title: '0 фейковых отзывов', desc: 'реальная обратная связь от игроков, которые уже протестировали наше железо. доверие и честная рекомендация для нас важнее громких обещаний.' },
+]
+
 function ContentTab() {
   const [slides, setSlides] = useState<HeroSlide[]>(DEFAULT_SLIDES)
+  const [categories, setCategories] = useState<ContentCategory[]>(DEFAULT_CATEGORIES)
+  const [perks, setPerks] = useState<ContentPerk[]>(DEFAULT_PERKS)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState<string | null>(null) // which section is saving
+  const [saved, setSaved] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [needsMigration, setNeedsMigration] = useState(false)
 
   useEffect(() => {
-    fetchSiteContent<HeroSlide[]>('hero_slides').then((result) => {
-      if (result.needsMigration) {
+    Promise.all([
+      fetchSiteContent<HeroSlide[]>('hero_slides'),
+      fetchSiteContent<ContentCategory[]>('homepage_categories'),
+      fetchSiteContent<ContentPerk[]>('homepage_perks'),
+    ]).then(([slidesResult, catsResult, perksResult]) => {
+      if (slidesResult.needsMigration || catsResult.needsMigration || perksResult.needsMigration) {
         setNeedsMigration(true)
-      } else if (!result.error && result.data && result.data.length > 0) {
-        setSlides(result.data)
+      } else {
+        if (!slidesResult.error && slidesResult.data && slidesResult.data.length > 0) setSlides(slidesResult.data)
+        if (!catsResult.error && catsResult.data && catsResult.data.length > 0) setCategories(catsResult.data)
+        if (!perksResult.error && perksResult.data && perksResult.data.length > 0) setPerks(perksResult.data)
       }
-      if (result.error && !result.needsMigration) setError(result.error)
       setLoading(false)
     })
   }, [])
+
+  async function saveSection(key: string, data: unknown) {
+    setSaving(key)
+    setError('')
+    try {
+      await updateSiteContent(key, data)
+      setSaved(key)
+      setTimeout(() => setSaved(null), 2500)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка сохранения')
+    } finally {
+      setSaving(null)
+    }
+  }
 
   function updateSlide(index: number, field: keyof HeroSlide, value: string) {
     setSlides((prev) => prev.map((s, i) => i === index ? { ...s, [field]: value } : s))
@@ -931,19 +985,6 @@ function ContentTab() {
     setSlides((prev) => prev.filter((_, i) => i !== index))
   }
 
-  async function save() {
-    setSaving(true)
-    setError('')
-    try {
-      await updateSiteContent('hero_slides', slides)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2500)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка сохранения')
-    } finally {
-      setSaving(false)
-    }
-  }
 
   if (loading) {
     return (
@@ -960,18 +1001,35 @@ function ContentTab() {
     return <div className="admin__content-tab"><MigrationNotice /></div>
   }
 
-  return (
-    <div className="admin__content-tab">
+  function SectionHeader({ title, sectionKey }: { title: string; sectionKey: string; }) {
+    return (
       <div className="admin__content-header">
-        <h2 className="admin__content-title">Главный баннер</h2>
+        <h2 className="admin__content-title">{title}</h2>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          {saved && <span className="admin__saved-toast">Сохранено ✓</span>}
+          {saved === sectionKey && <span className="admin__saved-toast">Сохранено ✓</span>}
           {error && <span style={{ color: 'var(--color-main)', fontSize: 13 }}>{error}</span>}
-          <button type="button" className="admin__save-btn" onClick={() => void save()} disabled={saving}>
-            {saving ? 'Сохраняем...' : 'Сохранить'}
+          <button
+            type="button"
+            className="admin__save-btn"
+            onClick={() => {
+              if (sectionKey === 'hero_slides') void saveSection('hero_slides', slides)
+              if (sectionKey === 'homepage_categories') void saveSection('homepage_categories', categories)
+              if (sectionKey === 'homepage_perks') void saveSection('homepage_perks', perks)
+            }}
+            disabled={saving !== null}
+          >
+            {saving === sectionKey ? 'Сохраняем...' : 'Сохранить'}
           </button>
         </div>
       </div>
+    )
+  }
+
+  return (
+    <div className="admin__content-tab">
+
+      {/* ── Hero slides ── */}
+      <SectionHeader title="Главный баннер" sectionKey="hero_slides" />
 
       {slides.length === 0 ? (
         <div className="admin__content-empty">
@@ -1041,6 +1099,96 @@ function ContentTab() {
           </button>
         </>
       )}
+
+      {/* ── Categories ── */}
+      <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 28, marginTop: 8 }}>
+        <SectionHeader title="Категории на главной" sectionKey="homepage_categories" />
+        <p className="admin__label-hint" style={{ marginBottom: 16 }}>Заголовок и фото для каждой из 6 категорий на главной странице.</p>
+        <div className="admin__slides-list">
+          {categories.map((cat, i) => (
+            <div key={i} className="admin__slide-card">
+              <div className="admin__slide-card-header">
+                <span className="admin__slide-num">Категория {i + 1}</span>
+                <span style={{ fontSize: 11, color: 'var(--color-text-ghost)' }}>{CATEGORY_KEY_LABELS[cat.catalogKey] ?? cat.catalogKey}</span>
+              </div>
+              <div className="admin__two-col">
+                <div className="admin__field">
+                  <label className="admin__label">Тип</label>
+                  <select
+                    className="admin__select"
+                    value={cat.catalogKey}
+                    onChange={(e) => setCategories((prev) => prev.map((c, idx) => idx === i ? { ...c, catalogKey: e.target.value } : c))}
+                  >
+                    {CATEGORY_KEYS.map((k) => (
+                      <option key={k} value={k}>{CATEGORY_KEY_LABELS[k] ?? k}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="admin__field">
+                  <label className="admin__label">Название</label>
+                  <input
+                    className="admin__input"
+                    value={cat.title}
+                    onChange={(e) => setCategories((prev) => prev.map((c, idx) => idx === i ? { ...c, title: e.target.value } : c))}
+                    placeholder="мышки"
+                  />
+                </div>
+              </div>
+              <div className="admin__field">
+                <label className="admin__label">Фото (URL)</label>
+                <div className="admin__image-field">
+                  <input
+                    className="admin__input"
+                    type="url"
+                    value={cat.image}
+                    onChange={(e) => setCategories((prev) => prev.map((c, idx) => idx === i ? { ...c, image: e.target.value } : c))}
+                    placeholder="https://..."
+                  />
+                  {cat.image
+                    ? <img className="admin__image-preview" src={cat.image} alt="preview" onError={(e) => { ;(e.target as HTMLImageElement).style.opacity = '0' }} />
+                    : <div className="admin__image-preview admin__image-preview--empty"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg></div>
+                  }
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Perks / Advantages ── */}
+      <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 28, marginTop: 8 }}>
+        <SectionHeader title="Преимущества" sectionKey="homepage_perks" />
+        <p className="admin__label-hint" style={{ marginBottom: 16 }}>3 карточки преимуществ под слайдером.</p>
+        <div className="admin__slides-list">
+          {perks.map((perk, i) => (
+            <div key={i} className="admin__slide-card">
+              <div className="admin__slide-card-header">
+                <span className="admin__slide-num">Преимущество {i + 1}</span>
+              </div>
+              <div className="admin__field">
+                <label className="admin__label">Заголовок</label>
+                <input
+                  className="admin__input"
+                  value={perk.title}
+                  onChange={(e) => setPerks((prev) => prev.map((p, idx) => idx === i ? { ...p, title: e.target.value } : p))}
+                  placeholder="гарантия качества"
+                />
+              </div>
+              <div className="admin__field">
+                <label className="admin__label">Описание</label>
+                <textarea
+                  className="admin__textarea"
+                  rows={3}
+                  value={perk.desc}
+                  onChange={(e) => setPerks((prev) => prev.map((p, idx) => idx === i ? { ...p, desc: e.target.value } : p))}
+                  placeholder="краткое описание преимущества..."
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
     </div>
   )
 }

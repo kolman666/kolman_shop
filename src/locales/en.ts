@@ -206,6 +206,76 @@ const en = {
     card1: { title: 'quick response', text: 'we aim to reply the same day. on weekdays usually within a couple of hours.' },
     card2: { title: 'warranty on everything', text: "if something arrived wrong — we'll sort it out. replacement or refund, no questions asked." },
   },
+  partnership: {
+    eyebrow: 'partnership',
+    title: 'work with us',
+    subtitle: 'for creators, resellers, and B2B clients — special terms and direct contact.',
+    card1: {
+      title: 'content creators',
+      text: 'we provide gear for reviews and testing. if your audience is into peripherals — reach out and we will sort out terms.',
+    },
+    card2: {
+      title: 'resellers',
+      text: 'wholesale orders with direct imports from China. we work with small shops and online stores. competitive pricing from 5 units.',
+    },
+    card3: {
+      title: 'B2B & organizations',
+      text: 'we equip cyber cafes, offices and training centers. full workstation setup — mouse, pad, keyboard. custom quotes available.',
+    },
+    ctaLabel: 'get in touch',
+    ctaText: 'tell us about your project — we will discuss partnership formats.',
+    telegramBtn: 'write on telegram',
+    emailBtn: 'send an email',
+  },
+  helpChoose: {
+    eyebrow: 'help me choose',
+    title: 'find the perfect device',
+    subtitle: 'tell us about yourself and your use case — we will match you with the right mouse, keyboard or pad.',
+    card1: {
+      title: 'competitive gaming',
+      text: 'looking for a lightweight mouse with a precise sensor and a fast pad? we will match a combo to your grip, hand size and genre.',
+    },
+    card2: {
+      title: 'work & study',
+      text: 'want a keyboard with comfortable switches for long sessions? we explain the difference between linears, tactiles and clicky switches.',
+    },
+    card3: {
+      title: 'streaming',
+      text: 'care about how your setup looks on camera? we will find peripherals that look great and feel great to use.',
+    },
+    card4: {
+      title: 'first upgrade',
+      text: 'buying your first proper peripheral and not sure where to start? we will tell you what matters and what is just marketing.',
+    },
+    ctaTitle: 'describe what you need',
+    ctaText: 'write to us — we reply fast and help you choose for free.',
+    telegramBtn: 'write on telegram',
+    supportBtn: 'use the form',
+  },
+  delivery: {
+    eyebrow: 'shipping & payment',
+    title: 'get your order',
+    subtitle: 'we ship across Russia via CDEK. most items go out the same day.',
+    card1: {
+      title: 'shipping',
+      text: 'shipped via CDEK with full tracking. average delivery is 3-7 business days depending on region. status updates at every stage.',
+    },
+    card2: {
+      title: 'payment',
+      text: 'we accept bank transfers to Tinkoff/Sber and Avito payments. prepayment or cash on delivery depending on terms.',
+    },
+    card3: {
+      title: 'returns & exchanges',
+      text: 'if an item arrived damaged or is not a good fit — we will sort it out. exchange or refund within 14 days, no questions asked.',
+    },
+    faqTitle: 'faq',
+    faq: [
+      { q: 'can i pick up my order on the same day?', a: 'no, we only ship within Russia via CDEK. no local pickup available.' },
+      { q: 'how do i track my order?', a: 'once shipped, we will send you a CDEK tracking number via telegram or email.' },
+      { q: 'what if i received the wrong item?', a: 'send us a photo — we will organise a replacement or refund at our expense.' },
+      { q: 'do you ship to CIS countries?', a: 'not yet, we currently only ship within Russia. expansion is planned.' },
+    ],
+  },
   products: {
     categories: {
       mice: 'Mice',

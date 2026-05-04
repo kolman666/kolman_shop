@@ -13,6 +13,9 @@ import AdminPage from './pages/AdminPage'
 import CatalogPage from './pages/CatalogPage'
 import ProductPage from './pages/ProductPage'
 import SupportPage from './pages/SupportPage'
+import PartnershipPage from './pages/PartnershipPage'
+import HelpChoosePage from './pages/HelpChoosePage'
+import DeliveryPage from './pages/DeliveryPage'
 import { getCartCount } from './lib/cart'
 
 type SlideText = {
@@ -31,10 +34,6 @@ type Perk = PerkText & {
   icon: ReactNode
 }
 
-type Category = {
-  title: string
-  image: string
-}
 
 type FeaturedProduct = {
   id: number
@@ -238,6 +237,8 @@ function HomePage() {
   const [searchValue, setSearchValue] = useState('')
   const [isBurgerOpen, setIsBurgerOpen] = useState(false)
   const [dbSlides, setDbSlides] = useState<Array<{ tag: string; title: string; subtitle: string; accent: string; img: string }> | null>(null)
+  const [dbCategories, setDbCategories] = useState<Array<{ catalogKey: string; title: string; image: string }> | null>(null)
+  const [dbPerks, setDbPerks] = useState<Array<{ title: string; desc: string }> | null>(null)
   const { products } = useProducts()
 
   useEffect(() => {
@@ -246,6 +247,12 @@ function HomePage() {
         setDbSlides(result.data.map((s) => ({ tag: s.tag, title: s.title, subtitle: s.subtitle, accent: s.accent, img: s.image })))
       }
     })
+    fetchSiteContent<Array<{ catalogKey: string; title: string; image: string }>>('homepage_categories').then((result) => {
+      if (!result.error && result.data && result.data.length > 0) setDbCategories(result.data)
+    })
+    fetchSiteContent<Array<{ title: string; desc: string }>>('homepage_perks').then((result) => {
+      if (!result.error && result.data && result.data.length > 0) setDbPerks(result.data)
+    })
   }, [])
 
   const i18nSlides = (t('slides', { returnObjects: true }) as SlideText[]).map((slide, index) => ({
@@ -253,19 +260,26 @@ function HomePage() {
     img: slideImages[index] ?? '',
   }))
   const slides = dbSlides ?? i18nSlides
+
+  const i18nCategories = (t('categories', { returnObjects: true }) as string[]).map((title, index) => ({
+    catalogKey: homepageCategoryTargets[index] ?? '',
+    title,
+    image: categoryImages[index] ?? '',
+  }))
+  const activeCategories = dbCategories ?? i18nCategories
+
+  const i18nPerksBase = t('perks', { returnObjects: true }) as PerkText[]
+  const activePerks = (dbPerks ?? i18nPerksBase).map((perk, index) => ({
+    ...perk,
+    icon: perkIcons[index],
+  })) as Perk[]
   const navLinks = t('navLinks', { returnObjects: true }) as string[]
   const topLinks = t('topLinks', { returnObjects: true }) as string[]
   const footerNavigation = t('footerNavigation', { returnObjects: true }) as string[]
   const footerServices = t('footerServices', { returnObjects: true }) as string[]
   const footerProducts = t('footerProducts', { returnObjects: true }) as string[]
-  const perks = (t('perks', { returnObjects: true }) as PerkText[]).map((perk, index) => ({
-    ...perk,
-    icon: perkIcons[index],
-  })) as Perk[]
-  const categories = (t('categories', { returnObjects: true }) as string[]).map((title, index) => ({
-    title,
-    image: categoryImages[index],
-  })) as Category[]
+  // perks and categories now come from DB override (activePerks / activeCategories below)
+
   const featuredProducts = products
     .filter((product) => product.isFeatured)
     .slice(0, 2)
@@ -318,7 +332,7 @@ function HomePage() {
     navigate(q ? `/catalog?q=${encodeURIComponent(q)}` : '/catalog')
   }
 
-  const topLinkTargets = ['/about', '/catalog', '/support', '/catalog', '/catalog?featured=1']
+  const topLinkTargets = ['/about', '/partnership', '/support', '/help-choose', '/delivery']
   const navCategoryTargets = [
     'products.categories.mice',
     'products.categories.mousepads',
@@ -528,7 +542,7 @@ function HomePage() {
         </section>
 
         <section className="perks-grid">
-          {perks.map((perk) => (
+          {activePerks.map((perk) => (
             <article key={perk.title} className="perk-card">
               <div className="perk-card__icon">{perk.icon}</div>
               <div>
@@ -549,10 +563,10 @@ function HomePage() {
           </div>
 
           <div className="category-grid">
-            {categories.map((category, index) => (
+            {activeCategories.map((category) => (
               <Link
-                key={category.title}
-                to={`/catalog?category=${encodeURIComponent(homepageCategoryTargets[index] ?? 'products.categories.mice')}`}
+                key={category.catalogKey}
+                to={category.catalogKey ? `/catalog?category=${encodeURIComponent(category.catalogKey)}` : '/catalog'}
                 className="category-card"
               >
                 <div className="category-card__top">
@@ -600,27 +614,6 @@ function HomePage() {
           </div>
         </section>
 
-        <section className="brands-section" aria-labelledby="brands-title">
-          <div className="brands-section__head">
-            <div>
-              <p className="brands-section__kicker">{t('ui.brandsKicker')}</p>
-              <h2 id="brands-title" className="brands-section__title">{t('ui.brandsTitle')}</h2>
-            </div>
-            <p className="brands-section__note">{t('ui.brandsNote')}</p>
-          </div>
-
-          <div className="brands-strip brands-strip--fullbleed">
-            <div className="marquee-wrap">
-              <div className="marquee-track">
-                {[...brandLogos, ...brandLogos].map((brand, i) => (
-                  <div key={`${brand.name}-${i}`} className="marquee-item">
-                    {brand.svg}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
 
       <BrandSpotlight
@@ -629,6 +622,27 @@ function HomePage() {
         brandLabel="wlmouse"
         bannerImage="https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1400&q=80"
       />
+
+      <section className="brands-section brands-section--standalone" aria-labelledby="brands-title">
+        <div className="container brands-section__head">
+          <div>
+            <p className="brands-section__kicker">{t('ui.brandsKicker')}</p>
+            <h2 id="brands-title" className="brands-section__title">{t('ui.brandsTitle')}</h2>
+          </div>
+          <p className="brands-section__note">{t('ui.brandsNote')}</p>
+        </div>
+        <div className="brands-strip brands-strip--fullbleed">
+          <div className="marquee-wrap">
+            <div className="marquee-track">
+              {[...brandLogos, ...brandLogos].map((brand, i) => (
+                <div key={`${brand.name}-${i}`} className="marquee-item">
+                  {brand.svg}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <BloggersBlock products={products} />
 
@@ -812,6 +826,18 @@ export default function App() {
               <ProductPage />
             </SiteChrome>
           }
+        />
+        <Route
+          path="/partnership"
+          element={<SiteChrome><PartnershipPage /></SiteChrome>}
+        />
+        <Route
+          path="/help-choose"
+          element={<SiteChrome><HelpChoosePage /></SiteChrome>}
+        />
+        <Route
+          path="/delivery"
+          element={<SiteChrome><DeliveryPage /></SiteChrome>}
         />
         <Route path="/admin" element={<AdminPage />} />
       </Routes>

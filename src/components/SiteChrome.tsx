@@ -118,7 +118,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [location.pathname, location.search])
 
-  const topLinkTargets = ['/about', '/catalog', '/support', '/catalog', '/catalog?featured=1']
+  const topLinkTargets = ['/about', '/partnership', '/support', '/help-choose', '/delivery']
   const navCategoryTargets = [
     'products.categories.mice',
     'products.categories.mousepads',
@@ -135,13 +135,11 @@ export default function SiteChrome({ children }: SiteChromeProps) {
   const pathParts = location.pathname.split('/').filter(Boolean)
   const breadcrumbs: Array<{ to?: string; label: string }> = [{ to: '/', label: t('ui.breadcrumbs.home') }]
 
-  if (pathParts[0] === 'about') {
-    breadcrumbs.push({ label: 'о нас' })
-  }
-
-  if (pathParts[0] === 'support') {
-    breadcrumbs.push({ label: 'поддержка' })
-  }
+  if (pathParts[0] === 'about') breadcrumbs.push({ label: 'о нас' })
+  if (pathParts[0] === 'support') breadcrumbs.push({ label: 'поддержка' })
+  if (pathParts[0] === 'partnership') breadcrumbs.push({ label: 'партнерство' })
+  if (pathParts[0] === 'help-choose') breadcrumbs.push({ label: 'помочь с выбором' })
+  if (pathParts[0] === 'delivery') breadcrumbs.push({ label: 'доставка и оплата' })
 
   if (pathParts[0] === 'catalog') {
     breadcrumbs.push({ label: t('ui.breadcrumbs.catalog') })
