@@ -11,6 +11,11 @@ export type BloggerRow = {
   sort_order: number
 }
 
+export type FetchBloggersResult = {
+  data: BloggerRow[]
+  error: string | null
+}
+
 export async function fetchBloggers(activeOnly = true): Promise<BloggerRow[]> {
   if (!supabase) return []
   let query = supabase.from('bloggers').select('*').order('sort_order', { ascending: true })
@@ -18,6 +23,17 @@ export async function fetchBloggers(activeOnly = true): Promise<BloggerRow[]> {
   const { data, error } = await query
   if (error) return []
   return (data as BloggerRow[]) ?? []
+}
+
+export async function fetchBloggersWithError(activeOnly = true): Promise<FetchBloggersResult> {
+  if (!supabase) return { data: [], error: 'Supabase not configured' }
+  let query = supabase.from('bloggers').select('*').order('sort_order', { ascending: true })
+  if (activeOnly) query = query.eq('is_active', true)
+  const { data, error } = await query
+  if (error) {
+    return { data: [], error: error.message }
+  }
+  return { data: (data as BloggerRow[]) ?? [], error: null }
 }
 
 export async function createBlogger(

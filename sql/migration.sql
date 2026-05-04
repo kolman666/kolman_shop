@@ -11,11 +11,11 @@ VALUES
   'Компактная 65% клавиатура с поддержкой горячей замены свитчей, трёхрежимным подключением (USB / 2.4G / BT) и gasket-маунтом для мягкого тактильного отклика.',
   7990,
   'https://ae01.alicdn.com/kf/Sdf5307d2047f4386b59dde83ff7df080r.png',
-  '["https://ae01.alicdn.com/kf/Sdf5307d2047f4386b59dde83ff7df080r.png"]',
+  ARRAY['https://ae01.alicdn.com/kf/Sdf5307d2047f4386b59dde83ff7df080r.png']::text[],
   'inStock',
   'products.categories.keyboards',
-  '["hot-swap", "tri-mode", "65%", "gasket mount", "rgb"]',
-  '[{"key":"switches","label":"Свитчи","options":["Red","Brown","Blue"]}]',
+  ARRAY['hot-swap', 'tri-mode', '65%', 'gasket mount', 'rgb']::text[],
+  $$[{"key":"switches","label":"Свитчи","options":["Red","Brown","Blue"]}]$$,
   false,
   10
 ),
@@ -26,11 +26,11 @@ VALUES
   'Симметричная игровая мышь с флагманским датчиком PAW3950 и магнитным энкодером колеса для плавной прокрутки.',
   5990,
   'https://polzarium.ru/content/images/2025/05/0-7.jpg',
-  '["https://polzarium.ru/content/images/2025/05/0-7.jpg"]',
+  ARRAY['https://polzarium.ru/content/images/2025/05/0-7.jpg']::text[],
   'inStock',
   'products.categories.mice',
-  '["PAW3950", "8K hz", "61g", "magnetic encoder", "tri-mode"]',
-  '[]',
+  ARRAY['PAW3950', '8K hz', '61g', 'magnetic encoder', 'tri-mode']::text[],
+  $$[]$$,
   false,
   10
 ),
@@ -41,11 +41,11 @@ VALUES
   'Профессиональный игровой коврик с выбором покрытия: Speed для быстрых свайпов, Control для точных микродвижений, Balanced для всего остального.',
   2490,
   'https://fbi.cults3d.com/uploaders/14107503/illustration-file/1080cada-90f7-4eef-a8fe-a112bfde6460/cyberpunk_edgerunners_keycaps_04.jpg',
-  '[]',
+  ARRAY[]::text[],
   'inStock',
   'products.categories.mousepads',
-  '["900x400mm", "3mm", "anti-slip base"]',
-  '[{"key":"surface","label":"Покрытие","options":["Speed","Control","Balanced"]}]',
+  ARRAY['900x400mm', '3mm', 'anti-slip base']::text[],
+  $$[{"key":"surface","label":"Покрытие","options":["Speed","Control","Balanced"]}]$$,
   false,
   15
 )
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS site_content (
 -- Seed default hero slides (mirrors the hardcoded fallback in App.tsx)
 INSERT INTO site_content (key, value) VALUES (
   'hero_slides',
-  '[
+  $$[
     {
       "tag": "новинка",
       "title": "atk gear ghost ultimate",
@@ -84,7 +84,7 @@ INSERT INTO site_content (key, value) VALUES (
       "accent": "сенсор hero 25600 внутри",
       "image": "https://images.unsplash.com/photo-1563297007-0686b7003af7?w=800&q=80"
     }
-  ]'
+  ]$$::jsonb
 ) ON CONFLICT (key) DO NOTHING;
 
 -- ─── bloggers table ────────────────────────────────────────────────────────────
@@ -109,7 +109,7 @@ VALUES
   'стример-миллионник с онлайн-аудиторией более 2М. играет на топовых сетапах и обозревает новейшую периферию',
   'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&q=80',
   'https://t.me/kolman_shop_bot',
-  '{}',
+  ARRAY[]::INTEGER[],
   true,
   1
 ),
@@ -118,7 +118,7 @@ VALUES
   'наш собственный выбор — топовая периферия, которую мы рекомендуем после длительного тестирования',
   'https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=600&q=80',
   'https://t.me/kolman_shop_bot',
-  '{}',
+  ARRAY[]::INTEGER[],
   true,
   2
 )

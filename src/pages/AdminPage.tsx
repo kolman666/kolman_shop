@@ -14,7 +14,7 @@ import {
 } from '../lib/adminProducts'
 import { fetchSiteContent, updateSiteContent } from '../lib/siteContent'
 import {
-  fetchBloggers,
+  fetchBloggersWithError,
   createBlogger,
   updateBlogger,
   deleteBlogger,
@@ -852,8 +852,12 @@ function ContentTab() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchSiteContent<HeroSlide[]>('hero_slides').then((val) => {
-      if (val && val.length > 0) setSlides(val)
+    fetchSiteContent<HeroSlide[]>('hero_slides').then((result) => {
+      if (result.error) {
+        setError(result.error)
+      } else if (result.data && result.data.length > 0) {
+        setSlides(result.data)
+      }
       setLoading(false)
     })
   }, [])
@@ -884,7 +888,28 @@ function ContentTab() {
     }
   }
 
-  if (loading) return <div className="admin__content-tab"><p style={{ color: 'var(--color-text-dim)' }}>Загрузка...</p></div>
+  if (loading) {
+    return (
+      <div className="admin__content-tab admin__content-tab--empty">
+        <svg className="admin__empty-icon" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+          <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
+        </svg>
+        <p className="admin__empty-text">Загрузка контента...</p>
+      </div>
+    )
+  }
+
+  if (error && slides.length === 0) {
+    return (
+      <div className="admin__content-tab admin__content-tab--empty">
+        <svg className="admin__empty-icon admin__empty-icon--error" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <p className="admin__empty-text">Ошибка загрузки</p>
+        <p style={{ color: 'var(--color-text-dim)', fontSize: 13, marginTop: 8 }}>{error}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="admin__content-tab">
@@ -899,58 +924,74 @@ function ContentTab() {
         </div>
       </div>
 
-      <div className="admin__slides-list">
-        {slides.map((slide, index) => (
-          <div key={index} className="admin__slide-card">
-            <div className="admin__slide-card-header">
-              <span className="admin__slide-num">Слайд {index + 1}</span>
-              <button type="button" className="admin__icon-btn admin__icon-btn--danger" onClick={() => removeSlide(index)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-                  <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
-                </svg>
-              </button>
-            </div>
-            <div className="admin__two-col">
-              <div className="admin__field">
-                <label className="admin__label">Тег</label>
-                <input className="admin__input" value={slide.tag} onChange={(e) => updateSlide(index, 'tag', e.target.value)} placeholder="новинка" />
-              </div>
-              <div className="admin__field">
-                <label className="admin__label">Заголовок</label>
-                <input className="admin__input" value={slide.title} onChange={(e) => updateSlide(index, 'title', e.target.value)} placeholder="название продукта" />
-              </div>
-            </div>
-            <div className="admin__field">
-              <label className="admin__label">Подзаголовок</label>
-              <input className="admin__input" value={slide.subtitle} onChange={(e) => updateSlide(index, 'subtitle', e.target.value)} placeholder="краткое описание" />
-            </div>
-            <div className="admin__field">
-              <label className="admin__label">Акцентный текст</label>
-              <input className="admin__input" value={slide.accent} onChange={(e) => updateSlide(index, 'accent', e.target.value)} placeholder="короткая фраза-акцент" />
-            </div>
-            <div className="admin__field">
-              <label className="admin__label">Фото (URL)</label>
-              <div className="admin__image-field">
-                <input className="admin__input" type="url" value={slide.image} onChange={(e) => updateSlide(index, 'image', e.target.value)} placeholder="https://..." />
-                {slide.image ? (
-                  <img className="admin__image-preview" src={slide.image} alt="preview" />
-                ) : (
-                  <div className="admin__image-preview admin__image-preview--empty">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+      {slides.length === 0 ? (
+        <div className="admin__content-empty">
+          <svg className="admin__empty-icon" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+          </svg>
+          <p className="admin__empty-text">Нет слайдов баннера</p>
+          <button type="button" className="admin__new-btn admin__new-btn--auto" onClick={addSlide}>
+            + Добавить слайд
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="admin__slides-list">
+            {slides.map((slide, index) => (
+              <div key={index} className="admin__slide-card">
+                <div className="admin__slide-card-header">
+                  <span className="admin__slide-num">Слайд {index + 1}</span>
+                  <button type="button" className="admin__icon-btn admin__icon-btn--danger" onClick={() => removeSlide(index)}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                      <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
                     </svg>
+                  </button>
+                </div>
+                <div className="admin__two-col">
+                  <div className="admin__field">
+                    <label className="admin__label">Тег</label>
+                    <input className="admin__input" value={slide.tag} onChange={(e) => updateSlide(index, 'tag', e.target.value)} placeholder="новинка" />
                   </div>
-                )}
+                  <div className="admin__field">
+                    <label className="admin__label">Заголовок</label>
+                    <input className="admin__input" value={slide.title} onChange={(e) => updateSlide(index, 'title', e.target.value)} placeholder="название продукта" />
+                  </div>
+                </div>
+                <div className="admin__field">
+                  <label className="admin__label">Подзаголовок</label>
+                  <input className="admin__input" value={slide.subtitle} onChange={(e) => updateSlide(index, 'subtitle', e.target.value)} placeholder="краткое описание" />
+                </div>
+                <div className="admin__field">
+                  <label className="admin__label">Акцентный текст</label>
+                  <input className="admin__input" value={slide.accent} onChange={(e) => updateSlide(index, 'accent', e.target.value)} placeholder="короткая фраза-акцент" />
+                </div>
+                <div className="admin__field">
+                  <label className="admin__label">Фото (URL)</label>
+                  <div className="admin__image-field">
+                    <input className="admin__input" type="url" value={slide.image} onChange={(e) => updateSlide(index, 'image', e.target.value)} placeholder="https://..." />
+                    {slide.image ? (
+                      <img className="admin__image-preview" src={slide.image} alt="preview" />
+                    ) : (
+                      <div className="admin__image-preview admin__image-preview--empty">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <button type="button" className="admin__spec-add-btn" style={{ marginTop: 4 }} onClick={addSlide}>
-        + Добавить слайд
-      </button>
+          <button type="button" className="admin__spec-add-btn" style={{ marginTop: 4 }} onClick={addSlide}>
+            + Добавить слайд
+          </button>
+        </>
+      )}
     </div>
   )
 }
@@ -985,6 +1026,7 @@ function bloggerToForm(b: BloggerRow): BloggerForm {
 function BloggersTab({ allProducts }: { allProducts: Product[] }) {
   const [bloggers, setBloggers] = useState<BloggerRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<BloggerForm>(BLANK_BLOGGER)
@@ -995,8 +1037,13 @@ function BloggersTab({ allProducts }: { allProducts: Product[] }) {
 
   const loadBloggers = async () => {
     setLoading(true)
-    const rows = await fetchBloggers(false)
-    setBloggers(rows)
+    setError('')
+    const result = await fetchBloggersWithError(false)
+    if (result.error) {
+      setError(result.error)
+    } else {
+      setBloggers(result.data)
+    }
     setLoading(false)
   }
 
@@ -1078,12 +1125,25 @@ function BloggersTab({ allProducts }: { allProducts: Product[] }) {
         <div className="admin__sidebar-top">
           <button type="button" className="admin__new-btn" onClick={openNew}>+ Новый блогер</button>
         </div>
+        
+        {error && (
+          <div style={{ padding: '12px 16px', background: 'rgba(225, 29, 29, 0.1)', borderRadius: '8px', margin: '0 0 12px', border: '1px solid rgba(225, 29, 29, 0.3)' }}>
+            <p style={{ margin: 0, color: 'var(--color-main)', fontSize: 12, fontWeight: 500 }}>Ошибка загрузки:</p>
+            <p style={{ margin: '4px 0 0', color: 'var(--color-text-dim)', fontSize: 11 }}>{error}</p>
+          </div>
+        )}
+
         <div className="admin__stats">
           <div className="admin__stat"><span className="admin__stat-label">Всего</span><strong className="admin__stat-value">{bloggers.length}</strong></div>
           <div className="admin__stat"><span className="admin__stat-label">Активных</span><strong className="admin__stat-value">{bloggers.filter((b) => b.is_active).length}</strong></div>
         </div>
         <ul className="admin__list">
           {loading && <li className="admin__list-loading">Загрузка...</li>}
+          {!loading && bloggers.length === 0 && (
+            <li style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-ghost)', fontSize: 13 }}>
+              Нет блогеров
+            </li>
+          )}
           {bloggers.map((b) => (
             <li
               key={b.id}
