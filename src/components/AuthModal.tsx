@@ -47,16 +47,16 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
     return null
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setErrorCode('')
     setSubmitting(true)
 
     try {
       if (mode === 'login') {
-        login(email, password)
+        await login(email, password)
       } else {
-        register(name, email, password)
+        await register(name, email, password)
       }
       onClose()
     } catch (error) {
@@ -83,7 +83,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
           {mode === 'login' ? t('ui.auth.loginLead') : t('ui.auth.registerLead')}
         </p>
 
-        <form className="auth-modal__form" onSubmit={handleSubmit}>
+        <form className="auth-modal__form" onSubmit={(e) => { void handleSubmit(e) }}>
           {mode === 'register' && (
             <label className="auth-modal__field">
               <span>{t('ui.auth.nameLabel')}</span>

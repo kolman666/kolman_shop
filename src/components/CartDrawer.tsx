@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useProducts } from '../hooks/useProducts'
 import { getCart, updateQuantity, removeFromCart, clearCart } from '../lib/cart'
-import { sendTelegramMessage } from '../lib/telegram'
+import { sendTelegramMessage, TelegramSendError } from '../lib/telegram'
 
 type CartDrawerProps = {
   isOpen: boolean
@@ -27,12 +27,15 @@ const DELIVERY_OPTIONS = [
   'Самовывоз (Вологда)',
 ]
 
-function escapeMd(s: string): string {
-  return s.replace(/[*_`[\]]/g, '\\$&')
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
 }
 
 function sanitizeLine(s: string, maxLen = 200): string {
-  return escapeMd(s.replace(/[\r\n\t]/g, ' ').trim().slice(0, maxLen))
+  return escapeHtml(s.replace(/[\r\n\t]/g, ' ').trim().slice(0, maxLen))
 }
 
 function buildOrderMessage(
@@ -42,26 +45,25 @@ function buildOrderMessage(
   contact: string,
   delivery: string,
   comment: string,
-  _titleFn: (key: string) => string,
 ): string {
   const lines: string[] = [
-    '🛒 *новый заказ*',
+    '🛒 <b>новый заказ</b>',
     '',
-    '📦 *состав:*',
+    '📦 <b>состав:</b>',
   ]
 
   for (const entry of entries) {
     const itemTotal = entry.price * entry.quantity
-    lines.push(`- ${escapeMd(entry.title)} × ${entry.quantity} — ${itemTotal.toLocaleString('ru-RU')} ₽`)
+    lines.push(`• ${escapeHtml(entry.title)} × ${entry.quantity} — ${itemTotal.toLocaleString('ru-RU')} ₽`)
   }
 
   lines.push('')
-  lines.push(`💰 *итого:* ${total.toLocaleString('ru-RU')} ₽`)
+  lines.push(`💰 <b>итого:</b> ${total.toLocaleString('ru-RU')} ₽`)
   lines.push('')
-  lines.push(`👤 *имя:* ${sanitizeLine(name) || '—'}`)
-  lines.push(`📞 *контакт:* ${sanitizeLine(contact) || '—'}`)
-  lines.push(`🚚 *доставка:* ${escapeMd(delivery)}`)
-  lines.push(`💬 *комментарий:* ${sanitizeLine(comment, 500) || '—'}`)
+  lines.push(`👤 <b>имя:</b> ${sanitizeLine(name) || '—'}`)
+  lines.push(`📞 <b>контакт:</b> ${sanitizeLine(contact) || '—'}`)
+  lines.push(`🚚 <b>доставка:</b> ${escapeHtml(delivery)}`)
+  lines.push(`💬 <b>комментарий:</b> ${sanitizeLine(comment, 500) || '—'}`)
 
   return lines.join('\n')
 }
@@ -77,7 +79,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const [delivery, setDelivery] = useState(DELIVERY_OPTIONS[0] ?? '')
   const [comment, setComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const prevOpenRef = useRef(isOpen)
 
@@ -145,18 +147,54 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     e.preventDefault()
     if (cartEntries.length === 0) return
     setIsSubmitting(true)
-    setSubmitError(false)
+    setSubmitError(null)
     try {
-      const msg = buildOrderMessage(cartEntries, total, name, contact, delivery, comment, t)
-      await sendTelegramMessage(msg)
+      const msg = buildOrderMessage(cartEntries, total, name, contact, delivery, comment)
+      // Try the new orders endpoint first (stores in DB + sends to Telegram).
+      // Fall back to plain telegram if the orders endpoint isn't deployed yet.
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: cartEntries.map((e) => ({ id: e.id, title: e.title, price: e.price, quantity: e.quantity })),
+            total,
+            name,
+            contact,
+            delivery,
+            comment,
+            telegram_text: msg,
+          }),
+        })
+        if (!res.ok) {
+          if (res.status === 404 || res.status === 405) {
+            await sendTelegramMessage(msg)
+          } else {
+            const body = await res.json().catch(() => ({}))
+            const detail = (body as { error?: string; detail?: string }).detail
+            const errMsg = (body as { error?: string }).error ?? 'request failed'
+            throw new TelegramSendError(res.status, errMsg, detail)
+          }
+        }
+      } catch (err) {
+        if (err instanceof TelegramSendError) throw err
+        // network/CORS — try fallback
+        await sendTelegramMessage(msg)
+      }
       clearCart()
       setView('success')
       setName('')
       setContact('')
       setDelivery(DELIVERY_OPTIONS[0] ?? '')
       setComment('')
-    } catch {
-      setSubmitError(true)
+    } catch (err) {
+      const base = 'не удалось отправить заказ.'
+      if (err instanceof TelegramSendError) {
+        const tail = err.detail ? ` (${err.detail})` : err.message ? ` (${err.message})` : ''
+        setSubmitError(`${base}${tail} проверьте подключение и попробуйте снова.`)
+      } else {
+        setSubmitError(`${base} проверьте подключение и попробуйте снова.`)
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -404,7 +442,7 @@ type CheckoutViewProps = {
   delivery: string
   comment: string
   isSubmitting: boolean
-  submitError: boolean
+  submitError: string | null
   onNameChange: (v: string) => void
   onContactChange: (v: string) => void
   onDeliveryChange: (v: string) => void
@@ -534,7 +572,7 @@ function CheckoutView({
               fontSize: 13,
             }}
           >
-            не удалось отправить заказ. проверьте подключение и попробуйте снова.
+            {submitError}
           </p>
         )}
 

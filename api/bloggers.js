@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { isAdminAuthorized, isSafeHttpUrl } from './_lib/auth.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -8,8 +9,7 @@ function getSupabase() {
 }
 
 function isAuthorized(req) {
-  const secret = req.headers['x-admin-secret']
-  return secret && secret === process.env.ADMIN_SECRET
+  return isAdminAuthorized(req)
 }
 
 const ALLOWED_UPDATE_FIELDS = ['name', 'description', 'image', 'social_url', 'gear_product_ids', 'is_active', 'sort_order']
@@ -22,8 +22,14 @@ function validateBlogger(fields) {
   if (description !== undefined && (typeof description !== 'string' || description.length > 500)) {
     return 'description must be a string (max 500 chars)'
   }
-  if (image !== undefined && typeof image !== 'string') return 'image must be a string'
-  if (social_url !== undefined && typeof social_url !== 'string') return 'social_url must be a string'
+  if (image !== undefined) {
+    if (typeof image !== 'string') return 'image must be a string'
+    if (!isSafeHttpUrl(image, { allowEmpty: true })) return 'image must be a valid http(s) URL'
+  }
+  if (social_url !== undefined) {
+    if (typeof social_url !== 'string') return 'social_url must be a string'
+    if (!isSafeHttpUrl(social_url, { allowEmpty: true })) return 'social_url must be a valid http(s) URL'
+  }
   if (gear_product_ids !== undefined) {
     if (!Array.isArray(gear_product_ids) || gear_product_ids.some((id) => typeof id !== 'number' || !Number.isInteger(id))) {
       return 'gear_product_ids must be an array of integers'

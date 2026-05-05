@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { sendTelegramMessage } from '../lib/telegram'
+import { sendTelegramMessage, TelegramSendError } from '../lib/telegram'
 
 const REQUEST_TYPE_VALUES = ['order', 'product', 'choose', 'delivery', 'other'] as const
 type RequestTypeValue = (typeof REQUEST_TYPE_VALUES)[number]
@@ -17,26 +17,59 @@ const TELEGRAM_LABELS: Record<RequestTypeValue, string> = {
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
 
-async function sendToTelegram(fields: {
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+async function submitInquiry(fields: {
   requestType: RequestTypeValue
   name: string
   contact: string
   message: string
 }) {
   const typeLabel = TELEGRAM_LABELS[fields.requestType]
+  const safeName = escapeHtml(fields.name.slice(0, 200))
+  const safeContact = escapeHtml(fields.contact.slice(0, 200))
+  const safeMessage = escapeHtml(fields.message.slice(0, 3500))
 
   const text = [
-    '📋 *новая заявка в поддержку*',
+    '📋 <b>новая заявка в поддержку</b>',
     '',
-    `📌 *тип:* ${typeLabel}`,
-    `👤 *имя:* ${fields.name || '—'}`,
-    `📞 *контакт:* ${fields.contact || '—'}`,
+    `📌 <b>тип:</b> ${escapeHtml(typeLabel)}`,
+    `👤 <b>имя:</b> ${safeName || '—'}`,
+    `📞 <b>контакт:</b> ${safeContact || '—'}`,
     '',
-    '💬 *вопрос:*',
-    fields.message,
+    '💬 <b>вопрос:</b>',
+    safeMessage,
   ].join('\n')
 
-  await sendTelegramMessage(text)
+  // Try the new inquiries endpoint (stores in DB), fall back to plain telegram
+  try {
+    const res = await fetch('/api/inquiries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: fields.requestType,
+        name: fields.name,
+        contact: fields.contact,
+        message: fields.message,
+        telegram_text: text,
+      }),
+    })
+    if (!res.ok) {
+      if (res.status === 404 || res.status === 405) {
+        await sendTelegramMessage(text)
+        return
+      }
+      const body = await res.json().catch(() => ({}))
+      const errMsg = (body as { error?: string }).error ?? 'request failed'
+      const detail = (body as { detail?: string }).detail
+      throw new TelegramSendError(res.status, errMsg, detail)
+    }
+  } catch (err) {
+    if (err instanceof TelegramSendError) throw err
+    await sendTelegramMessage(text)
+  }
 }
 
 export default function SupportPage() {
@@ -46,18 +79,23 @@ export default function SupportPage() {
   const [contact, setContact] = useState('')
   const [message, setMessage] = useState('')
   const [status, setStatus] = useState<Status>('idle')
+  const [errorDetail, setErrorDetail] = useState<string>('')
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!message.trim()) return
     setStatus('loading')
+    setErrorDetail('')
     try {
-      await sendToTelegram({ requestType, name, contact, message })
+      await submitInquiry({ requestType, name, contact, message })
       setStatus('success')
       setMessage('')
       setName('')
       setContact('')
-    } catch {
+    } catch (err) {
+      if (err instanceof TelegramSendError) {
+        setErrorDetail(err.detail || err.message || '')
+      }
       setStatus('error')
     }
   }
@@ -214,7 +252,7 @@ export default function SupportPage() {
                 fontSize: 13,
               }}
             >
-              {t('support.errorMsg')}
+              {t('support.errorMsg')}{errorDetail ? ` (${errorDetail})` : ''}
             </p>
           )}
 

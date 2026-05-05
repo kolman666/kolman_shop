@@ -8,6 +8,7 @@ import CartDrawer from './components/CartDrawer'
 import BrandSpotlight from './components/BrandSpotlight'
 import BloggersBlock from './components/BloggersBlock'
 import { fetchSiteContent } from './lib/siteContent'
+import { safeBackgroundImage } from './lib/safeUrl'
 import AboutPage from './pages/AboutPage'
 import AdminPage from './pages/AdminPage'
 import CatalogPage from './pages/CatalogPage'
@@ -23,6 +24,7 @@ type SlideText = {
   title: string
   subtitle: string
   accent: string
+  detailsUrl?: string
 }
 
 type PerkText = {
@@ -236,15 +238,15 @@ function HomePage() {
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [searchValue, setSearchValue] = useState('')
   const [isBurgerOpen, setIsBurgerOpen] = useState(false)
-  const [dbSlides, setDbSlides] = useState<Array<{ tag: string; title: string; subtitle: string; accent: string; img: string }> | null>(null)
+  const [dbSlides, setDbSlides] = useState<Array<{ tag: string; title: string; subtitle: string; accent: string; img: string; detailsUrl?: string }> | null>(null)
   const [dbCategories, setDbCategories] = useState<Array<{ catalogKey: string; title: string; image: string }> | null>(null)
   const [dbPerks, setDbPerks] = useState<Array<{ title: string; desc: string }> | null>(null)
   const { products } = useProducts()
 
   useEffect(() => {
-    fetchSiteContent<Array<{ tag: string; title: string; subtitle: string; accent: string; image: string }>>('hero_slides').then((result) => {
+    fetchSiteContent<Array<{ tag: string; title: string; subtitle: string; accent: string; image: string; detailsUrl?: string }>>('hero_slides').then((result) => {
       if (!result.error && result.data && result.data.length > 0) {
-        setDbSlides(result.data.map((s) => ({ tag: s.tag, title: s.title, subtitle: s.subtitle, accent: s.accent, img: s.image })))
+        setDbSlides(result.data.map((s) => ({ tag: s.tag, title: s.title, subtitle: s.subtitle, accent: s.accent, img: s.image, detailsUrl: s.detailsUrl })))
       }
     })
     fetchSiteContent<Array<{ catalogKey: string; title: string; image: string }>>('homepage_categories').then((result) => {
@@ -458,7 +460,7 @@ function HomePage() {
       <main className="container page-content">
         <section className="hero-grid">
           <div className="hero-card">
-            <div className="hero-card__image" style={{ backgroundImage: `url(${slide.img})` }} />
+            <div className="hero-card__image" style={(() => { const u = safeBackgroundImage(slide.img); return u ? { backgroundImage: `url("${u}")` } : undefined })()} />
             <div className="hero-card__overlay" />
             <div className="hero-card__accent" />
 
@@ -473,9 +475,33 @@ function HomePage() {
                   <Link to="/catalog" className="cta-btn">
                     {t('ui.shopNow')}
                   </Link>
-                  <button type="button" className="ghost-btn">
-                    {t('ui.learnMore')}
-                  </button>
+                  {(() => {
+                    const url = (slide.detailsUrl ?? '').trim()
+                    if (!url) return null
+                    // Internal route — render with React Router Link to keep SPA behavior
+                    if (url.startsWith('/')) {
+                      return (
+                        <Link to={url} className="ghost-btn">
+                          {t('ui.learnMore')}
+                        </Link>
+                      )
+                    }
+                    // External — only allow http(s) to block javascript:/data: payloads
+                    if (/^https?:\/\//i.test(url)) {
+                      return (
+                        <a
+                          href={url}
+                          className="ghost-btn"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ textDecoration: 'none' }}
+                        >
+                          {t('ui.learnMore')}
+                        </a>
+                      )
+                    }
+                    return null
+                  })()}
                 </div>
               </div>
 
@@ -577,7 +603,7 @@ function HomePage() {
                     </svg>
                   </span>
                 </div>
-                <div className="category-card__image" style={{ backgroundImage: `url(${category.image})` }} />
+                <div className="category-card__image" style={(() => { const u = safeBackgroundImage(category.image); return u ? { backgroundImage: `url("${u}")` } : undefined })()} />
               </Link>
             ))}
           </div>
@@ -586,7 +612,7 @@ function HomePage() {
             {featuredProducts.map((product) => (
               <article key={product.title} className="featured-card">
                 <Link className="featured-card__cover" to={`/product/${product.slug}`} aria-label={product.title} />
-                <div className="featured-card__media" style={{ backgroundImage: `url(${product.image})` }} />
+                <div className="featured-card__media" style={(() => { const u = safeBackgroundImage(product.image); return u ? { backgroundImage: `url("${u}")` } : undefined })()} />
                 <div className="featured-card__overlay" />
 
                 <div className="featured-card__content">

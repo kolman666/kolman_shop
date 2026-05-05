@@ -841,13 +841,13 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 }
 
 // ── Content Tab ───────────────────────────────────────────────────────────────
-type HeroSlide = { tag: string; title: string; subtitle: string; accent: string; image: string }
-const BLANK_SLIDE: HeroSlide = { tag: '', title: '', subtitle: '', accent: '', image: '' }
+type HeroSlide = { tag: string; title: string; subtitle: string; accent: string; image: string; detailsUrl?: string }
+const BLANK_SLIDE: HeroSlide = { tag: '', title: '', subtitle: '', accent: '', image: '', detailsUrl: '' }
 
 const DEFAULT_SLIDES: HeroSlide[] = [
-  { tag: 'новинка', title: 'atk gear ghost ultimate', subtitle: 'бескомпромиссная игровая мышь с уникальным дизайном', accent: 'никаких компромиссов в производительности', image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&q=80' },
-  { tag: 'хит продаж', title: 'razer viper v4 pro', subtitle: 'ультралегкая беспроводная имба', accent: 'оптический сенсор 50k dpi', image: 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=800&q=80' },
-  { tag: 'лимитка', title: 'logitech g pro superlight 2 yellow edition', subtitle: 'создана вместе с киберспортсменами со всего мира', accent: 'сенсор hero 25600 внутри', image: 'https://images.unsplash.com/photo-1563297007-0686b7003af7?w=800&q=80' },
+  { tag: 'новинка', title: 'atk gear ghost ultimate', subtitle: 'бескомпромиссная игровая мышь с уникальным дизайном', accent: 'никаких компромиссов в производительности', image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&q=80', detailsUrl: '' },
+  { tag: 'хит продаж', title: 'razer viper v4 pro', subtitle: 'ультралегкая беспроводная имба', accent: 'оптический сенсор 50k dpi', image: 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=800&q=80', detailsUrl: '' },
+  { tag: 'лимитка', title: 'logitech g pro superlight 2 yellow edition', subtitle: 'создана вместе с киберспортсменами со всего мира', accent: 'сенсор hero 25600 внутри', image: 'https://images.unsplash.com/photo-1563297007-0686b7003af7?w=800&q=80', detailsUrl: '' },
 ]
 
 const MIGRATION_SQL = `-- Запустите этот SQL в Supabase → SQL Editor
@@ -866,7 +866,29 @@ CREATE TABLE IF NOT EXISTS bloggers (
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);`
+);
+CREATE TABLE IF NOT EXISTS orders (
+  id BIGSERIAL PRIMARY KEY,
+  status TEXT NOT NULL DEFAULT 'new',
+  customer_name TEXT NOT NULL DEFAULT '',
+  customer_contact TEXT NOT NULL DEFAULT '',
+  delivery TEXT NOT NULL DEFAULT '',
+  comment TEXT NOT NULL DEFAULT '',
+  total INTEGER NOT NULL DEFAULT 0,
+  items JSONB NOT NULL DEFAULT '[]',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS orders_status_idx ON orders(status, created_at DESC);
+CREATE TABLE IF NOT EXISTS inquiries (
+  id BIGSERIAL PRIMARY KEY,
+  category TEXT NOT NULL DEFAULT 'other',
+  status TEXT NOT NULL DEFAULT 'new',
+  customer_name TEXT NOT NULL DEFAULT '',
+  customer_contact TEXT NOT NULL DEFAULT '',
+  message TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS inquiries_category_idx ON inquiries(category, created_at DESC);`
 
 function MigrationNotice() {
   const [copied, setCopied] = useState(false)
@@ -985,6 +1007,22 @@ function ContentTab() {
     setSlides((prev) => prev.filter((_, i) => i !== index))
   }
 
+  function addCategory() {
+    setCategories((prev) => [...prev, { catalogKey: CATEGORY_KEYS[0] ?? '', title: '', image: '' }])
+  }
+
+  function removeCategory(index: number) {
+    setCategories((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function addPerk() {
+    setPerks((prev) => [...prev, { title: '', desc: '' }])
+  }
+
+  function removePerk(index: number) {
+    setPerks((prev) => prev.filter((_, i) => i !== index))
+  }
+
 
   if (loading) {
     return (
@@ -1090,6 +1128,19 @@ function ContentTab() {
                     )}
                   </div>
                 </div>
+                <div className="admin__field">
+                  <label className="admin__label">
+                    Ссылка кнопки «Подробнее»{' '}
+                    <span className="admin__label-hint">(внутренняя: /product/slug или /catalog?category=…, либо https://… — оставьте пустым, чтобы скрыть кнопку)</span>
+                  </label>
+                  <input
+                    className="admin__input"
+                    type="text"
+                    value={slide.detailsUrl ?? ''}
+                    onChange={(e) => updateSlide(index, 'detailsUrl', e.target.value)}
+                    placeholder="/product/wlmouse-beast-x-pro  или  https://…"
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -1103,90 +1154,142 @@ function ContentTab() {
       {/* ── Categories ── */}
       <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 28, marginTop: 8 }}>
         <SectionHeader title="Категории на главной" sectionKey="homepage_categories" />
-        <p className="admin__label-hint" style={{ marginBottom: 16 }}>Заголовок и фото для каждой из 6 категорий на главной странице.</p>
-        <div className="admin__slides-list">
-          {categories.map((cat, i) => (
-            <div key={i} className="admin__slide-card">
-              <div className="admin__slide-card-header">
-                <span className="admin__slide-num">Категория {i + 1}</span>
-                <span style={{ fontSize: 11, color: 'var(--color-text-ghost)' }}>{CATEGORY_KEY_LABELS[cat.catalogKey] ?? cat.catalogKey}</span>
-              </div>
-              <div className="admin__two-col">
-                <div className="admin__field">
-                  <label className="admin__label">Тип</label>
-                  <select
-                    className="admin__select"
-                    value={cat.catalogKey}
-                    onChange={(e) => setCategories((prev) => prev.map((c, idx) => idx === i ? { ...c, catalogKey: e.target.value } : c))}
-                  >
-                    {CATEGORY_KEYS.map((k) => (
-                      <option key={k} value={k}>{CATEGORY_KEY_LABELS[k] ?? k}</option>
-                    ))}
-                  </select>
+        <p className="admin__label-hint" style={{ marginBottom: 16 }}>Заголовок, фото и тип для каждой категории. Можно добавлять и удалять.</p>
+        {categories.length === 0 ? (
+          <div className="admin__content-empty">
+            <p className="admin__empty-text">Нет категорий</p>
+            <button type="button" className="admin__new-btn admin__new-btn--auto" onClick={addCategory}>
+              + Добавить категорию
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="admin__slides-list">
+              {categories.map((cat, i) => (
+                <div key={i} className="admin__slide-card">
+                  <div className="admin__slide-card-header">
+                    <span className="admin__slide-num">Категория {i + 1}</span>
+                    <button type="button" className="admin__icon-btn admin__icon-btn--danger" onClick={() => removeCategory(i)} title="Удалить категорию">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                        <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="admin__two-col">
+                    <div className="admin__field">
+                      <label className="admin__label">Тип товара</label>
+                      <select
+                        className="admin__select"
+                        value={CATEGORY_KEYS.includes(cat.catalogKey) ? cat.catalogKey : '__custom__'}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          setCategories((prev) => prev.map((c, idx) => idx === i ? { ...c, catalogKey: v === '__custom__' ? c.catalogKey : v } : c))
+                        }}
+                      >
+                        {CATEGORY_KEYS.map((k) => (
+                          <option key={k} value={k}>{CATEGORY_KEY_LABELS[k] ?? k}</option>
+                        ))}
+                        <option value="__custom__">— своё значение —</option>
+                      </select>
+                      {!CATEGORY_KEYS.includes(cat.catalogKey) && (
+                        <input
+                          className="admin__input"
+                          style={{ marginTop: 6 }}
+                          value={cat.catalogKey}
+                          onChange={(e) => setCategories((prev) => prev.map((c, idx) => idx === i ? { ...c, catalogKey: e.target.value } : c))}
+                          placeholder="my-custom-category"
+                        />
+                      )}
+                    </div>
+                    <div className="admin__field">
+                      <label className="admin__label">Название</label>
+                      <input
+                        className="admin__input"
+                        value={cat.title}
+                        onChange={(e) => setCategories((prev) => prev.map((c, idx) => idx === i ? { ...c, title: e.target.value } : c))}
+                        placeholder="мышки"
+                      />
+                    </div>
+                  </div>
+                  <div className="admin__field">
+                    <label className="admin__label">Фото (URL)</label>
+                    <div className="admin__image-field">
+                      <input
+                        className="admin__input"
+                        type="url"
+                        value={cat.image}
+                        onChange={(e) => setCategories((prev) => prev.map((c, idx) => idx === i ? { ...c, image: e.target.value } : c))}
+                        placeholder="https://..."
+                      />
+                      {cat.image
+                        ? <img className="admin__image-preview" src={cat.image} alt="preview" onError={(e) => { ;(e.target as HTMLImageElement).style.opacity = '0' }} />
+                        : <div className="admin__image-preview admin__image-preview--empty"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg></div>
+                      }
+                    </div>
+                  </div>
                 </div>
-                <div className="admin__field">
-                  <label className="admin__label">Название</label>
-                  <input
-                    className="admin__input"
-                    value={cat.title}
-                    onChange={(e) => setCategories((prev) => prev.map((c, idx) => idx === i ? { ...c, title: e.target.value } : c))}
-                    placeholder="мышки"
-                  />
-                </div>
-              </div>
-              <div className="admin__field">
-                <label className="admin__label">Фото (URL)</label>
-                <div className="admin__image-field">
-                  <input
-                    className="admin__input"
-                    type="url"
-                    value={cat.image}
-                    onChange={(e) => setCategories((prev) => prev.map((c, idx) => idx === i ? { ...c, image: e.target.value } : c))}
-                    placeholder="https://..."
-                  />
-                  {cat.image
-                    ? <img className="admin__image-preview" src={cat.image} alt="preview" onError={(e) => { ;(e.target as HTMLImageElement).style.opacity = '0' }} />
-                    : <div className="admin__image-preview admin__image-preview--empty"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg></div>
-                  }
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
+            <button type="button" className="admin__spec-add-btn" style={{ marginTop: 4 }} onClick={addCategory}>
+              + Добавить категорию
+            </button>
+          </>
+        )}
       </div>
 
       {/* ── Perks / Advantages ── */}
       <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 28, marginTop: 8 }}>
         <SectionHeader title="Преимущества" sectionKey="homepage_perks" />
-        <p className="admin__label-hint" style={{ marginBottom: 16 }}>3 карточки преимуществ под слайдером.</p>
-        <div className="admin__slides-list">
-          {perks.map((perk, i) => (
-            <div key={i} className="admin__slide-card">
-              <div className="admin__slide-card-header">
-                <span className="admin__slide-num">Преимущество {i + 1}</span>
-              </div>
-              <div className="admin__field">
-                <label className="admin__label">Заголовок</label>
-                <input
-                  className="admin__input"
-                  value={perk.title}
-                  onChange={(e) => setPerks((prev) => prev.map((p, idx) => idx === i ? { ...p, title: e.target.value } : p))}
-                  placeholder="гарантия качества"
-                />
-              </div>
-              <div className="admin__field">
-                <label className="admin__label">Описание</label>
-                <textarea
-                  className="admin__textarea"
-                  rows={3}
-                  value={perk.desc}
-                  onChange={(e) => setPerks((prev) => prev.map((p, idx) => idx === i ? { ...p, desc: e.target.value } : p))}
-                  placeholder="краткое описание преимущества..."
-                />
-              </div>
+        <p className="admin__label-hint" style={{ marginBottom: 16 }}>Карточки преимуществ под слайдером. Можно добавлять и удалять.</p>
+        {perks.length === 0 ? (
+          <div className="admin__content-empty">
+            <p className="admin__empty-text">Нет преимуществ</p>
+            <button type="button" className="admin__new-btn admin__new-btn--auto" onClick={addPerk}>
+              + Добавить преимущество
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="admin__slides-list">
+              {perks.map((perk, i) => (
+                <div key={i} className="admin__slide-card">
+                  <div className="admin__slide-card-header">
+                    <span className="admin__slide-num">Преимущество {i + 1}</span>
+                    <button type="button" className="admin__icon-btn admin__icon-btn--danger" onClick={() => removePerk(i)} title="Удалить преимущество">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                        <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="admin__field">
+                    <label className="admin__label">Заголовок</label>
+                    <input
+                      className="admin__input"
+                      value={perk.title}
+                      onChange={(e) => setPerks((prev) => prev.map((p, idx) => idx === i ? { ...p, title: e.target.value } : p))}
+                      placeholder="гарантия качества"
+                    />
+                  </div>
+                  <div className="admin__field">
+                    <label className="admin__label">Описание</label>
+                    <textarea
+                      className="admin__textarea"
+                      rows={3}
+                      value={perk.desc}
+                      onChange={(e) => setPerks((prev) => prev.map((p, idx) => idx === i ? { ...p, desc: e.target.value } : p))}
+                      placeholder="краткое описание преимущества..."
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+            <button type="button" className="admin__spec-add-btn" style={{ marginTop: 4 }} onClick={addPerk}>
+              + Добавить преимущество
+            </button>
+          </>
+        )}
       </div>
 
     </div>

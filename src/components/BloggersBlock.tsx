@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import type { Product } from '../data/products'
 import { productPath } from '../lib/productRoute'
 import { fetchBloggers, type BloggerRow } from '../lib/fetchBloggers'
+import { safeHref, safeBackgroundImage } from '../lib/safeUrl'
 
 const FALLBACK_BLOGGERS: BloggerRow[] = [
   {
@@ -98,26 +99,32 @@ export default function BloggersBlock({ products }: Props) {
 
         <div className="bloggers-stage">
           {/* Main blogger card */}
-          <div
-            className="bloggers-card"
-            style={blogger.image ? { backgroundImage: `url(${blogger.image})` } : undefined}
-          >
-            <div className="bloggers-card__overlay" />
-            <div className="bloggers-card__content">
-              <h3 className="bloggers-card__name">{blogger.name}</h3>
-              <p className="bloggers-card__desc">{blogger.description}</p>
-              {blogger.social_url && (
-                <a
-                  href={blogger.social_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bloggers-card__link"
-                >
-                  посмотреть профиль →
-                </a>
-              )}
-            </div>
-          </div>
+          {(() => {
+            const safeImg = safeBackgroundImage(blogger.image)
+            const safeLink = safeHref(blogger.social_url)
+            return (
+              <div
+                className="bloggers-card"
+                style={safeImg ? { backgroundImage: `url("${safeImg}")` } : undefined}
+              >
+                <div className="bloggers-card__overlay" />
+                <div className="bloggers-card__content">
+                  <h3 className="bloggers-card__name">{blogger.name}</h3>
+                  <p className="bloggers-card__desc">{blogger.description}</p>
+                  {safeLink && (
+                    <a
+                      href={safeLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bloggers-card__link"
+                    >
+                      посмотреть профиль →
+                    </a>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Gear panel */}
           <div className="bloggers-gear">

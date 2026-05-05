@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { isAdminAuthorized, isSafeHttpUrl } from './_lib/auth.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -8,8 +9,7 @@ function getSupabase() {
 }
 
 function isAuthorized(req) {
-  const secret = req.headers['x-admin-secret']
-  return secret && secret === process.env.ADMIN_SECRET
+  return isAdminAuthorized(req)
 }
 
 function slugify(brand, title) {
@@ -44,14 +44,22 @@ function validateProductFields(fields) {
   if (availability !== undefined && !VALID_AVAILABILITY.includes(availability)) {
     return `availability must be one of: ${VALID_AVAILABILITY.join(', ')}`
   }
-  if (image !== undefined && image !== null && typeof image !== 'string') {
-    return 'image must be a string URL'
+  if (image !== undefined && image !== null) {
+    if (typeof image !== 'string') return 'image must be a string URL'
+    if (!isSafeHttpUrl(image, { allowEmpty: true })) {
+      return 'image must be a valid http(s) URL'
+    }
   }
   if (gallery !== undefined) {
     if (!Array.isArray(gallery) || gallery.some((u) => typeof u !== 'string')) {
       return 'gallery must be an array of strings'
     }
     if (gallery.length > 20) return 'gallery cannot exceed 20 items'
+    for (const u of gallery) {
+      if (!isSafeHttpUrl(u, { allowEmpty: true })) {
+        return 'gallery URLs must be http(s)'
+      }
+    }
   }
   if (specs !== undefined) {
     if (!Array.isArray(specs) || specs.some((s) => typeof s !== 'string')) {
