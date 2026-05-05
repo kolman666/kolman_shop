@@ -412,7 +412,7 @@
 .hero-card__overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(120deg, #000 28%, transparent 80%);
+background: linear-gradient(120deg, #0a0a0a 10%, #0000 60%);
 }
 
 .hero-card__accent {
