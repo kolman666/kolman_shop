@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BrowserRouter, Link, Route, Routes, useNavigate } from 'react-router-dom'
 import './App.css'
@@ -19,6 +19,7 @@ import HelpChoosePage from './pages/HelpChoosePage'
 import DeliveryPage from './pages/DeliveryPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import { getCartCount } from './lib/cart'
+import SearchDropdown, { type SearchSection } from './components/SearchDropdown'
 
 type SlideText = {
   tag: string
@@ -239,6 +240,9 @@ function HomePage() {
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [searchValue, setSearchValue] = useState('')
   const [isBurgerOpen, setIsBurgerOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [popularSections, setPopularSections] = useState<SearchSection[]>([])
+  const searchWrapRef = useRef<HTMLDivElement>(null)
   const [dbSlides, setDbSlides] = useState<Array<{ tag: string; title: string; subtitle: string; accent: string; img: string; detailsUrl?: string }> | null>(null)
   const [dbCategories, setDbCategories] = useState<Array<{ catalogKey: string; title: string; image: string }> | null>(null)
   const [dbPerks, setDbPerks] = useState<Array<{ title: string; desc: string }> | null>(null)
@@ -255,6 +259,9 @@ function HomePage() {
     })
     fetchSiteContent<Array<{ title: string; desc: string }>>('homepage_perks').then((result) => {
       if (!result.error && result.data && result.data.length > 0) setDbPerks(result.data)
+    })
+    fetchSiteContent<SearchSection[]>('search_popular_sections').then((result) => {
+      if (!result.error && result.data && result.data.length > 0) setPopularSections(result.data)
     })
   }, [])
 
@@ -373,20 +380,30 @@ function HomePage() {
         <div className="container header-main">
           <BrandLogo />
 
-          <form className="search" role="search" onSubmit={handleSearchSubmit}>
-            <button type="submit" className="search__icon-btn" aria-label="search">
-              <svg className="search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
-            </button>
-            <input
-              className="search__input"
-              placeholder={t('ui.searchPlaceholder')}
-              value={searchValue}
-              onChange={(event) => setSearchValue(event.target.value)}
+          <div ref={searchWrapRef} className="search-wrap">
+            <form className="search" role="search" onSubmit={(e) => { setSearchOpen(false); handleSearchSubmit(e) }}>
+              <button type="submit" className="search__icon-btn" aria-label="search">
+                <svg className="search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" />
+                </svg>
+              </button>
+              <input
+                className="search__input"
+                placeholder={t('ui.searchPlaceholder')}
+                value={searchValue}
+                onChange={(event) => setSearchValue(event.target.value)}
+                onFocus={() => setSearchOpen(true)}
+              />
+            </form>
+            <SearchDropdown
+              open={searchOpen && searchValue.trim() === ''}
+              onClose={() => setSearchOpen(false)}
+              hitProducts={products.filter((p) => p.isFeatured).slice(0, 4)}
+              popularSections={popularSections}
+              anchorRef={searchWrapRef}
             />
-          </form>
+          </div>
 
           <div className="header-actions">
             <button type="button" className="header-link">

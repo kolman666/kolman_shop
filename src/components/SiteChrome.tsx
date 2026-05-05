@@ -183,7 +183,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
         <div className="container header-main">
           <BrandLogo />
 
-          <div ref={searchWrapRef} className="search-wrap" style={{ position: 'relative' }}>
+          <div ref={searchWrapRef} className="search-wrap">
             <form className="search" role="search" onSubmit={(e) => { setSearchOpen(false); handleSearchSubmit(e) }}>
               <button type="submit" className="search__icon-btn" aria-label="search">
                 <svg className="search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -12,6 +12,7 @@ const ALLOWED_KEYS = new Set([
   'hero_slides',
   'homepage_categories',
   'homepage_perks',
+  'search_popular_sections',
 ])
 
 // Strip ASCII control characters and clamp length.
@@ -80,6 +81,23 @@ const VALIDATORS = {
       cleaned.push({
         title: clean(item.title, 120),
         desc: clean(item.desc, 600),
+      })
+    }
+    return { ok: true, value: cleaned }
+  },
+  search_popular_sections(value) {
+    if (!Array.isArray(value)) return { ok: false, error: 'search_popular_sections must be an array' }
+    if (value.length > 50) return { ok: false, error: 'too many sections' }
+    const cleaned = []
+    for (const item of value) {
+      if (!item || typeof item !== 'object') return { ok: false, error: 'each section must be an object' }
+      const catalogKey = typeof item.catalogKey === 'string' ? item.catalogKey.trim().slice(0, 120) : ''
+      if (catalogKey && FORBIDDEN_KEY_CHARS_RE.test(catalogKey)) {
+        return { ok: false, error: 'catalogKey contains forbidden characters' }
+      }
+      cleaned.push({
+        label: clean(item.label, 100),
+        catalogKey,
       })
     }
     return { ok: true, value: cleaned }

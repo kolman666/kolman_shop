@@ -197,6 +197,7 @@
 }
 
 .search-wrap {
+  position: relative;
   flex: 1;
   max-width: 560px;
 }
