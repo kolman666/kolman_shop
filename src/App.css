@@ -1420,6 +1420,7 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  justify-content: center;
 }
 
 .catalog-hero__title,
@@ -2391,7 +2392,7 @@
   }
 
   .hero-card {
-    height: 420px;
+    height: 500px;
     min-height: unset;
     border-radius: 28px;
   }
