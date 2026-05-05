@@ -106,7 +106,32 @@ function answerCallback(callbackId, text) {
 
 // ── Renderers ─────────────────────────────────────────────────────────────────
 
-function ordersKeyboard(activeStatus, page, hasNext) {
+// Short codes for status, used in callback_data to stay within Telegram's 64-byte limit.
+const O_STATUS_CODES = { n: 'new', w: 'in_progress', d: 'done', c: 'cancelled' }
+const O_CODE_BY_STATUS = { new: 'n', in_progress: 'w', done: 'd', cancelled: 'c' }
+const I_STATUS_CODES = { n: 'new', w: 'in_progress', d: 'done' }
+const I_CODE_BY_STATUS = { new: 'n', in_progress: 'w', done: 'd' }
+
+function orderItemStatusButtons(orderId, currentStatus, filter, page) {
+  // Per-item status buttons. Highlight current with •.
+  const choices = [
+    { code: 'n', label: 'новый' },
+    { code: 'w', label: 'работа' },
+    { code: 'd', label: 'готово' },
+    { code: 'c', label: 'отмена' },
+  ]
+  const filterCode = filter === 'all' ? 'a' : (O_CODE_BY_STATUS[filter] ?? 'a')
+  return choices.map((ch) => {
+    const isCurrent = O_STATUS_CODES[ch.code] === currentStatus
+    return {
+      text: (isCurrent ? '• ' : '') + `#${orderId} ${ch.label}`,
+      // os = order set status; format: os:<id>:<newCode>:<filterCode>:<page>
+      callback_data: `os:${orderId}:${ch.code}:${filterCode}:${page}`,
+    }
+  })
+}
+
+function ordersKeyboard(activeStatus, page, hasNext, items = []) {
   const tabs = [
     { label: 'все', value: 'all' },
     { label: 'новые', value: 'new' },
@@ -114,43 +139,83 @@ function ordersKeyboard(activeStatus, page, hasNext) {
     { label: 'выполнены', value: 'done' },
     { label: 'отмена', value: 'cancelled' },
   ]
-  const tabRow = tabs.map((t) => ({
-    text: (activeStatus === t.value ? '• ' : '') + t.label,
-    callback_data: `o:${t.value}:${0}`,
-  }))
+  const filterCode = activeStatus === 'all' ? 'a' : (O_CODE_BY_STATUS[activeStatus] ?? 'a')
+  const tabRow = tabs.map((t) => {
+    const tCode = t.value === 'all' ? 'a' : (O_CODE_BY_STATUS[t.value] ?? 'a')
+    return {
+      text: (activeStatus === t.value ? '• ' : '') + t.label,
+      callback_data: `o:${tCode}:0`,
+    }
+  })
+  // For each visible item: 4 small status-change buttons in two rows of two (compact)
+  const itemRows = []
+  for (const it of items) {
+    const buttons = orderItemStatusButtons(it.id, it.status, activeStatus, page)
+    itemRows.push(buttons.slice(0, 2))
+    itemRows.push(buttons.slice(2))
+  }
   const navRow = []
-  if (page > 0) navRow.push({ text: '« назад', callback_data: `o:${activeStatus}:${page - 1}` })
-  if (hasNext) navRow.push({ text: 'вперёд »', callback_data: `o:${activeStatus}:${page + 1}` })
-  navRow.push({ text: '🔄 обновить', callback_data: `o:${activeStatus}:${page}` })
-  return { inline_keyboard: [tabRow, navRow] }
+  if (page > 0) navRow.push({ text: '« назад', callback_data: `o:${filterCode}:${page - 1}` })
+  if (hasNext) navRow.push({ text: 'вперёд »', callback_data: `o:${filterCode}:${page + 1}` })
+  navRow.push({ text: '🔄 обновить', callback_data: `o:${filterCode}:${page}` })
+  return { inline_keyboard: [tabRow, ...itemRows, navRow] }
 }
 
-function inquiriesKeyboard(activeCategory, activeStatus, page, hasNext) {
+// Short category codes for inquiries (a=all, o=order, p=product, h=choose, l=delivery, x=other)
+const I_CAT_CODES = { a: 'all', o: 'order', p: 'product', h: 'choose', l: 'delivery', x: 'other' }
+const I_CODE_BY_CAT = { all: 'a', order: 'o', product: 'p', choose: 'h', delivery: 'l', other: 'x' }
+
+function inquiryItemStatusButtons(inquiryId, currentStatus, category, statusFilter, page) {
+  const choices = [
+    { code: 'n', label: 'новая' },
+    { code: 'w', label: 'работа' },
+    { code: 'd', label: 'закрыта' },
+  ]
+  const catCode = I_CODE_BY_CAT[category] ?? 'a'
+  const sCode = statusFilter === 'all' ? 'a' : (I_CODE_BY_STATUS[statusFilter] ?? 'a')
+  return choices.map((ch) => {
+    const isCurrent = I_STATUS_CODES[ch.code] === currentStatus
+    return {
+      text: (isCurrent ? '• ' : '') + `#${inquiryId} ${ch.label}`,
+      // is = inquiry set status; format: is:<id>:<newCode>:<catCode>:<sCode>:<page>
+      callback_data: `is:${inquiryId}:${ch.code}:${catCode}:${sCode}:${page}`,
+    }
+  })
+}
+
+function inquiriesKeyboard(activeCategory, activeStatus, page, hasNext, items = []) {
+  const catCode = I_CODE_BY_CAT[activeCategory] ?? 'a'
+  const sCode = activeStatus === 'all' ? 'a' : (I_CODE_BY_STATUS[activeStatus] ?? 'a')
   const catRow = [
-    { label: 'все', value: 'all' },
-    { label: 'заказ', value: 'order' },
-    { label: 'товар', value: 'product' },
-    { label: 'выбор', value: 'choose' },
-    { label: 'доставка', value: 'delivery' },
-    { label: 'другое', value: 'other' },
+    { label: 'все', value: 'all', code: 'a' },
+    { label: 'заказ', value: 'order', code: 'o' },
+    { label: 'товар', value: 'product', code: 'p' },
+    { label: 'выбор', value: 'choose', code: 'h' },
+    { label: 'доставка', value: 'delivery', code: 'l' },
+    { label: 'другое', value: 'other', code: 'x' },
   ].map((t) => ({
     text: (activeCategory === t.value ? '• ' : '') + t.label,
-    callback_data: `i:${t.value}:${activeStatus}:${0}`,
+    callback_data: `i:${t.code}:${sCode}:0`,
   }))
   const statusRow = [
-    { label: 'все', value: 'all' },
-    { label: 'новые', value: 'new' },
-    { label: 'в работе', value: 'in_progress' },
-    { label: 'закрытые', value: 'done' },
+    { label: 'все', value: 'all', code: 'a' },
+    { label: 'новые', value: 'new', code: 'n' },
+    { label: 'в работе', value: 'in_progress', code: 'w' },
+    { label: 'закрытые', value: 'done', code: 'd' },
   ].map((t) => ({
     text: (activeStatus === t.value ? '• ' : '') + t.label,
-    callback_data: `i:${activeCategory}:${t.value}:${0}`,
+    callback_data: `i:${catCode}:${t.code}:0`,
   }))
+  const itemRows = []
+  for (const it of items) {
+    const buttons = inquiryItemStatusButtons(it.id, it.status, activeCategory, activeStatus, page)
+    itemRows.push(buttons)
+  }
   const navRow = []
-  if (page > 0) navRow.push({ text: '« назад', callback_data: `i:${activeCategory}:${activeStatus}:${page - 1}` })
-  if (hasNext) navRow.push({ text: 'вперёд »', callback_data: `i:${activeCategory}:${activeStatus}:${page + 1}` })
-  navRow.push({ text: '🔄 обновить', callback_data: `i:${activeCategory}:${activeStatus}:${page}` })
-  return { inline_keyboard: [catRow, statusRow, navRow] }
+  if (page > 0) navRow.push({ text: '« назад', callback_data: `i:${catCode}:${sCode}:${page - 1}` })
+  if (hasNext) navRow.push({ text: 'вперёд »', callback_data: `i:${catCode}:${sCode}:${page + 1}` })
+  navRow.push({ text: '🔄 обновить', callback_data: `i:${catCode}:${sCode}:${page}` })
+  return { inline_keyboard: [catRow, statusRow, ...itemRows, navRow] }
 }
 
 function formatOrder(o) {
@@ -186,17 +251,17 @@ async function buildOrdersView(supabase, status, page) {
   const { data, error } = await q
   if (error) {
     const missing = error.message.includes('does not exist') || error.code === '42P01'
-    return { text: missing ? '⚠️ таблица orders не создана. запустите миграцию из админки.' : '⚠️ ' + error.message, keyboard: ordersKeyboard(status, page, false) }
+    return { text: missing ? '⚠️ таблица orders не создана. запустите миграцию.' : '⚠️ ' + error.message, keyboard: ordersKeyboard(status, page, false, []) }
   }
   const rows = data ?? []
   const hasNext = rows.length > PAGE_SIZE
   const visible = hasNext ? rows.slice(0, PAGE_SIZE) : rows
   const header = `<b>🛒 заказы</b> · фильтр: <i>${status === 'all' ? 'все' : escapeHtml(ORDER_STATUS_LABELS[status] ?? status)}</i> · стр. ${page + 1}`
   if (visible.length === 0) {
-    return { text: `${header}\n\nпусто.`, keyboard: ordersKeyboard(status, page, false) }
+    return { text: `${header}\n\nпусто.`, keyboard: ordersKeyboard(status, page, false, []) }
   }
   const body = visible.map(formatOrder).join('\n\n────────────\n')
-  return { text: `${header}\n\n${body}`, keyboard: ordersKeyboard(status, page, hasNext) }
+  return { text: `${header}\n\n${body}`, keyboard: ordersKeyboard(status, page, hasNext, visible) }
 }
 
 async function buildInquiriesView(supabase, category, status, page) {
@@ -208,25 +273,29 @@ async function buildInquiriesView(supabase, category, status, page) {
   const { data, error } = await q
   if (error) {
     const missing = error.message.includes('does not exist') || error.code === '42P01'
-    return { text: missing ? '⚠️ таблица inquiries не создана. запустите миграцию из админки.' : '⚠️ ' + error.message, keyboard: inquiriesKeyboard(category, status, page, false) }
+    return { text: missing ? '⚠️ таблица inquiries не создана. запустите миграцию.' : '⚠️ ' + error.message, keyboard: inquiriesKeyboard(category, status, page, false, []) }
   }
   const rows = data ?? []
   const hasNext = rows.length > PAGE_SIZE
   const visible = hasNext ? rows.slice(0, PAGE_SIZE) : rows
   const header = `<b>📋 заявки</b> · категория: <i>${category === 'all' ? 'все' : escapeHtml(CATEGORY_LABELS[category] ?? category)}</i> · статус: <i>${status === 'all' ? 'все' : escapeHtml(INQUIRY_STATUS_LABELS[status] ?? status)}</i> · стр. ${page + 1}`
   if (visible.length === 0) {
-    return { text: `${header}\n\nпусто.`, keyboard: inquiriesKeyboard(category, status, page, false) }
+    return { text: `${header}\n\nпусто.`, keyboard: inquiriesKeyboard(category, status, page, false, []) }
   }
   const body = visible.map(formatInquiry).join('\n\n────────────\n')
-  return { text: `${header}\n\n${body}`, keyboard: inquiriesKeyboard(category, status, page, hasNext) }
+  return { text: `${header}\n\n${body}`, keyboard: inquiriesKeyboard(category, status, page, hasNext, visible) }
 }
 
 const HELP_TEXT = [
   '<b>панель управления магазина</b>',
   '',
-  '/orders — заказы (фильтр по статусу)',
-  '/inquiries — заявки в поддержку (фильтр по категории + статусу)',
+  '/orders — заказы (фильтр по статусу + смена статуса кнопками)',
+  '/inquiries — заявки в поддержку (фильтр по категории/статусу + смена статуса кнопками)',
   '/help — это сообщение',
+  '',
+  'смена статуса:',
+  'под каждым заказом/заявкой — кнопки. нажатие меняет статус и обновляет список.',
+  'текущий статус помечен «•».',
 ].join('\n')
 
 // ── Main handler ──────────────────────────────────────────────────────────────
@@ -286,19 +355,68 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true })
       }
       const data = (cq.data || '').split(':')
-      if (data[0] === 'o') {
-        const status = data[1] || 'all'
+      const kind = data[0]
+
+      if (kind === 'o') {
+        // o:<filterCode>:<page>  — switch tab / paginate orders
+        const filterCode = data[1] || 'a'
+        const status = filterCode === 'a' ? 'all' : (O_STATUS_CODES[filterCode] ?? 'all')
         const page = Math.max(0, parseInt(data[2] || '0', 10) || 0)
         const view = await buildOrdersView(supabase, status, page)
         await editMessage(chatId, messageId, view.text, view.keyboard)
         await answerCallback(cq.id)
-      } else if (data[0] === 'i') {
-        const category = data[1] || 'all'
-        const status = data[2] || 'all'
+      } else if (kind === 'os') {
+        // os:<id>:<newCode>:<filterCode>:<page>  — change order status
+        const id = parseInt(data[1] || '', 10)
+        const newCode = data[2] || ''
+        const newStatus = O_STATUS_CODES[newCode]
+        const filterCode = data[3] || 'a'
+        const page = Math.max(0, parseInt(data[4] || '0', 10) || 0)
+        const status = filterCode === 'a' ? 'all' : (O_STATUS_CODES[filterCode] ?? 'all')
+        if (!Number.isInteger(id) || !newStatus) {
+          await answerCallback(cq.id, 'некорректные данные')
+        } else {
+          const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', id)
+          if (error) {
+            await answerCallback(cq.id, 'ошибка: ' + error.message.slice(0, 150))
+          } else {
+            await answerCallback(cq.id, `#${id} → ${ORDER_STATUS_LABELS[newStatus] ?? newStatus}`)
+            const view = await buildOrdersView(supabase, status, page)
+            await editMessage(chatId, messageId, view.text, view.keyboard)
+          }
+        }
+      } else if (kind === 'i') {
+        // i:<catCode>:<sCode>:<page>  — switch inquiry filters / paginate
+        const catCode = data[1] || 'a'
+        const sCode = data[2] || 'a'
+        const category = I_CAT_CODES[catCode] ?? 'all'
+        const status = sCode === 'a' ? 'all' : (I_STATUS_CODES[sCode] ?? 'all')
         const page = Math.max(0, parseInt(data[3] || '0', 10) || 0)
         const view = await buildInquiriesView(supabase, category, status, page)
         await editMessage(chatId, messageId, view.text, view.keyboard)
         await answerCallback(cq.id)
+      } else if (kind === 'is') {
+        // is:<id>:<newCode>:<catCode>:<sCode>:<page>  — change inquiry status
+        const id = parseInt(data[1] || '', 10)
+        const newCode = data[2] || ''
+        const newStatus = I_STATUS_CODES[newCode]
+        const catCode = data[3] || 'a'
+        const sCode = data[4] || 'a'
+        const page = Math.max(0, parseInt(data[5] || '0', 10) || 0)
+        const category = I_CAT_CODES[catCode] ?? 'all'
+        const status = sCode === 'a' ? 'all' : (I_STATUS_CODES[sCode] ?? 'all')
+        if (!Number.isInteger(id) || !newStatus) {
+          await answerCallback(cq.id, 'некорректные данные')
+        } else {
+          const { error } = await supabase.from('inquiries').update({ status: newStatus }).eq('id', id)
+          if (error) {
+            await answerCallback(cq.id, 'ошибка: ' + error.message.slice(0, 150))
+          } else {
+            await answerCallback(cq.id, `#${id} → ${INQUIRY_STATUS_LABELS[newStatus] ?? newStatus}`)
+            const view = await buildInquiriesView(supabase, category, status, page)
+            await editMessage(chatId, messageId, view.text, view.keyboard)
+          }
+        }
       } else {
         await answerCallback(cq.id, 'неизвестная команда')
       }
