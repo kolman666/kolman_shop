@@ -65,9 +65,6 @@ export default function SearchDropdown({ open, onClose, hitProducts, popularSect
     <div className="search-drop" ref={ref}>
       <div className="search-drop__section">
         <div className="search-drop__section-head">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="search-drop__section-icon search-drop__section-icon--star">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
           <span>Популярные разделы</span>
         </div>
         <div className="search-drop__chips">
@@ -87,9 +84,6 @@ export default function SearchDropdown({ open, onClose, hitProducts, popularSect
       {hitProducts.length > 0 && (
         <div className="search-drop__section">
           <div className="search-drop__section-head">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="search-drop__section-icon search-drop__section-icon--fire">
-              <path d="M12 2c0 0-5 5.5-5 10a5 5 0 0010 0C17 7.5 12 2 12 2zm0 13a2 2 0 01-2-2c0-2 2-4.5 2-4.5s2 2.5 2 4.5a2 2 0 01-2 2z" />
-            </svg>
             <span>Хиты</span>
           </div>
           <div className="search-drop__hits">
