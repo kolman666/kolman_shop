@@ -167,13 +167,18 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           }),
         })
         if (!res.ok) {
+          // Endpoint missing OR DB table not migrated yet — still send to Telegram so order isn't lost
           if (res.status === 404 || res.status === 405) {
             await sendTelegramMessage(msg)
           } else {
             const body = await res.json().catch(() => ({}))
-            const detail = (body as { error?: string; detail?: string }).detail
             const errMsg = (body as { error?: string }).error ?? 'request failed'
-            throw new TelegramSendError(res.status, errMsg, detail)
+            const detail = (body as { error?: string; detail?: string }).detail
+            if (res.status === 503 && errMsg === 'table_not_found') {
+              await sendTelegramMessage(msg)
+            } else {
+              throw new TelegramSendError(res.status, errMsg, detail)
+            }
           }
         }
       } catch (err) {

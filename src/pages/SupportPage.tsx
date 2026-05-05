@@ -57,6 +57,7 @@ async function submitInquiry(fields: {
       }),
     })
     if (!res.ok) {
+      // Endpoint missing OR DB table not migrated yet — still send to Telegram so the inquiry isn't lost
       if (res.status === 404 || res.status === 405) {
         await sendTelegramMessage(text)
         return
@@ -64,6 +65,10 @@ async function submitInquiry(fields: {
       const body = await res.json().catch(() => ({}))
       const errMsg = (body as { error?: string }).error ?? 'request failed'
       const detail = (body as { detail?: string }).detail
+      if (res.status === 503 && errMsg === 'table_not_found') {
+        await sendTelegramMessage(text)
+        return
+      }
       throw new TelegramSendError(res.status, errMsg, detail)
     }
   } catch (err) {

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Product } from '../data/products'
 import { productPath } from '../lib/productRoute'
+import { safeBackgroundImage } from '../lib/safeUrl'
 
 type Props = {
   products: Product[]
@@ -36,7 +37,7 @@ export default function BrandSpotlight({ products, brandSlug, brandLabel, banner
         {/* ── Full-width banner ── */}
         <div
           className="bsp__banner"
-          style={bannerImage ? { backgroundImage: `url(${bannerImage})` } : undefined}
+          style={(() => { const u = safeBackgroundImage(bannerImage); return u ? { backgroundImage: `url("${u}")` } : undefined })()}
         >
           <div className="bsp__banner-overlay" />
           <Link
