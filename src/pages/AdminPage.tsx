@@ -954,10 +954,24 @@ const DEFAULT_PERKS: ContentPerk[] = [
   { title: '0 фейковых отзывов', desc: 'реальная обратная связь от игроков, которые уже протестировали наше железо. доверие и честная рекомендация для нас важнее громких обещаний.' },
 ]
 
+type SearchSectionAdmin = { label: string; catalogKey: string }
+
+const DEFAULT_SEARCH_SECTIONS: SearchSectionAdmin[] = [
+  { label: 'Клавиатуры', catalogKey: 'products.categories.keyboards' },
+  { label: 'Мышки', catalogKey: 'products.categories.mice' },
+  { label: 'Коврики', catalogKey: 'products.categories.mousepads' },
+  { label: 'Наушники', catalogKey: 'products.categories.headsets' },
+  { label: 'Мониторы', catalogKey: '' },
+  { label: 'Глайды/Грипсы', catalogKey: 'products.categories.glides' },
+  { label: 'Микрофоны', catalogKey: '' },
+  { label: 'Кейкапы', catalogKey: '' },
+]
+
 function ContentTab() {
   const [slides, setSlides] = useState<HeroSlide[]>(DEFAULT_SLIDES)
   const [categories, setCategories] = useState<ContentCategory[]>(DEFAULT_CATEGORIES)
   const [perks, setPerks] = useState<ContentPerk[]>(DEFAULT_PERKS)
+  const [searchSections, setSearchSections] = useState<SearchSectionAdmin[]>(DEFAULT_SEARCH_SECTIONS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null) // which section is saving
   const [saved, setSaved] = useState<string | null>(null)
@@ -969,13 +983,15 @@ function ContentTab() {
       fetchSiteContent<HeroSlide[]>('hero_slides'),
       fetchSiteContent<ContentCategory[]>('homepage_categories'),
       fetchSiteContent<ContentPerk[]>('homepage_perks'),
-    ]).then(([slidesResult, catsResult, perksResult]) => {
+      fetchSiteContent<SearchSectionAdmin[]>('search_popular_sections'),
+    ]).then(([slidesResult, catsResult, perksResult, searchResult]) => {
       if (slidesResult.needsMigration || catsResult.needsMigration || perksResult.needsMigration) {
         setNeedsMigration(true)
       } else {
         if (!slidesResult.error && slidesResult.data && slidesResult.data.length > 0) setSlides(slidesResult.data)
         if (!catsResult.error && catsResult.data && catsResult.data.length > 0) setCategories(catsResult.data)
         if (!perksResult.error && perksResult.data && perksResult.data.length > 0) setPerks(perksResult.data)
+        if (!searchResult.error && searchResult.data && searchResult.data.length > 0) setSearchSections(searchResult.data)
       }
       setLoading(false)
     })
@@ -1053,6 +1069,7 @@ function ContentTab() {
               if (sectionKey === 'hero_slides') void saveSection('hero_slides', slides)
               if (sectionKey === 'homepage_categories') void saveSection('homepage_categories', categories)
               if (sectionKey === 'homepage_perks') void saveSection('homepage_perks', perks)
+              if (sectionKey === 'search_popular_sections') void saveSection('search_popular_sections', searchSections)
             }}
             disabled={saving !== null}
           >
@@ -1290,6 +1307,68 @@ function ContentTab() {
             </button>
           </>
         )}
+      </div>
+
+      {/* ── Search popular sections ── */}
+      <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 28, marginTop: 8 }}>
+        <SectionHeader title="Поиск — популярные разделы" sectionKey="search_popular_sections" />
+        <p className="admin__label-hint" style={{ marginBottom: 16 }}>
+          Чипы, которые отображаются в выпадающем меню поиска под «Популярные разделы». Оставьте catalogKey пустым, чтобы вести просто в каталог.
+        </p>
+        <div className="admin__slides-list">
+          {searchSections.map((s, i) => (
+            <div key={i} className="admin__slide-card">
+              <div className="admin__slide-card-header">
+                <span className="admin__slide-num">Раздел {i + 1}</span>
+                <button
+                  type="button"
+                  className="admin__icon-btn admin__icon-btn--danger"
+                  onClick={() => setSearchSections((prev) => prev.filter((_, idx) => idx !== i))}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                    <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                  </svg>
+                </button>
+              </div>
+              <div className="admin__two-col">
+                <div className="admin__field">
+                  <label className="admin__label">Название</label>
+                  <input
+                    className="admin__input"
+                    value={s.label}
+                    onChange={(e) => setSearchSections((prev) => prev.map((x, idx) => idx === i ? { ...x, label: e.target.value } : x))}
+                    placeholder="Мышки"
+                  />
+                </div>
+                <div className="admin__field">
+                  <label className="admin__label">Ключ категории</label>
+                  <select
+                    className="admin__select"
+                    value={CATEGORY_KEYS.includes(s.catalogKey) ? s.catalogKey : '__none__'}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setSearchSections((prev) => prev.map((x, idx) => idx === i ? { ...x, catalogKey: v === '__none__' ? '' : v } : x))
+                    }}
+                  >
+                    <option value="__none__">— без фильтра (весь каталог) —</option>
+                    {CATEGORY_KEYS.map((k) => (
+                      <option key={k} value={k}>{CATEGORY_KEY_LABELS[k] ?? k}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="admin__spec-add-btn"
+          style={{ marginTop: 4 }}
+          onClick={() => setSearchSections((prev) => [...prev, { label: '', catalogKey: '' }])}
+        >
+          + Добавить раздел
+        </button>
       </div>
 
     </div>
