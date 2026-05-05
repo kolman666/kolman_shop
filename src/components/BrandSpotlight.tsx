@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import type { Product } from '../data/products'
 import { productPath } from '../lib/productRoute'
@@ -11,18 +11,27 @@ type Props = {
   bannerImage?: string
 }
 
-const VISIBLE = 4
+function getVisibleCount() {
+  return window.innerWidth <= 720 ? 1 : 4
+}
 
 export default function BrandSpotlight({ products, brandSlug, brandLabel, bannerImage }: Props) {
   const [offset, setOffset] = useState(0)
+  const [visibleCount, setVisibleCount] = useState(getVisibleCount)
+
+  useEffect(() => {
+    const update = () => setVisibleCount(getVisibleCount())
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   const brandProducts = products.filter(
     (p) => p.brand.toLowerCase().replace(/\s+/g, '') === brandSlug.toLowerCase().replace(/\s+/g, '')
   )
   if (brandProducts.length === 0) return null
 
-  const maxOffset = Math.max(0, brandProducts.length - VISIBLE)
-  const visible = brandProducts.slice(offset, offset + VISIBLE)
+  const maxOffset = Math.max(0, brandProducts.length - visibleCount)
+  const visible = brandProducts.slice(offset, offset + visibleCount)
 
   const prev = () => setOffset((o) => Math.max(0, o - 1))
   const next = () => setOffset((o) => Math.min(maxOffset, o + 1))

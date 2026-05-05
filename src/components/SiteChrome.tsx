@@ -140,6 +140,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
   if (pathParts[0] === 'partnership') breadcrumbs.push({ label: 'партнерство' })
   if (pathParts[0] === 'help-choose') breadcrumbs.push({ label: 'помочь с выбором' })
   if (pathParts[0] === 'delivery') breadcrumbs.push({ label: 'доставка и оплата' })
+  if (pathParts[0] === 'privacy') breadcrumbs.push({ label: 'политика конфиденциальности' })
 
   if (pathParts[0] === 'catalog') {
     breadcrumbs.push({ label: t('ui.breadcrumbs.catalog') })
@@ -409,7 +410,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
         </div>
 
         <div className="container footer-bottom">
-          <Link to="/" className="footer-policy">
+          <Link to="/privacy" className="footer-policy">
             {t('ui.privacyPolicy')}
           </Link>
           <p className="footer-credit">

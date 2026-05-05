@@ -17,6 +17,7 @@ import SupportPage from './pages/SupportPage'
 import PartnershipPage from './pages/PartnershipPage'
 import HelpChoosePage from './pages/HelpChoosePage'
 import DeliveryPage from './pages/DeliveryPage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import { getCartCount } from './lib/cart'
 
 type SlideText = {
@@ -803,7 +804,7 @@ function HomePage() {
         </div>
 
         <div className="container footer-bottom">
-          <Link to="/" className="footer-policy">
+          <Link to="/privacy" className="footer-policy">
             {t('ui.privacyPolicy')}
           </Link>
           <p className="footer-credit">
@@ -866,6 +867,14 @@ export default function App() {
           element={<SiteChrome><DeliveryPage /></SiteChrome>}
         />
         <Route path="/admin" element={<AdminPage />} />
+        <Route
+          path="/privacy"
+          element={
+            <SiteChrome>
+              <PrivacyPolicyPage />
+            </SiteChrome>
+          }
+        />
       </Routes>
     </BrowserRouter>
   )

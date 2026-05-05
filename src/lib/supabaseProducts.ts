@@ -4,6 +4,15 @@ import { normalizeVariantGroups } from './variantGroups'
 
 const SUPABASE_ID_OFFSET = 1_000_000
 
+let _cache: Product[] | null = null
+let _cacheTs = 0
+const CACHE_TTL = 60_000
+
+export function invalidateProductCache() {
+  _cache = null
+  _cacheTs = 0
+}
+
 export type ProductRow = {
   id: number
   slug: string
@@ -45,8 +54,13 @@ export function rowToProduct(row: ProductRow): Product {
   }
 }
 
-export async function fetchSupabaseProducts(): Promise<Product[]> {
+export async function fetchSupabaseProducts(forceRefresh = false): Promise<Product[]> {
   if (!supabase) return []
+
+  const now = Date.now()
+  if (!forceRefresh && _cache && now - _cacheTs < CACHE_TTL) {
+    return _cache
+  }
 
   const { data, error } = await supabase
     .from('admin_products')
@@ -55,10 +69,12 @@ export async function fetchSupabaseProducts(): Promise<Product[]> {
 
   if (error) {
     console.error('[supabase] fetch admin_products failed:', error.message, error)
-    return []
+    return _cache ?? []
   }
 
-  if (!data) return []
+  if (!data) return _cache ?? []
 
-  return (data as ProductRow[]).map(rowToProduct)
+  _cache = (data as ProductRow[]).map(rowToProduct)
+  _cacheTs = now
+  return _cache
 }

@@ -2380,7 +2380,8 @@
   }
 
   .hero-card {
-    min-height: 420px;
+    height: 420px;
+    min-height: unset;
     border-radius: 28px;
   }
 

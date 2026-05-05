@@ -1,16 +1,18 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { Product } from '../data/products'
-import { fetchSupabaseProducts } from '../lib/supabaseProducts'
+import { fetchSupabaseProducts, invalidateProductCache } from '../lib/supabaseProducts'
 
 export function useProducts() {
   const [supabaseProducts, setSupabaseProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (forceRefresh = false) => {
     setLoading(true)
     try {
-      const data = await fetchSupabaseProducts()
-      setSupabaseProducts(data)
+      const data = await fetchSupabaseProducts(forceRefresh)
+      if (data.length > 0) {
+        setSupabaseProducts(data)
+      }
     } finally {
       setLoading(false)
     }
@@ -18,7 +20,10 @@ export function useProducts() {
 
   useEffect(() => {
     void load()
-    const handler = () => void load()
+    const handler = () => {
+      invalidateProductCache()
+      void load(true)
+    }
     window.addEventListener('admin:update', handler)
     return () => window.removeEventListener('admin:update', handler)
   }, [load])
@@ -28,6 +33,6 @@ export function useProducts() {
   return {
     products,
     loading,
-    refresh: load,
+    refresh: () => load(true),
   }
 }

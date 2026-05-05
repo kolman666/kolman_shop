@@ -9,7 +9,7 @@ import { variantGroupLabel } from '../lib/variantGroups'
 export default function ProductPage() {
   const { t } = useTranslation()
   const { slug } = useParams()
-  const { products } = useProducts()
+  const { products, loading } = useProducts()
   const product = products.find((item) => item.slug === slug) ?? products.find((item) => String(item.id) === slug)
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'faq'>('description')
   const [activeImageIndex, setActiveImageIndex] = useState(0)
@@ -42,6 +42,9 @@ export default function ProductPage() {
   }, [product?.id, product?.variantGroups])
 
   if (!product) {
+    if (loading) {
+      return <main className="product-page product-page--missing container" />
+    }
     return (
       <main className="product-page product-page--missing container">
         <p className="product-page__eyebrow">{t('ui.productPage.overview')}</p>
