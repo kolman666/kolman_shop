@@ -100,22 +100,29 @@ function validateProductFields(fields) {
 
 function normalizeVariantGroups(variantGroups) {
   if (!Array.isArray(variantGroups)) return []
-  return variantGroups
-    .filter((group) => group && typeof group === 'object')
-    .map((group) => {
-      const keySource = typeof group.key === 'string' && group.key.trim()
-        ? group.key
-        : (typeof group.name === 'string' ? group.name : '')
-      const key = keySource.trim().toLowerCase().replace(/\s+/g, '_')
-      const label = (typeof group.label === 'string' && group.label.trim())
-        ? group.label.trim()
-        : (typeof group.name === 'string' && group.name.trim() ? group.name.trim() : key)
-      const options = Array.isArray(group.options)
-        ? group.options.filter((o) => typeof o === 'string').map((o) => o.trim()).filter(Boolean)
-        : []
-      return { key, label, options }
-    })
-    .filter((group) => group.key && group.options.length > 0)
+  const normalized = []
+  for (const group of variantGroups) {
+    if (!group || typeof group !== 'object') continue
+    const keySource = typeof group.key === 'string' && group.key.trim()
+      ? group.key
+      : (typeof group.name === 'string' ? group.name : '')
+    const key = keySource.trim().toLowerCase().replace(/\s+/g, '_')
+    const label = (typeof group.label === 'string' && group.label.trim())
+      ? group.label.trim()
+      : (typeof group.name === 'string' && group.name.trim() ? group.name.trim() : key)
+    const options = []
+    if (Array.isArray(group.options)) {
+      for (const option of group.options) {
+        if (typeof option !== 'string') continue
+        const trimmed = option.trim()
+        if (trimmed) options.push(trimmed)
+      }
+    }
+    if (key && options.length > 0) {
+      normalized.push({ key, label, options })
+    }
+  }
+  return normalized
 }
 
 export default async function handler(req, res) {

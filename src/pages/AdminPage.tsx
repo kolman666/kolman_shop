@@ -152,9 +152,12 @@ function AdminLogin({ onLogin }: { onLogin: (secret: string) => Promise<boolean>
 }
 
 // ── Main admin panel ──────────────────────────────────────────────────────────
+type AuthStatus = 'checking' | 'guest' | 'authed'
+
 export default function AdminPage() {
-  const [isAuthed, setIsAuthed] = useState(false)
-  const [authChecking, setAuthChecking] = useState(() => Boolean(sessionStorage.getItem('admin_secret')))
+  const [authStatus, setAuthStatus] = useState<AuthStatus>(() => (
+    sessionStorage.getItem('admin_secret') ? 'checking' : 'guest'
+  ))
 
   useEffect(() => {
     const stored = sessionStorage.getItem('admin_secret')
@@ -162,9 +165,8 @@ export default function AdminPage() {
       return
     }
     verifyAdminSecret(stored).then((ok) => {
-      setIsAuthed(ok)
       if (!ok) clearAdminSecret()
-      setAuthChecking(false)
+      setAuthStatus(ok ? 'authed' : 'guest')
     })
   }, [])
 
@@ -172,12 +174,12 @@ export default function AdminPage() {
     const ok = await verifyAdminSecret(secret)
     if (ok) {
       saveAdminSecret(secret)
-      setIsAuthed(true)
+      setAuthStatus('authed')
     }
     return ok
   }
 
-  if (authChecking) {
+  if (authStatus === 'checking') {
     return (
       <div className="admin admin--loading">
         <div className="admin__loading-text">Загрузка...</div>
@@ -185,11 +187,11 @@ export default function AdminPage() {
     )
   }
 
-  if (!isAuthed) {
+  if (authStatus === 'guest') {
     return <AdminLogin onLogin={handleLogin} />
   }
 
-  return <AdminPanel onLogout={() => { clearAdminSecret(); setIsAuthed(false) }} />
+  return <AdminPanel onLogout={() => { clearAdminSecret(); setAuthStatus('guest') }} />
 }
 
 type AdminTab = 'products' | 'content' | 'bloggers'

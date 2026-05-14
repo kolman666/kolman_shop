@@ -363,8 +363,10 @@ export default async function handler(req, res) {
         const status = filterCode === 'a' ? 'all' : (O_STATUS_CODES[filterCode] ?? 'all')
         const page = Math.max(0, parseInt(data[2] || '0', 10) || 0)
         const view = await buildOrdersView(supabase, status, page)
-        await editMessage(chatId, messageId, view.text, view.keyboard)
-        await answerCallback(cq.id)
+        await Promise.all([
+          editMessage(chatId, messageId, view.text, view.keyboard),
+          answerCallback(cq.id),
+        ])
       } else if (kind === 'os') {
         // os:<id>:<newCode>:<filterCode>:<page>  — change order status
         const id = parseInt(data[1] || '', 10)
@@ -380,8 +382,10 @@ export default async function handler(req, res) {
           if (error) {
             await answerCallback(cq.id, 'ошибка: ' + error.message.slice(0, 150))
           } else {
-            await answerCallback(cq.id, `#${id} → ${ORDER_STATUS_LABELS[newStatus] ?? newStatus}`)
-            const view = await buildOrdersView(supabase, status, page)
+            const [view] = await Promise.all([
+              buildOrdersView(supabase, status, page),
+              answerCallback(cq.id, `#${id} → ${ORDER_STATUS_LABELS[newStatus] ?? newStatus}`),
+            ])
             await editMessage(chatId, messageId, view.text, view.keyboard)
           }
         }
@@ -393,8 +397,10 @@ export default async function handler(req, res) {
         const status = sCode === 'a' ? 'all' : (I_STATUS_CODES[sCode] ?? 'all')
         const page = Math.max(0, parseInt(data[3] || '0', 10) || 0)
         const view = await buildInquiriesView(supabase, category, status, page)
-        await editMessage(chatId, messageId, view.text, view.keyboard)
-        await answerCallback(cq.id)
+        await Promise.all([
+          editMessage(chatId, messageId, view.text, view.keyboard),
+          answerCallback(cq.id),
+        ])
       } else if (kind === 'is') {
         // is:<id>:<newCode>:<catCode>:<sCode>:<page>  — change inquiry status
         const id = parseInt(data[1] || '', 10)
@@ -412,8 +418,10 @@ export default async function handler(req, res) {
           if (error) {
             await answerCallback(cq.id, 'ошибка: ' + error.message.slice(0, 150))
           } else {
-            await answerCallback(cq.id, `#${id} → ${INQUIRY_STATUS_LABELS[newStatus] ?? newStatus}`)
-            const view = await buildInquiriesView(supabase, category, status, page)
+            const [view] = await Promise.all([
+              buildInquiriesView(supabase, category, status, page),
+              answerCallback(cq.id, `#${id} → ${INQUIRY_STATUS_LABELS[newStatus] ?? newStatus}`),
+            ])
             await editMessage(chatId, messageId, view.text, view.keyboard)
           }
         }

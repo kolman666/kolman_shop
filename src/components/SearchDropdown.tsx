@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { Product } from '../data/products'
 
@@ -29,6 +29,7 @@ const DEFAULT_SECTIONS: SearchSection[] = [
 export default function SearchDropdown({ open, onClose, hitProducts, popularSections, anchorRef }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
+  const closeDropdown = useEffectEvent(onClose)
 
   const sections = popularSections.length > 0 ? popularSections : DEFAULT_SECTIONS
 
@@ -38,21 +39,21 @@ export default function SearchDropdown({ open, onClose, hitProducts, popularSect
       const target = e.target as Node
       if (anchorRef?.current && anchorRef.current.contains(target)) return
       if (ref.current && !ref.current.contains(target)) {
-        onClose()
+        closeDropdown()
       }
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [open, onClose, anchorRef])
+  }, [open, anchorRef])
 
   useEffect(() => {
     if (!open) return
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') closeDropdown()
     }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 
