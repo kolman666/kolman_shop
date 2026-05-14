@@ -26,7 +26,7 @@ export default function PrivacyPolicyPage() {
             padding: '32px 36px',
           }}
         >
-          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>1. Общие положения</h2>
+          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 600 }}>1. Общие положения</h2>
           <p style={{ margin: 0, lineHeight: 1.7, color: 'var(--color-text-secondary)', fontSize: 14 }}>
             Настоящая Политика конфиденциальности описывает, как интернет-магазин <strong style={{ color: 'var(--color-text)' }}>kolman.shop</strong> собирает,
             использует и защищает персональные данные пользователей при использовании сайта и оформлении заказов.
@@ -42,12 +42,12 @@ export default function PrivacyPolicyPage() {
             padding: '32px 36px',
           }}
         >
-          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>2. Какие данные мы собираем</h2>
+          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 600 }}>2. Какие данные мы собираем</h2>
           <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 2, color: 'var(--color-text-secondary)', fontSize: 14 }}>
-            <li>Имя и контактные данные (email, номер телефона) — при оформлении заказа или обращении в поддержку</li>
-            <li>Адрес доставки — для отправки заказа</li>
-            <li>Технические данные (IP-адрес, тип браузера, cookie) — автоматически при посещении сайта</li>
-            <li>История заказов и обращений — для улучшения сервиса</li>
+            <li>Имя и контактные данные (email, номер телефона), при оформлении заказа или обращении в поддержку</li>
+            <li>Адрес доставки, для отправки заказа</li>
+            <li>Технические данные (IP-адрес, тип браузера, cookie), автоматически при посещении сайта</li>
+            <li>История заказов и обращений, для улучшения сервиса</li>
           </ul>
         </section>
 
@@ -59,7 +59,7 @@ export default function PrivacyPolicyPage() {
             padding: '32px 36px',
           }}
         >
-          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>3. Как мы используем данные</h2>
+          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 600 }}>3. Как мы используем данные</h2>
           <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 2, color: 'var(--color-text-secondary)', fontSize: 14 }}>
             <li>Обработка и доставка заказов</li>
             <li>Связь с покупателем по вопросам заказа и поддержки</li>
@@ -76,14 +76,14 @@ export default function PrivacyPolicyPage() {
             padding: '32px 36px',
           }}
         >
-          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>4. Передача данных третьим лицам</h2>
+          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 600 }}>4. Передача данных третьим лицам</h2>
           <p style={{ margin: '0 0 12px', lineHeight: 1.7, color: 'var(--color-text-secondary)', fontSize: 14 }}>
             Мы не продаём и не передаём ваши персональные данные третьим лицам в коммерческих целях.
             Данные могут быть переданы только:
           </p>
           <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 2, color: 'var(--color-text-secondary)', fontSize: 14 }}>
-            <li>Службам доставки (СДЭК и другие) — для отправки заказа</li>
-            <li>Платёжным системам — для обработки оплаты</li>
+            <li>Службам доставки (СДЭК и другие), для отправки заказа</li>
+            <li>Платёжным системам, для обработки оплаты</li>
             <li>По требованию закона или государственных органов</li>
           </ul>
         </section>
@@ -96,7 +96,7 @@ export default function PrivacyPolicyPage() {
             padding: '32px 36px',
           }}
         >
-          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>5. Защита данных</h2>
+          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 600 }}>5. Защита данных</h2>
           <p style={{ margin: 0, lineHeight: 1.7, color: 'var(--color-text-secondary)', fontSize: 14 }}>
             Мы применяем технические и организационные меры для защиты ваших данных от несанкционированного доступа,
             изменения, раскрытия или уничтожения. Сайт использует HTTPS для шифрования передаваемых данных.
@@ -111,7 +111,7 @@ export default function PrivacyPolicyPage() {
             padding: '32px 36px',
           }}
         >
-          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>6. Cookie</h2>
+          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 600 }}>6. Cookie</h2>
           <p style={{ margin: 0, lineHeight: 1.7, color: 'var(--color-text-secondary)', fontSize: 14 }}>
             Сайт использует cookie-файлы для корректной работы (например, сохранение товаров в корзине и языковых настроек).
             Вы можете отключить cookie в настройках браузера, однако некоторые функции сайта могут перестать работать.
@@ -126,7 +126,7 @@ export default function PrivacyPolicyPage() {
             padding: '32px 36px',
           }}
         >
-          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>7. Ваши права</h2>
+          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 600 }}>7. Ваши права</h2>
           <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 2, color: 'var(--color-text-secondary)', fontSize: 14 }}>
             <li>Запросить доступ к своим персональным данным</li>
             <li>Потребовать исправления неточных данных</li>
@@ -147,7 +147,7 @@ export default function PrivacyPolicyPage() {
             padding: '32px 36px',
           }}
         >
-          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>8. Контакты</h2>
+          <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 600 }}>8. Контакты</h2>
           <p style={{ margin: 0, lineHeight: 1.7, color: 'var(--color-text-secondary)', fontSize: 14 }}>
             По всем вопросам, связанным с обработкой персональных данных, обращайтесь:{' '}
             <a href="mailto:hello@kolman.shop" style={{ color: 'var(--color-main)' }}>hello@kolman.shop</a>

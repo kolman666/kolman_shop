@@ -28,6 +28,7 @@ export default function ProductPage() {
   }, [product?.id])
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
     if (!product?.variantGroups?.length) {
       setSelectedVariants({})
       return
@@ -39,6 +40,8 @@ export default function ProductPage() {
       defaults[groupKey] = group.options[0] ?? ''
     }
     setSelectedVariants(defaults)
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [product?.id, product?.variantGroups])
 
   if (!product) {
@@ -294,7 +297,12 @@ export default function ProductPage() {
 
       {isAskModalOpen && (
         <div className="ask-modal" role="dialog" aria-modal="true">
-          <div className="ask-modal__overlay" onClick={() => setIsAskModalOpen(false)} />
+          <button
+            type="button"
+            className="ask-modal__overlay"
+            onClick={() => setIsAskModalOpen(false)}
+            aria-label="close question form"
+          />
           <div className="ask-modal__body">
             <h2>{t('ui.productPage.askModalTitle')}</h2>
             <form className="ask-modal__form" onSubmit={handleQuestionSubmit}>

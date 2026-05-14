@@ -35,29 +35,19 @@ function TelegramIcon() {
 function AvitoIcon() {
   return (
     <svg className="social-icon social-icon--avito" viewBox="0 0 410 380" aria-hidden="true">
-      <path
-        className="avito-dot avito-dot--green"
-        d="M122.965 379.27C190.652 379.27 245.524 324.398 245.524 256.711C245.524 189.023 190.652 134.152 122.965 134.152C55.2778 134.152 0.40625 189.023 0.40625 256.711C0.40625 324.398 55.2778 379.27 122.965 379.27Z"
-      />
-      <path
-        className="avito-dot avito-dot--red"
-        d="M335.574 363.803C376.475 363.803 409.631 330.646 409.631 289.745C409.631 248.844 376.475 215.688 335.574 215.688C294.673 215.688 261.516 248.844 261.516 289.745C261.516 330.646 294.673 363.803 335.574 363.803Z"
-      />
-      <path
-        className="avito-dot avito-dot--purple"
-        d="M146.404 118.175C171.715 118.175 192.233 97.6569 192.233 72.3466C192.233 47.0363 171.715 26.5182 146.404 26.5182C121.094 26.5182 100.576 47.0363 100.576 72.3466C100.576 97.6569 121.094 118.175 146.404 118.175Z"
-      />
-      <path
-        className="avito-dot avito-dot--blue"
-        d="M306.803 199.696C361.835 199.696 406.448 155.083 406.448 100.051C406.448 45.0183 361.835 0.405762 306.803 0.405762C251.77 0.405762 207.158 45.0183 207.158 100.051C207.158 155.083 251.77 199.696 306.803 199.696Z"
-      />
+      <circle className="avito-dot avito-dot--green" cx="123" cy="256.7" r="122.6" />
+      <circle className="avito-dot avito-dot--red" cx="335.6" cy="289.7" r="74.1" />
+      <circle className="avito-dot avito-dot--purple" cx="146.4" cy="72.3" r="45.8" />
+      <circle className="avito-dot avito-dot--blue" cx="306.8" cy="100.1" r="99.6" />
     </svg>
   )
 }
 
 export default function SiteChrome({ children }: SiteChromeProps) {
   const { t, i18n } = useTranslation()
-  const location = useLocation()
+  const routerLocation = useLocation()
+  const pathname = routerLocation.pathname
+  const search = routerLocation.search
   const navigate = useNavigate()
   const [cartCount, setCartCount] = useState(0)
   const [isCartOpen, setIsCartOpen] = useState(false)
@@ -70,13 +60,13 @@ export default function SiteChrome({ children }: SiteChromeProps) {
   const { products: allProducts } = useProducts()
 
   useEffect(() => {
-    setSearchOpen(false)
-    if (location.pathname === '/catalog') {
-      setSearchValue(new URLSearchParams(location.search).get('q') ?? '')
-    } else {
-      setSearchValue('')
-    }
-  }, [location.pathname, location.search])
+    const nextSearchValue = pathname === '/catalog' ? new URLSearchParams(search).get('q') ?? '' : ''
+    const timer = window.setTimeout(() => {
+      setSearchOpen(false)
+      setSearchValue(nextSearchValue)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [pathname, search])
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -122,7 +112,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [location.pathname, location.search])
+  }, [pathname, search])
 
   useEffect(() => {
     fetchSiteContent<SearchSection[]>('search_popular_sections').then((result) => {
@@ -146,7 +136,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
     '',
   ]
 
-  const pathParts = location.pathname.split('/').filter(Boolean)
+  const pathParts = pathname.split('/').filter(Boolean)
   const breadcrumbs: Array<{ to?: string; label: string }> = [{ to: '/', label: t('ui.breadcrumbs.home') }]
 
   if (pathParts[0] === 'about') breadcrumbs.push({ label: 'о нас' })
@@ -265,7 +255,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
               const categoryKey = navCategoryTargets[index] ?? ''
               const href = categoryKey ? `/catalog?category=${encodeURIComponent(categoryKey)}` : '/catalog'
               const isActive = categoryKey
-                ? location.pathname === '/catalog' && new URLSearchParams(location.search).get('category') === categoryKey
+                ? pathname === '/catalog' && new URLSearchParams(search).get('category') === categoryKey
                 : false
 
               return (

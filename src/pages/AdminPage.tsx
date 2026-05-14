@@ -131,7 +131,7 @@ function AdminLogin({ onLogin }: { onLogin: (secret: string) => Promise<boolean>
         <form className="admin__login-box" onSubmit={handleSubmit}>
           <h2 className="admin__login-title">Вход в панель управления</h2>
           <div className="admin__field">
-            <label className="admin__label">Пароль администратора</label>
+            <span className="admin__label">Пароль администратора</span>
             <input
               className="admin__input"
               type="password"
@@ -154,12 +154,11 @@ function AdminLogin({ onLogin }: { onLogin: (secret: string) => Promise<boolean>
 // ── Main admin panel ──────────────────────────────────────────────────────────
 export default function AdminPage() {
   const [isAuthed, setIsAuthed] = useState(false)
-  const [authChecking, setAuthChecking] = useState(true)
+  const [authChecking, setAuthChecking] = useState(() => Boolean(sessionStorage.getItem('admin_secret')))
 
   useEffect(() => {
     const stored = sessionStorage.getItem('admin_secret')
     if (!stored) {
-      setAuthChecking(false)
       return
     }
     verifyAdminSecret(stored).then((ok) => {
@@ -504,7 +503,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                 <p className="admin__form-section-title">Основная информация</p>
                 <div className="admin__two-col">
                   <div className="admin__field">
-                    <label className="admin__label">Тип товара *</label>
+                    <span className="admin__label">Тип товара *</span>
                     <select
                       className="admin__select"
                       value={form.categoryKey}
@@ -516,7 +515,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     </select>
                   </div>
                   <div className="admin__field">
-                    <label className="admin__label">Бренд *</label>
+                    <span className="admin__label">Бренд *</span>
                     <input
                       className="admin__input"
                       type="text"
@@ -528,7 +527,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                   </div>
                 </div>
                 <div className="admin__field">
-                  <label className="admin__label">Название *</label>
+                  <span className="admin__label">Название *</span>
                   <input
                     className="admin__input"
                     type="text"
@@ -539,7 +538,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                   />
                 </div>
                 <div className="admin__field">
-                  <label className="admin__label">Описание</label>
+                  <span className="admin__label">Описание</span>
                   <textarea
                     className="admin__textarea"
                     rows={3}
@@ -554,10 +553,10 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
               <div className="admin__form-section">
                 <p className="admin__form-section-title">Фото</p>
                 <div className="admin__field">
-                  <label className="admin__label">
+                  <span className="admin__label">
                     Главное фото (URL){' '}
                     <span className="admin__label-hint">(рекомендуемый размер: 800×600 px)</span>
-                  </label>
+                  </span>
                   <div className="admin__image-field">
                     <input
                       className="admin__input"
@@ -580,14 +579,14 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                   </div>
                 </div>
                 <div className="admin__field">
-                  <label className="admin__label">
+                  <span className="admin__label">
                     Галерея{' '}
                     <span className="admin__label-hint">(дополнительные фото, рекомендуемый размер: 800×600 px)</span>
-                  </label>
+                  </span>
                   {form.gallery.length > 0 && (
                     <div className="admin__gallery-list">
                       {form.gallery.map((url, idx) => (
-                        <div key={idx} className="admin__gallery-row">
+                        <div key={url || 'empty-gallery-url'} className="admin__gallery-row">
                           <input
                             className="admin__input"
                             type="url"
@@ -622,7 +621,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                 <p className="admin__form-section-title">Наличие</p>
                 <div className="admin__two-col">
                   <div className="admin__field">
-                    <label className="admin__label">Статус *</label>
+                    <span className="admin__label">Статус *</span>
                     <select
                       className="admin__select"
                       value={form.availability}
@@ -633,7 +632,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     </select>
                   </div>
                   <div className="admin__field">
-                    <label className="admin__label">Количество (шт.)</label>
+                    <span className="admin__label">Количество (шт.)</span>
                     <input
                       className="admin__input"
                       type="number"
@@ -650,9 +649,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
               <div className="admin__form-section">
                 <p className="admin__form-section-title">Ключевые характеристики</p>
                 <div className="admin__field">
-                  <label className="admin__label">
+                  <span className="admin__label">
                     Теги <span className="admin__label-hint">(Enter или запятая — добавить)</span>
-                  </label>
+                  </span>
                   {form.specs.length > 0 && (
                     <div className="admin__specs">
                       {form.specs.map((spec) => (
@@ -755,7 +754,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                 <p className="admin__form-section-title">Цена и отображение</p>
                 <div className="admin__two-col">
                   <div className="admin__field">
-                    <label className="admin__label">Цена (RUB) *</label>
+                    <span className="admin__label">Цена (RUB) *</span>
                     <input
                       className="admin__input"
                       type="number"
@@ -768,7 +767,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     />
                   </div>
                   <div className="admin__field">
-                    <label className="admin__label">Рекомендованный</label>
+                    <span className="admin__label">Рекомендованный</span>
                     <label className="admin__checkbox-field">
                       <input
                         type="checkbox"
@@ -956,6 +955,35 @@ const DEFAULT_PERKS: ContentPerk[] = [
 
 type SearchSectionAdmin = { label: string; catalogKey: string }
 
+type ContentSectionHeaderProps = {
+  title: string
+  sectionKey: string
+  saved: string | null
+  error: string
+  saving: string | null
+  onSave: (sectionKey: string) => void
+}
+
+function ContentSectionHeader({ title, sectionKey, saved, error, saving, onSave }: ContentSectionHeaderProps) {
+  return (
+    <div className="admin__content-header">
+      <h2 className="admin__content-title">{title}</h2>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        {saved === sectionKey && <span className="admin__saved-toast">Сохранено ✓</span>}
+        {error && <span style={{ color: 'var(--color-main)', fontSize: 13 }}>{error}</span>}
+        <button
+          type="button"
+          className="admin__save-btn"
+          onClick={() => onSave(sectionKey)}
+          disabled={saving !== null}
+        >
+          {saving === sectionKey ? 'Сохраняем...' : 'Сохранить'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const DEFAULT_SEARCH_SECTIONS: SearchSectionAdmin[] = [
   { label: 'Клавиатуры', catalogKey: 'products.categories.keyboards' },
   { label: 'Мышки', catalogKey: 'products.categories.mice' },
@@ -1011,6 +1039,13 @@ function ContentTab() {
     }
   }
 
+  function saveContentSection(sectionKey: string) {
+    if (sectionKey === 'hero_slides') void saveSection('hero_slides', slides)
+    if (sectionKey === 'homepage_categories') void saveSection('homepage_categories', categories)
+    if (sectionKey === 'homepage_perks') void saveSection('homepage_perks', perks)
+    if (sectionKey === 'search_popular_sections') void saveSection('search_popular_sections', searchSections)
+  }
+
   function updateSlide(index: number, field: keyof HeroSlide, value: string) {
     setSlides((prev) => prev.map((s, i) => i === index ? { ...s, [field]: value } : s))
   }
@@ -1055,36 +1090,11 @@ function ContentTab() {
     return <div className="admin__content-tab"><MigrationNotice /></div>
   }
 
-  function SectionHeader({ title, sectionKey }: { title: string; sectionKey: string; }) {
-    return (
-      <div className="admin__content-header">
-        <h2 className="admin__content-title">{title}</h2>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          {saved === sectionKey && <span className="admin__saved-toast">Сохранено ✓</span>}
-          {error && <span style={{ color: 'var(--color-main)', fontSize: 13 }}>{error}</span>}
-          <button
-            type="button"
-            className="admin__save-btn"
-            onClick={() => {
-              if (sectionKey === 'hero_slides') void saveSection('hero_slides', slides)
-              if (sectionKey === 'homepage_categories') void saveSection('homepage_categories', categories)
-              if (sectionKey === 'homepage_perks') void saveSection('homepage_perks', perks)
-              if (sectionKey === 'search_popular_sections') void saveSection('search_popular_sections', searchSections)
-            }}
-            disabled={saving !== null}
-          >
-            {saving === sectionKey ? 'Сохраняем...' : 'Сохранить'}
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="admin__content-tab">
 
       {/* ── Hero slides ── */}
-      <SectionHeader title="Главный баннер" sectionKey="hero_slides" />
+      <ContentSectionHeader title="Главный баннер" sectionKey="hero_slides" saved={saved} error={error} saving={saving} onSave={saveContentSection} />
 
       {slides.length === 0 ? (
         <div className="admin__content-empty">
@@ -1102,7 +1112,7 @@ function ContentTab() {
         <>
           <div className="admin__slides-list">
             {slides.map((slide, index) => (
-              <div key={index} className="admin__slide-card">
+              <div key={`${slide.image}-${slide.title}-${slide.tag}`} className="admin__slide-card">
                 <div className="admin__slide-card-header">
                   <span className="admin__slide-num">Слайд {index + 1}</span>
                   <button type="button" className="admin__icon-btn admin__icon-btn--danger" onClick={() => removeSlide(index)}>
@@ -1114,24 +1124,24 @@ function ContentTab() {
                 </div>
                 <div className="admin__two-col">
                   <div className="admin__field">
-                    <label className="admin__label">Тег</label>
+                    <span className="admin__label">Тег</span>
                     <input className="admin__input" value={slide.tag} onChange={(e) => updateSlide(index, 'tag', e.target.value)} placeholder="новинка" />
                   </div>
                   <div className="admin__field">
-                    <label className="admin__label">Заголовок</label>
+                    <span className="admin__label">Заголовок</span>
                     <input className="admin__input" value={slide.title} onChange={(e) => updateSlide(index, 'title', e.target.value)} placeholder="название продукта" />
                   </div>
                 </div>
                 <div className="admin__field">
-                  <label className="admin__label">Подзаголовок</label>
+                  <span className="admin__label">Подзаголовок</span>
                   <input className="admin__input" value={slide.subtitle} onChange={(e) => updateSlide(index, 'subtitle', e.target.value)} placeholder="краткое описание" />
                 </div>
                 <div className="admin__field">
-                  <label className="admin__label">Акцентный текст</label>
+                  <span className="admin__label">Акцентный текст</span>
                   <input className="admin__input" value={slide.accent} onChange={(e) => updateSlide(index, 'accent', e.target.value)} placeholder="короткая фраза-акцент" />
                 </div>
                 <div className="admin__field">
-                  <label className="admin__label">Фото (URL)</label>
+                  <span className="admin__label">Фото (URL)</span>
                   <div className="admin__image-field">
                     <input className="admin__input" type="url" value={slide.image} onChange={(e) => updateSlide(index, 'image', e.target.value)} placeholder="https://..." />
                     {slide.image ? (
@@ -1146,10 +1156,10 @@ function ContentTab() {
                   </div>
                 </div>
                 <div className="admin__field">
-                  <label className="admin__label">
+                  <span className="admin__label">
                     Ссылка кнопки «Подробнее»{' '}
                     <span className="admin__label-hint">(внутренняя: /product/slug или /catalog?category=…, либо https://… — оставьте пустым, чтобы скрыть кнопку)</span>
-                  </label>
+                  </span>
                   <input
                     className="admin__input"
                     type="text"
@@ -1170,7 +1180,7 @@ function ContentTab() {
 
       {/* ── Categories ── */}
       <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 28, marginTop: 8 }}>
-        <SectionHeader title="Категории на главной" sectionKey="homepage_categories" />
+        <ContentSectionHeader title="Категории на главной" sectionKey="homepage_categories" saved={saved} error={error} saving={saving} onSave={saveContentSection} />
         <p className="admin__label-hint" style={{ marginBottom: 16 }}>Заголовок, фото и тип для каждой категории. Можно добавлять и удалять.</p>
         {categories.length === 0 ? (
           <div className="admin__content-empty">
@@ -1183,7 +1193,7 @@ function ContentTab() {
           <>
             <div className="admin__slides-list">
               {categories.map((cat, i) => (
-                <div key={i} className="admin__slide-card">
+                <div key={`${cat.catalogKey}-${cat.title}-${cat.image}`} className="admin__slide-card">
                   <div className="admin__slide-card-header">
                     <span className="admin__slide-num">Категория {i + 1}</span>
                     <button type="button" className="admin__icon-btn admin__icon-btn--danger" onClick={() => removeCategory(i)} title="Удалить категорию">
@@ -1195,7 +1205,7 @@ function ContentTab() {
                   </div>
                   <div className="admin__two-col">
                     <div className="admin__field">
-                      <label className="admin__label">Тип товара</label>
+                      <span className="admin__label">Тип товара</span>
                       <select
                         className="admin__select"
                         value={CATEGORY_KEYS.includes(cat.catalogKey) ? cat.catalogKey : '__custom__'}
@@ -1220,7 +1230,7 @@ function ContentTab() {
                       )}
                     </div>
                     <div className="admin__field">
-                      <label className="admin__label">Название</label>
+                      <span className="admin__label">Название</span>
                       <input
                         className="admin__input"
                         value={cat.title}
@@ -1230,7 +1240,7 @@ function ContentTab() {
                     </div>
                   </div>
                   <div className="admin__field">
-                    <label className="admin__label">Фото (URL)</label>
+                    <span className="admin__label">Фото (URL)</span>
                     <div className="admin__image-field">
                       <input
                         className="admin__input"
@@ -1257,7 +1267,7 @@ function ContentTab() {
 
       {/* ── Perks / Advantages ── */}
       <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 28, marginTop: 8 }}>
-        <SectionHeader title="Преимущества" sectionKey="homepage_perks" />
+        <ContentSectionHeader title="Преимущества" sectionKey="homepage_perks" saved={saved} error={error} saving={saving} onSave={saveContentSection} />
         <p className="admin__label-hint" style={{ marginBottom: 16 }}>Карточки преимуществ под слайдером. Можно добавлять и удалять.</p>
         {perks.length === 0 ? (
           <div className="admin__content-empty">
@@ -1270,7 +1280,7 @@ function ContentTab() {
           <>
             <div className="admin__slides-list">
               {perks.map((perk, i) => (
-                <div key={i} className="admin__slide-card">
+                <div key={`${perk.title}-${perk.desc}`} className="admin__slide-card">
                   <div className="admin__slide-card-header">
                     <span className="admin__slide-num">Преимущество {i + 1}</span>
                     <button type="button" className="admin__icon-btn admin__icon-btn--danger" onClick={() => removePerk(i)} title="Удалить преимущество">
@@ -1281,7 +1291,7 @@ function ContentTab() {
                     </button>
                   </div>
                   <div className="admin__field">
-                    <label className="admin__label">Заголовок</label>
+                    <span className="admin__label">Заголовок</span>
                     <input
                       className="admin__input"
                       value={perk.title}
@@ -1290,7 +1300,7 @@ function ContentTab() {
                     />
                   </div>
                   <div className="admin__field">
-                    <label className="admin__label">Описание</label>
+                    <span className="admin__label">Описание</span>
                     <textarea
                       className="admin__textarea"
                       rows={3}
@@ -1311,13 +1321,13 @@ function ContentTab() {
 
       {/* ── Search popular sections ── */}
       <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 28, marginTop: 8 }}>
-        <SectionHeader title="Поиск — популярные разделы" sectionKey="search_popular_sections" />
+        <ContentSectionHeader title="Поиск — популярные разделы" sectionKey="search_popular_sections" saved={saved} error={error} saving={saving} onSave={saveContentSection} />
         <p className="admin__label-hint" style={{ marginBottom: 16 }}>
           Чипы, которые отображаются в выпадающем меню поиска под «Популярные разделы». Оставьте catalogKey пустым, чтобы вести просто в каталог.
         </p>
         <div className="admin__slides-list">
           {searchSections.map((s, i) => (
-            <div key={i} className="admin__slide-card">
+            <div key={`${s.label}-${s.catalogKey}`} className="admin__slide-card">
               <div className="admin__slide-card-header">
                 <span className="admin__slide-num">Раздел {i + 1}</span>
                 <button
@@ -1333,7 +1343,7 @@ function ContentTab() {
               </div>
               <div className="admin__two-col">
                 <div className="admin__field">
-                  <label className="admin__label">Название</label>
+                  <span className="admin__label">Название</span>
                   <input
                     className="admin__input"
                     value={s.label}
@@ -1342,7 +1352,7 @@ function ContentTab() {
                   />
                 </div>
                 <div className="admin__field">
-                  <label className="admin__label">Ключ категории</label>
+                  <span className="admin__label">Ключ категории</span>
                   <select
                     className="admin__select"
                     value={CATEGORY_KEYS.includes(s.catalogKey) ? s.catalogKey : '__none__'}
@@ -1563,16 +1573,16 @@ function BloggersTab({ allProducts }: { allProducts: Product[] }) {
               <p className="admin__form-section-title">Основная информация</p>
               <div className="admin__two-col">
                 <div className="admin__field">
-                  <label className="admin__label">Имя / Ник *</label>
+                  <span className="admin__label">Имя / Ник *</span>
                   <input className="admin__input" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="shadowkekw" required />
                 </div>
                 <div className="admin__field">
-                  <label className="admin__label">Ссылка (соцсети / канал)</label>
+                  <span className="admin__label">Ссылка (соцсети / канал)</span>
                   <input className="admin__input" type="url" value={form.social_url} onChange={(e) => setField('social_url', e.target.value)} placeholder="https://t.me/..." />
                 </div>
               </div>
               <div className="admin__field">
-                <label className="admin__label">Описание</label>
+                <span className="admin__label">Описание</span>
                 <textarea className="admin__textarea" rows={3} value={form.description} onChange={(e) => setField('description', e.target.value)} placeholder="Краткое описание блогера..." />
               </div>
             </div>
@@ -1580,7 +1590,7 @@ function BloggersTab({ allProducts }: { allProducts: Product[] }) {
             <div className="admin__form-section">
               <p className="admin__form-section-title">Фото</p>
               <div className="admin__field">
-                <label className="admin__label">URL фото <span className="admin__label-hint">(фон карточки, рекомендуется 600×400 px)</span></label>
+                <span className="admin__label">URL фото <span className="admin__label-hint">(фон карточки, рекомендуется 600×400 px)</span></span>
                 <div className="admin__image-field">
                   <input className="admin__input" type="url" value={form.image} onChange={(e) => setField('image', e.target.value)} placeholder="https://..." />
                   {form.image ? (
@@ -1626,11 +1636,11 @@ function BloggersTab({ allProducts }: { allProducts: Product[] }) {
               <p className="admin__form-section-title">Настройки отображения</p>
               <div className="admin__two-col">
                 <div className="admin__field">
-                  <label className="admin__label">Порядок сортировки</label>
+                  <span className="admin__label">Порядок сортировки</span>
                   <input className="admin__input" type="number" min="0" value={form.sort_order} onChange={(e) => setField('sort_order', e.target.value)} />
                 </div>
                 <div className="admin__field">
-                  <label className="admin__label">Видимость</label>
+                  <span className="admin__label">Видимость</span>
                   <label className="admin__checkbox-field">
                     <input type="checkbox" className="admin__checkbox-input" checked={form.is_active} onChange={(e) => setField('is_active', e.target.checked)} />
                     <span className="admin__checkbox-label">Показывать на сайте</span>
@@ -1677,4 +1687,3 @@ function BloggersTab({ allProducts }: { allProducts: Product[] }) {
     </div>
   )
 }
-

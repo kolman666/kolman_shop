@@ -96,8 +96,8 @@ export default function DeliveryPage() {
             {t('delivery.faqTitle')}
           </p>
           <div className="delivery-faq">
-            {faq.map((item, i) => (
-              <FaqRow key={i} item={item} />
+            {faq.map((item) => (
+              <FaqRow key={`${item.q}-${item.a}`} item={item} />
             ))}
           </div>
         </div>

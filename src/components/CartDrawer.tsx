@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useProducts } from '../hooks/useProducts'
@@ -83,7 +83,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
   const prevOpenRef = useRef(isOpen)
 
-  function syncCart() {
+  const syncCart = useCallback(() => {
     const record = getCart()
     const entries: CartEntry[] = []
     for (const [idStr, qty] of Object.entries(record)) {
@@ -100,7 +100,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       }
     }
     setCartEntries(entries)
-  }
+  }, [products, t])
 
   useEffect(() => {
     syncCart()
@@ -110,7 +110,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       window.removeEventListener('cart:update', syncCart)
       window.removeEventListener('storage', syncCart)
     }
-  }, [products, t])
+  }, [syncCart])
 
   // Reset view to 'cart' when drawer closes (but not after success)
   useEffect(() => {

@@ -85,14 +85,16 @@ export default async function handler(req, res) {
     if (items.length === 0) return res.status(400).json({ error: 'cart is empty' })
 
     // Normalize items: only the safe fields go into DB
-    const safeItems = items
-      .filter((it) => it && typeof it === 'object')
-      .map((it) => ({
+    const safeItems = []
+    for (const it of items) {
+      if (!it || typeof it !== 'object') continue
+      safeItems.push({
         id: typeof it.id === 'number' ? it.id : null,
         title: s(it.title, 200),
         price: typeof it.price === 'number' && Number.isFinite(it.price) ? it.price : 0,
         quantity: typeof it.quantity === 'number' && Number.isInteger(it.quantity) && it.quantity > 0 ? it.quantity : 1,
-      }))
+      })
+    }
     const total = typeof body.total === 'number' && Number.isFinite(body.total)
       ? Math.max(0, Math.min(body.total, 1_000_000_000))
       : safeItems.reduce((acc, it) => acc + it.price * it.quantity, 0)

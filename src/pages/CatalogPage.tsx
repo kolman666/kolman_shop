@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useReducer } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
@@ -8,6 +8,71 @@ import { safeBackgroundImage } from '../lib/safeUrl'
 
 type PriceFilter = 'all' | 'budget' | 'mid' | 'premium'
 type SortFilter = 'featured' | 'priceAsc' | 'priceDesc' | 'title'
+
+type CatalogFilterState = {
+  activeCategory: string
+  selectedBrand: string
+  selectedPrice: PriceFilter
+  sortBy: SortFilter
+  featuredOnly: boolean
+  inStockOnly: boolean
+  query: string
+  page: number
+}
+
+type CatalogFilterAction =
+  | { type: 'syncUrl'; payload: CatalogFilterState }
+  | { type: 'reset' }
+  | { type: 'resetPage' }
+  | { type: 'setActiveCategory'; value: string }
+  | { type: 'setSelectedBrand'; value: string }
+  | { type: 'setSelectedPrice'; value: PriceFilter }
+  | { type: 'setSortBy'; value: SortFilter }
+  | { type: 'setFeaturedOnly'; value: boolean }
+  | { type: 'setInStockOnly'; value: boolean }
+  | { type: 'setQuery'; value: string }
+  | { type: 'setPage'; value: number | ((page: number) => number) }
+
+const DEFAULT_FILTER_STATE: CatalogFilterState = {
+  activeCategory: 'all',
+  selectedBrand: 'all',
+  selectedPrice: 'all',
+  sortBy: 'featured',
+  featuredOnly: false,
+  inStockOnly: false,
+  query: '',
+  page: 1,
+}
+
+function catalogFilterReducer(state: CatalogFilterState, action: CatalogFilterAction): CatalogFilterState {
+  switch (action.type) {
+    case 'syncUrl':
+      return action.payload
+    case 'reset':
+      return DEFAULT_FILTER_STATE
+    case 'resetPage':
+      return state.page === 1 ? state : { ...state, page: 1 }
+    case 'setActiveCategory':
+      return { ...state, activeCategory: action.value, page: 1 }
+    case 'setSelectedBrand':
+      return { ...state, selectedBrand: action.value, page: 1 }
+    case 'setSelectedPrice':
+      return { ...state, selectedPrice: action.value, page: 1 }
+    case 'setSortBy':
+      return { ...state, sortBy: action.value, page: 1 }
+    case 'setFeaturedOnly':
+      return { ...state, featuredOnly: action.value, page: 1 }
+    case 'setInStockOnly':
+      return { ...state, inStockOnly: action.value, page: 1 }
+    case 'setQuery':
+      return { ...state, query: action.value, page: 1 }
+    case 'setPage':
+      return {
+        ...state,
+        page: typeof action.value === 'function' ? action.value(state.page) : action.value,
+      }
+  }
+}
 
 function matchesPrice(price: number, filter: PriceFilter) {
   if (filter === 'budget') {
@@ -28,15 +93,9 @@ function matchesPrice(price: number, filter: PriceFilter) {
 export default function CatalogPage() {
   const { t } = useTranslation()
   const [searchParams] = useSearchParams()
-  const [activeCategory, setActiveCategory] = useState<string>('all')
-  const [selectedBrand, setSelectedBrand] = useState('all')
-  const [selectedPrice, setSelectedPrice] = useState<PriceFilter>('all')
-  const [sortBy, setSortBy] = useState<SortFilter>('featured')
-  const [featuredOnly, setFeaturedOnly] = useState(false)
-  const [inStockOnly, setInStockOnly] = useState(false)
-  const [query, setQuery] = useState('')
-  const [page, setPage] = useState(1)
+  const [filters, dispatchFilters] = useReducer(catalogFilterReducer, DEFAULT_FILTER_STATE)
   const { products } = useProducts()
+  const { activeCategory, selectedBrand, selectedPrice, sortBy, featuredOnly, inStockOnly, query, page } = filters
   const deferredQuery = useDeferredValue(query)
   const pageSize = 6
   const searchParamsString = searchParams.toString()
@@ -58,14 +117,16 @@ export default function CatalogPage() {
     const featuredFromUrl = params.get('featured')
     const searchFromUrl = params.get('q')
 
-    setActiveCategory(categoryFromUrl && categoryTabs.includes(categoryFromUrl) ? categoryFromUrl : 'all')
-    setInStockOnly(inStockFromUrl === '1' || inStockFromUrl === 'true')
-    setFeaturedOnly(featuredFromUrl === '1' || featuredFromUrl === 'true')
-    setQuery(searchFromUrl ?? '')
-    setSelectedBrand('all')
-    setSelectedPrice('all')
-    setSortBy('featured')
-    setPage(1)
+    dispatchFilters({
+      type: 'syncUrl',
+      payload: {
+        ...DEFAULT_FILTER_STATE,
+        activeCategory: categoryFromUrl && categoryTabs.includes(categoryFromUrl) ? categoryFromUrl : 'all',
+        inStockOnly: inStockFromUrl === '1' || inStockFromUrl === 'true',
+        featuredOnly: featuredFromUrl === '1' || featuredFromUrl === 'true',
+        query: searchFromUrl ?? '',
+      },
+    })
   }, [searchParamsString, categoryTabs])
 
   const filteredProducts = products
@@ -113,18 +174,11 @@ export default function CatalogPage() {
   const paginatedProducts = filteredProducts.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   useEffect(() => {
-    setPage(1)
+    dispatchFilters({ type: 'resetPage' })
   }, [activeCategory, selectedBrand, selectedPrice, sortBy, featuredOnly, inStockOnly, deferredQuery])
 
   const resetFilters = () => {
-    setActiveCategory('all')
-    setSelectedBrand('all')
-    setSelectedPrice('all')
-    setSortBy('featured')
-    setFeaturedOnly(false)
-    setInStockOnly(false)
-    setQuery('')
-    setPage(1)
+    dispatchFilters({ type: 'reset' })
   }
 
   return (
@@ -149,7 +203,7 @@ export default function CatalogPage() {
             className="catalog-search__input"
             type="text"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => dispatchFilters({ type: 'setQuery', value: event.target.value })}
             placeholder={t('ui.catalog.searchPlaceholder')}
           />
         </label>
@@ -162,7 +216,7 @@ export default function CatalogPage() {
               role="tab"
               className={`catalog-tab ${activeCategory === category ? 'active' : ''}`}
               aria-selected={activeCategory === category}
-              onClick={() => setActiveCategory(category)}
+              onClick={() => dispatchFilters({ type: 'setActiveCategory', value: category })}
             >
               {category === 'all' ? t('ui.catalog.allCategories') : t(category)}
             </button>
@@ -195,7 +249,7 @@ export default function CatalogPage() {
 
             <label className="catalog-field">
               <span className="catalog-field__label">{t('ui.catalog.brandsLabel')}</span>
-              <select className="catalog-field__control" value={selectedBrand} onChange={(event) => setSelectedBrand(event.target.value)}>
+              <select className="catalog-field__control" value={selectedBrand} onChange={(event) => dispatchFilters({ type: 'setSelectedBrand', value: event.target.value })}>
                 {brands.map((brand) => (
                   <option key={brand} value={brand}>
                     {brand === 'all' ? t('ui.catalog.allCategories') : brand}
@@ -209,7 +263,7 @@ export default function CatalogPage() {
               <select
                 className="catalog-field__control"
                 value={selectedPrice}
-                onChange={(event) => setSelectedPrice(event.target.value as PriceFilter)}
+                onChange={(event) => dispatchFilters({ type: 'setSelectedPrice', value: event.target.value as PriceFilter })}
               >
                 <option value="all">{t('ui.catalog.priceAny')}</option>
                 <option value="budget">{t('ui.catalog.priceBudget')}</option>
@@ -220,7 +274,7 @@ export default function CatalogPage() {
 
             <label className="catalog-field">
               <span className="catalog-field__label">{t('ui.catalog.sortLabel')}</span>
-              <select className="catalog-field__control" value={sortBy} onChange={(event) => setSortBy(event.target.value as SortFilter)}>
+              <select className="catalog-field__control" value={sortBy} onChange={(event) => dispatchFilters({ type: 'setSortBy', value: event.target.value as SortFilter })}>
                 <option value="featured">{t('ui.catalog.sortFeatured')}</option>
                 <option value="priceAsc">{t('ui.catalog.sortPriceAsc')}</option>
                 <option value="priceDesc">{t('ui.catalog.sortPriceDesc')}</option>
@@ -229,12 +283,12 @@ export default function CatalogPage() {
             </label>
 
             <label className="catalog-toggle">
-              <input type="checkbox" checked={featuredOnly} onChange={(event) => setFeaturedOnly(event.target.checked)} />
+              <input type="checkbox" checked={featuredOnly} onChange={(event) => dispatchFilters({ type: 'setFeaturedOnly', value: event.target.checked })} />
               <span>{t('ui.catalog.featuredOnly')}</span>
             </label>
 
             <label className="catalog-toggle">
-              <input type="checkbox" checked={inStockOnly} onChange={(event) => setInStockOnly(event.target.checked)} />
+              <input type="checkbox" checked={inStockOnly} onChange={(event) => dispatchFilters({ type: 'setInStockOnly', value: event.target.checked })} />
               <span>{t('ui.catalog.inStockOnly')}</span>
             </label>
           </div>
@@ -262,7 +316,7 @@ export default function CatalogPage() {
               <button
                 type="button"
                 className="catalog-pagination__btn"
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                onClick={() => dispatchFilters({ type: 'setPage', value: (prev) => Math.max(1, prev - 1) })}
                 disabled={safePage === 1}
               >
                 {t('ui.catalog.pagePrev')}
@@ -273,7 +327,7 @@ export default function CatalogPage() {
               <button
                 type="button"
                 className="catalog-pagination__btn"
-                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                onClick={() => dispatchFilters({ type: 'setPage', value: (prev) => Math.min(totalPages, prev + 1) })}
                 disabled={safePage === totalPages}
               >
                 {t('ui.catalog.pageNext')}

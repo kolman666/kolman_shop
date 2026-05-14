@@ -58,12 +58,12 @@ const slideImages = [
 
 const perkIcons = [
   (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg key="shield" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   ),
   (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg key="delivery" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <rect x="1" y="3" width="15" height="13" rx="2" />
       <path d="M16 8h4l3 5v3h-7V8z" />
       <circle cx="5.5" cy="18.5" r="2.5" />
@@ -71,7 +71,7 @@ const perkIcons = [
     </svg>
   ),
   (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg key="star" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
   ),
@@ -187,6 +187,11 @@ const brandLogos = [
   },
 ]
 
+const marqueeBrandLogos = [
+  ...brandLogos.map((brand) => ({ ...brand, marqueeKey: `${brand.name}-first` })),
+  ...brandLogos.map((brand) => ({ ...brand, marqueeKey: `${brand.name}-second` })),
+]
+
 type BrandLogoProps = {
   className?: string
 }
@@ -211,22 +216,10 @@ function TelegramIcon() {
 function AvitoIcon() {
   return (
     <svg className="social-icon social-icon--avito" viewBox="0 0 410 380" aria-hidden="true">
-      <path
-        className="avito-dot avito-dot--green"
-        d="M122.965 379.27C190.652 379.27 245.524 324.398 245.524 256.711C245.524 189.023 190.652 134.152 122.965 134.152C55.2778 134.152 0.40625 189.023 0.40625 256.711C0.40625 324.398 55.2778 379.27 122.965 379.27Z"
-      />
-      <path
-        className="avito-dot avito-dot--red"
-        d="M335.574 363.803C376.475 363.803 409.631 330.646 409.631 289.745C409.631 248.844 376.475 215.688 335.574 215.688C294.673 215.688 261.516 248.844 261.516 289.745C261.516 330.646 294.673 363.803 335.574 363.803Z"
-      />
-      <path
-        className="avito-dot avito-dot--purple"
-        d="M146.404 118.175C171.715 118.175 192.233 97.6569 192.233 72.3466C192.233 47.0363 171.715 26.5182 146.404 26.5182C121.094 26.5182 100.576 47.0363 100.576 72.3466C100.576 97.6569 121.094 118.175 146.404 118.175Z"
-      />
-      <path
-        className="avito-dot avito-dot--blue"
-        d="M306.803 199.696C361.835 199.696 406.448 155.083 406.448 100.051C406.448 45.0183 361.835 0.405762 306.803 0.405762C251.77 0.405762 207.158 45.0183 207.158 100.051C207.158 155.083 251.77 199.696 306.803 199.696Z"
-      />
+      <circle className="avito-dot avito-dot--green" cx="123" cy="256.7" r="122.6" />
+      <circle className="avito-dot avito-dot--red" cx="335.6" cy="289.7" r="74.1" />
+      <circle className="avito-dot avito-dot--purple" cx="146.4" cy="72.3" r="45.8" />
+      <circle className="avito-dot avito-dot--blue" cx="306.8" cy="100.1" r="99.6" />
     </svg>
   )
 }
@@ -327,18 +320,13 @@ function HomePage() {
     })) as FeaturedProduct[]
 
   useEffect(() => {
+    if (slides.length <= 1) return
     const timer = window.setInterval(() => {
       setCurrent((prev) => (prev + 1) % slides.length)
     }, 4500)
 
     return () => window.clearInterval(timer)
   }, [slides.length])
-
-  useEffect(() => {
-    if (current >= slides.length) {
-      setCurrent(0)
-    }
-  }, [current, slides.length])
 
   useEffect(() => {
     const syncCart = () => setCartCount(getCartCount())
@@ -351,7 +339,8 @@ function HomePage() {
     }
   }, [])
 
-  const slide = slides[current]
+  const visibleSlideIndex = slides.length > 0 ? current % slides.length : 0
+  const slide = slides[visibleSlideIndex]
 
   const handleLanguageChange = (language: 'en' | 'ru') => {
     void i18n.changeLanguage(language)
@@ -483,7 +472,7 @@ function HomePage() {
             <div className="hero-card__accent" />
 
             <div className="hero-card__content">
-              <div key={current} className="hero-card__copy">
+              <div key={visibleSlideIndex} className="hero-card__copy">
                 <span className="hero-tag">{slide.tag}</span>
                 <h1 className="hero-title">{slide.title}</h1>
                 <p className="hero-subtitle">{slide.subtitle}</p>
@@ -528,7 +517,7 @@ function HomePage() {
                   <button
                     key={item.title}
                     type="button"
-                    className={`dot ${index === current ? 'active' : ''}`}
+                    className={`dot ${index === visibleSlideIndex ? 'active' : ''}`}
                     onClick={() => setCurrent(index)}
                     aria-label={`open slide ${index + 1}`}
                   />
@@ -678,8 +667,8 @@ function HomePage() {
         <div className="brands-strip brands-strip--fullbleed">
           <div className="marquee-wrap">
             <div className="marquee-track">
-              {[...brandLogos, ...brandLogos].map((brand, i) => (
-                <div key={`${brand.name}-${i}`} className="marquee-item">
+              {marqueeBrandLogos.map((brand) => (
+                <div key={brand.marqueeKey} className="marquee-item">
                   {brand.svg}
                 </div>
               ))}

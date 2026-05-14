@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useReducer, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { sendTelegramMessage, TelegramSendError } from '../lib/telegram'
@@ -16,6 +16,55 @@ const TELEGRAM_LABELS: Record<RequestTypeValue, string> = {
 }
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
+
+type SupportState = {
+  requestType: RequestTypeValue
+  name: string
+  contact: string
+  message: string
+  status: Status
+  errorDetail: string
+}
+
+type SupportAction =
+  | { type: 'setRequestType'; value: RequestTypeValue }
+  | { type: 'setName'; value: string }
+  | { type: 'setContact'; value: string }
+  | { type: 'setMessage'; value: string }
+  | { type: 'submitStart' }
+  | { type: 'submitSuccess' }
+  | { type: 'submitError'; detail: string }
+  | { type: 'sendAnother' }
+
+const INITIAL_SUPPORT_STATE: SupportState = {
+  requestType: 'other',
+  name: '',
+  contact: '',
+  message: '',
+  status: 'idle',
+  errorDetail: '',
+}
+
+function supportReducer(state: SupportState, action: SupportAction): SupportState {
+  switch (action.type) {
+    case 'setRequestType':
+      return { ...state, requestType: action.value }
+    case 'setName':
+      return { ...state, name: action.value }
+    case 'setContact':
+      return { ...state, contact: action.value }
+    case 'setMessage':
+      return { ...state, message: action.value }
+    case 'submitStart':
+      return { ...state, status: 'loading', errorDetail: '' }
+    case 'submitSuccess':
+      return { ...state, name: '', contact: '', message: '', status: 'success', errorDetail: '' }
+    case 'submitError':
+      return { ...state, status: 'error', errorDetail: action.detail }
+    case 'sendAnother':
+      return { ...state, status: 'idle', errorDetail: '' }
+  }
+}
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -79,29 +128,18 @@ async function submitInquiry(fields: {
 
 export default function SupportPage() {
   const { t } = useTranslation()
-  const [requestType, setRequestType] = useState<RequestTypeValue>('other')
-  const [name, setName] = useState('')
-  const [contact, setContact] = useState('')
-  const [message, setMessage] = useState('')
-  const [status, setStatus] = useState<Status>('idle')
-  const [errorDetail, setErrorDetail] = useState<string>('')
+  const [state, dispatch] = useReducer(supportReducer, INITIAL_SUPPORT_STATE)
+  const { requestType, name, contact, message, status, errorDetail } = state
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!message.trim()) return
-    setStatus('loading')
-    setErrorDetail('')
+    dispatch({ type: 'submitStart' })
     try {
       await submitInquiry({ requestType, name, contact, message })
-      setStatus('success')
-      setMessage('')
-      setName('')
-      setContact('')
+      dispatch({ type: 'submitSuccess' })
     } catch (err) {
-      if (err instanceof TelegramSendError) {
-        setErrorDetail(err.detail || err.message || '')
-      }
-      setStatus('error')
+      dispatch({ type: 'submitError', detail: err instanceof TelegramSendError ? err.detail || err.message || '' : '' })
     }
   }
 
@@ -142,7 +180,7 @@ export default function SupportPage() {
             {t('support.successText')}
           </p>
           <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-            <button type="button" className="cta-btn" onClick={() => setStatus('idle')}>
+            <button type="button" className="cta-btn" onClick={() => dispatch({ type: 'sendAnother' })}>
               {t('support.sendAnother')}
             </button>
             <Link to="/" className="ghost-btn">
@@ -194,7 +232,7 @@ export default function SupportPage() {
                   key={value}
                   type="button"
                   className={`catalog-tab ${requestType === value ? 'active' : ''}`}
-                  onClick={() => setRequestType(value)}
+                  onClick={() => dispatch({ type: 'setRequestType', value })}
                 >
                   {t(`support.types.${value}`)}
                 </button>
@@ -212,7 +250,7 @@ export default function SupportPage() {
                 className="catalog-search__input"
                 placeholder={t('support.namePlaceholder')}
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => dispatch({ type: 'setName', value: e.target.value })}
               />
             </div>
             <div className="catalog-field" style={{ gap: 10 }}>
@@ -224,7 +262,7 @@ export default function SupportPage() {
                 className="catalog-search__input"
                 placeholder={t('support.contactPlaceholder')}
                 value={contact}
-                onChange={(e) => setContact(e.target.value)}
+                onChange={(e) => dispatch({ type: 'setContact', value: e.target.value })}
               />
             </div>
           </div>
@@ -240,7 +278,7 @@ export default function SupportPage() {
               rows={6}
               required
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => dispatch({ type: 'setMessage', value: e.target.value })}
               style={{ resize: 'vertical', fontFamily: 'inherit' }}
             />
           </div>
