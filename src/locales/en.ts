@@ -63,6 +63,7 @@ const en = {
     newsTitleEnd: '.',
     newsSub: 'news from the peripheral world, setup guides and honest reviews of new releases.',
     newsReadMore: 'read more',
+    newsReadAll: 'read all articles',
     blog: 'blog',
     mediaPicks: 'media picks',
     shopNow: 'shop now',
