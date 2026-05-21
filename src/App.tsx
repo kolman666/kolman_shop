@@ -7,7 +7,11 @@ import SiteChrome from './components/SiteChrome'
 import CartDrawer from './components/CartDrawer'
 import BrandSpotlight from './components/BrandSpotlight'
 import BloggersBlock from './components/BloggersBlock'
-import { fetchSiteContent } from './lib/siteContent'
+import NewsBlock from './components/NewsBlock'
+import AuthModal from './components/AuthModal'
+import { AUTH_EVENT, getUser, type User } from './lib/auth'
+import ProfilePage from './pages/ProfilePage'
+import { fetchSiteContent, fetchSiteContentLocalized } from './lib/siteContent'
 import { safeBackgroundImage } from './lib/safeUrl'
 import AboutPage from './pages/AboutPage'
 import AdminPage from './pages/AdminPage'
@@ -17,6 +21,7 @@ import SupportPage from './pages/SupportPage'
 import PartnershipPage from './pages/PartnershipPage'
 import HelpChoosePage from './pages/HelpChoosePage'
 import DeliveryPage from './pages/DeliveryPage'
+import ModdingPage from './pages/ModdingPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import { getCartCount } from './lib/cart'
 import SearchDropdown, { type SearchSection } from './components/SearchDropdown'
@@ -235,6 +240,8 @@ function HomePage() {
   const [isBurgerOpen, setIsBurgerOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [popularSections, setPopularSections] = useState<SearchSection[]>([])
+  const [authOpen, setAuthOpen] = useState(false)
+  const [currentUser, setCurrentUser] = useState<User | null>(() => getUser())
   const searchWrapRef = useRef<HTMLDivElement>(null)
   const [dbSlides, setDbSlides] = useState<Array<{ tag: string; title: string; subtitle: string; accent: string; img: string; detailsUrl?: string }> | null>(null)
   const [dbCategories, setDbCategories] = useState<Array<{ catalogKey: string; title: string; image: string }> | null>(null)
@@ -242,21 +249,22 @@ function HomePage() {
   const { products } = useProducts()
 
   useEffect(() => {
-    fetchSiteContent<Array<{ tag: string; title: string; subtitle: string; accent: string; image: string; detailsUrl?: string }>>('hero_slides').then((result) => {
+    const lng = i18n.language.startsWith('en') ? 'en' : 'ru'
+    fetchSiteContentLocalized<Array<{ tag: string; title: string; subtitle: string; accent: string; image: string; detailsUrl?: string }>>('hero_slides', lng).then((result) => {
       if (!result.error && result.data && result.data.length > 0) {
         setDbSlides(result.data.map((s) => ({ tag: s.tag, title: s.title, subtitle: s.subtitle, accent: s.accent, img: s.image, detailsUrl: s.detailsUrl })))
       }
     })
-    fetchSiteContent<Array<{ catalogKey: string; title: string; image: string }>>('homepage_categories').then((result) => {
+    fetchSiteContentLocalized<Array<{ catalogKey: string; title: string; image: string }>>('homepage_categories', lng).then((result) => {
       if (!result.error && result.data && result.data.length > 0) setDbCategories(result.data)
     })
-    fetchSiteContent<Array<{ title: string; desc: string }>>('homepage_perks').then((result) => {
+    fetchSiteContentLocalized<Array<{ title: string; desc: string }>>('homepage_perks', lng).then((result) => {
       if (!result.error && result.data && result.data.length > 0) setDbPerks(result.data)
     })
     fetchSiteContent<SearchSection[]>('search_popular_sections').then((result) => {
       if (!result.error && result.data && result.data.length > 0) setPopularSections(result.data)
     })
-  }, [])
+  }, [i18n.language])
 
   const topLinkTargets = ['/about', '/partnership', '/support', '/help-choose', '/delivery']
   const navCategoryTargets = [
@@ -271,6 +279,9 @@ function HomePage() {
     'products.categories.accessories',
     '',
   ]
+  const navHrefOverrides: Record<number, string> = {
+    9: '/modding',
+  }
   const homepageCategoryTargets = [
     'products.categories.mice',
     'products.categories.mousepads',
@@ -338,6 +349,24 @@ function HomePage() {
       window.removeEventListener('storage', syncCart)
     }
   }, [])
+
+  useEffect(() => {
+    const syncUser = () => setCurrentUser(getUser())
+    window.addEventListener(AUTH_EVENT, syncUser)
+    window.addEventListener('storage', syncUser)
+    return () => {
+      window.removeEventListener(AUTH_EVENT, syncUser)
+      window.removeEventListener('storage', syncUser)
+    }
+  }, [])
+
+  const handleAccountClick = () => {
+    if (currentUser) {
+      navigate('/profile')
+    } else {
+      setAuthOpen(true)
+    }
+  }
 
   const visibleSlideIndex = slides.length > 0 ? current % slides.length : 0
   const slide = slides[visibleSlideIndex]
@@ -428,11 +457,25 @@ function HomePage() {
               {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
             </button>
 
-            <button type="button" className="icon-button" aria-label="account">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="account"
+              onClick={handleAccountClick}
+              title={currentUser ? (currentUser.firstName || currentUser.name) : t('ui.auth.loginTitle')}
+            >
+              {currentUser?.photo ? (
+                <img
+                  src={currentUser.photo}
+                  alt=""
+                  style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }}
+                />
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              )}
             </button>
 
             <button type="button" className="burger-btn" aria-label="menu" onClick={() => setIsBurgerOpen(true)}>
@@ -448,8 +491,10 @@ function HomePage() {
         <nav className="main-nav">
           <div className="container main-nav__inner">
             {navLinks.map((link, index) => {
+              const override = navHrefOverrides[index]
               const categoryKey = navCategoryTargets[index] ?? ''
-              const href = categoryKey ? `/catalog?category=${encodeURIComponent(categoryKey)}` : '/catalog'
+              const href = override
+                ?? (categoryKey ? `/catalog?category=${encodeURIComponent(categoryKey)}` : '/catalog')
               return (
               <Link
                 key={link}
@@ -679,6 +724,8 @@ function HomePage() {
 
       <BloggersBlock products={products} />
 
+      <NewsBlock />
+
       {isBurgerOpen && (
         <div className="burger-overlay" onClick={() => setIsBurgerOpen(false)} />
       )}
@@ -746,6 +793,8 @@ function HomePage() {
       </div>
 
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 
       <footer className="site-footer">
         <div className="container footer-grid">
@@ -872,7 +921,19 @@ export default function App() {
           path="/delivery"
           element={<SiteChrome><DeliveryPage /></SiteChrome>}
         />
+        <Route
+          path="/modding"
+          element={<SiteChrome><ModdingPage /></SiteChrome>}
+        />
         <Route path="/admin" element={<AdminPage />} />
+        <Route
+          path="/profile"
+          element={
+            <SiteChrome>
+              <ProfilePage />
+            </SiteChrome>
+          }
+        />
         <Route
           path="/privacy"
           element={

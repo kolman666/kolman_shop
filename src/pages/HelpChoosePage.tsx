@@ -1,97 +1,94 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
+type Option = { id: string; label: string; hint?: string }
+type Step = { question: string; options: Option[] }
 
 export default function HelpChoosePage() {
   const { t } = useTranslation()
+  const steps = t('helpChoose.steps', { returnObjects: true }) as Step[]
+  const [answers, setAnswers] = useState<Record<number, string>>({})
 
-  const cards = [
-    {
-      key: 'card1',
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-        </svg>
-      ),
-    },
-    {
-      key: 'card2',
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <rect x="2" y="3" width="20" height="14" rx="2" />
-          <path d="M8 21h8M12 17v4" />
-        </svg>
-      ),
-    },
-    {
-      key: 'card3',
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-        </svg>
-      ),
-    },
-    {
-      key: 'card4',
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
-        </svg>
-      ),
-    },
-  ]
+  const selected = (idx: number) => answers[idx]
+  const allAnswered = steps.every((_, idx) => answers[idx])
+
+  const setAnswer = (stepIdx: number, optionId: string) =>
+    setAnswers((prev) => ({ ...prev, [stepIdx]: optionId }))
+
+  const selectionLabels = steps
+    .map((step, idx) => step.options.find((o) => o.id === answers[idx])?.label)
+    .filter((label): label is string => Boolean(label))
 
   return (
-    <div className="catalog-shell">
-      <div className="catalog-hero" style={{ gridTemplateColumns: '1fr', marginBottom: 24 }}>
-        <div>
-          <span className="catalog-hero__eyebrow">{t('helpChoose.eyebrow')}</span>
-          <h1 className="catalog-hero__title">{t('helpChoose.title')}</h1>
-          <p className="catalog-hero__note">{t('helpChoose.subtitle')}</p>
-        </div>
-      </div>
+    <div className="page-shell">
+      <div className="page-container">
+        <section className="quiz-hero">
+          <span className="page-eyebrow">{t('helpChoose.eyebrow')}</span>
+          <h1 className="quiz-hero__title">{t('helpChoose.title')}</h1>
+          <p className="quiz-hero__sub">{t('helpChoose.subtitle')}</p>
+        </section>
 
-      <div style={{ width: 'min(1280px, calc(100% - 32px))', margin: '0 auto', display: 'grid', gap: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
-          {cards.map(({ key, icon }) => (
-            <article key={key} className="perk-card" style={{ flexDirection: 'column', gap: 18 }}>
-              <div className="perk-card__icon" style={{ width: 48, height: 48 }}>{icon}</div>
-              <div>
-                <h2 className="perk-card__title" style={{ fontSize: 17, marginBottom: 10 }}>{t(`helpChoose.${key}.title`)}</h2>
-                <p className="perk-card__text" style={{ fontSize: 14, lineHeight: 1.75 }}>{t(`helpChoose.${key}.text`)}</p>
+        {steps.map((step, idx) => (
+          <section key={step.question} className="quiz-step">
+            <div className="quiz-step__head">
+              <span className={`quiz-step__index ${selected(idx) ? 'quiz-step__index--done' : ''}`.trim()}>
+                {idx + 1}
+              </span>
+              <h2 className="quiz-step__q">{step.question}</h2>
+            </div>
+            <div className="quiz-options">
+              {step.options.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`quiz-option ${answers[idx] === option.id ? 'quiz-option--active' : ''}`.trim()}
+                  onClick={() => setAnswer(idx, option.id)}
+                >
+                  <span className="quiz-option__label">{option.label}</span>
+                  {option.hint && <span className="quiz-option__hint">{option.hint}</span>}
+                </button>
+              ))}
+            </div>
+          </section>
+        ))}
+
+        {Object.keys(answers).length > 0 && (
+          <section className="quiz-result">
+            <p className="page-eyebrow" style={{ color: 'var(--color-text-soft)' }}>
+              {allAnswered ? t('helpChoose.eyebrow') : `${t('helpChoose.stepLabel')} ${Object.keys(answers).length} / ${steps.length}`}
+            </p>
+            <h2 className="quiz-result__title">{t('helpChoose.resultTitle')}</h2>
+
+            {selectionLabels.length > 0 && (
+              <div className="quiz-result__pills">
+                {selectionLabels.map((label) => (
+                  <span key={label} className="quiz-result__pill">{label}</span>
+                ))}
               </div>
-            </article>
-          ))}
-        </div>
+            )}
 
-        <div
-          style={{
-            padding: '36px 40px',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-xl)',
-            background: 'radial-gradient(circle at top right, rgba(225, 29, 29, 0.1), transparent 28%), var(--color-bg-elevated)',
-            display: 'grid',
-            gap: 20,
-          }}
-        >
-          <div>
-            <p style={{ margin: '0 0 8px', color: 'var(--color-main)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              {t('helpChoose.ctaTitle')}
-            </p>
-            <p style={{ margin: 0, color: 'var(--color-text-dim)', fontSize: 15, lineHeight: 1.7 }}>
-              {t('helpChoose.ctaText')}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <a href="https://t.me/kolman_shop_bot" target="_blank" rel="noopener noreferrer" className="cta-btn" style={{ textDecoration: 'none' }}>
-              {t('helpChoose.telegramBtn')}
-            </a>
-            <Link to="/support" className="ghost-btn">
-              {t('helpChoose.supportBtn')}
-            </Link>
-          </div>
-        </div>
+            <p className="quiz-result__text">{t('helpChoose.resultText')}</p>
+
+            <div className="quiz-result__actions">
+              <a
+                href="https://t.me/kolman_shop_bot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cta-btn"
+                style={{ textDecoration: 'none' }}
+              >
+                {t('helpChoose.telegramBtn')}
+              </a>
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => setAnswers({})}
+              >
+                {t('helpChoose.resetBtn')}
+              </button>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   )

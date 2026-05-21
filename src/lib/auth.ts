@@ -10,10 +10,18 @@ export const AUTH_EVENT = 'auth:update'
 export type User = {
   name: string
   email: string
+  firstName?: string
+  lastName?: string
+  phone?: string
+  photo?: string
 }
 
 type StoredAccount = {
   name: string
+  firstName?: string
+  lastName?: string
+  phone?: string
+  photo?: string
   // Either { kind: 'pbkdf2', salt, hash, iter } (new) or string (legacy plain password).
   password: string | PasswordRecord
 }
@@ -129,12 +137,25 @@ function readState(): AuthState {
       candidate.users && typeof candidate.users === 'object'
         ? (candidate.users as Record<string, StoredAccount>)
         : {}
-    const currentUser =
+    let currentUser =
       candidate.currentUser &&
       typeof candidate.currentUser === 'object' &&
       typeof (candidate.currentUser as User).email === 'string'
         ? (candidate.currentUser as User)
         : null
+
+    // Refresh profile fields from stored account in case admin or another tab updated them.
+    if (currentUser && users[currentUser.email]) {
+      const account = users[currentUser.email]
+      currentUser = {
+        email: currentUser.email,
+        name: account.name,
+        firstName: account.firstName,
+        lastName: account.lastName,
+        phone: account.phone,
+        photo: account.photo,
+      }
+    }
 
     return { users, currentUser }
   } catch {
@@ -185,10 +206,50 @@ export async function login(email: string, password: string): Promise<User> {
     }
   }
 
-  const user: User = { name: account.name, email: normalized }
+  const user: User = {
+    name: account.name,
+    email: normalized,
+    firstName: account.firstName,
+    lastName: account.lastName,
+    phone: account.phone,
+    photo: account.photo,
+  }
   const latest = readState()
   writeState({ ...latest, currentUser: user })
   return user
+}
+
+export function updateProfile(patch: Partial<Omit<User, 'email'>>): User {
+  const state = readState()
+  const current = state.currentUser
+  if (!current) {
+    throw new AuthError('USER_NOT_FOUND')
+  }
+  const account = state.users[current.email]
+  if (!account) {
+    throw new AuthError('USER_NOT_FOUND')
+  }
+  const nextAccount: StoredAccount = {
+    ...account,
+    name: patch.name ?? account.name,
+    firstName: patch.firstName ?? account.firstName,
+    lastName: patch.lastName ?? account.lastName,
+    phone: patch.phone ?? account.phone,
+    photo: patch.photo ?? account.photo,
+  }
+  const nextUser: User = {
+    email: current.email,
+    name: nextAccount.name,
+    firstName: nextAccount.firstName,
+    lastName: nextAccount.lastName,
+    phone: nextAccount.phone,
+    photo: nextAccount.photo,
+  }
+  writeState({
+    users: { ...state.users, [current.email]: nextAccount },
+    currentUser: nextUser,
+  })
+  return nextUser
 }
 
 export async function register(name: string, email: string, password: string): Promise<User> {

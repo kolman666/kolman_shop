@@ -36,6 +36,29 @@ export async function fetchSiteContent<T>(key: string): Promise<FetchResult<T>> 
   return { data: (data?.value as T) ?? null, error: null, needsMigration: false }
 }
 
+// Fetch content with a language fallback: tries `${baseKey}_${lng}`, then
+// `${baseKey}_en` (default), then the legacy unsuffixed `${baseKey}`.
+export async function fetchSiteContentLocalized<T>(baseKey: string, lng: string): Promise<FetchResult<T>> {
+  const tried: string[] = []
+  const langSpecific = await fetchSiteContent<T>(`${baseKey}_${lng}`)
+  tried.push(`${baseKey}_${lng}`)
+  if (!langSpecific.error && langSpecific.data && (!Array.isArray(langSpecific.data) || langSpecific.data.length > 0)) {
+    return langSpecific
+  }
+  if (langSpecific.needsMigration) return langSpecific
+
+  if (lng !== 'en') {
+    const fallbackLang = await fetchSiteContent<T>(`${baseKey}_en`)
+    tried.push(`${baseKey}_en`)
+    if (!fallbackLang.error && fallbackLang.data && (!Array.isArray(fallbackLang.data) || fallbackLang.data.length > 0)) {
+      return fallbackLang
+    }
+  }
+
+  const legacy = await fetchSiteContent<T>(baseKey)
+  return legacy
+}
+
 export async function updateSiteContent(key: string, value: unknown): Promise<void> {
   const secret = sessionStorage.getItem('admin_secret') ?? ''
   const res = await fetch('/api/site-content', {

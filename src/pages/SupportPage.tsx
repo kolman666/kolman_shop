@@ -6,7 +6,6 @@ import { sendTelegramMessage, TelegramSendError } from '../lib/telegram'
 const REQUEST_TYPE_VALUES = ['order', 'product', 'choose', 'delivery', 'other'] as const
 type RequestTypeValue = (typeof REQUEST_TYPE_VALUES)[number]
 
-// Telegram messages always in Russian (shop owner reads Russian)
 const TELEGRAM_LABELS: Record<RequestTypeValue, string> = {
   order: 'проблема с заказом',
   product: 'вопрос о товаре',
@@ -92,7 +91,6 @@ async function submitInquiry(fields: {
     safeMessage,
   ].join('\n')
 
-  // Try the new inquiries endpoint (stores in DB), fall back to plain telegram
   try {
     const res = await fetch('/api/inquiries', {
       method: 'POST',
@@ -106,7 +104,6 @@ async function submitInquiry(fields: {
       }),
     })
     if (!res.ok) {
-      // Endpoint missing OR DB table not migrated yet — still send to Telegram so the inquiry isn't lost
       if (res.status === 404 || res.status === 405) {
         await sendTelegramMessage(text)
         return
@@ -126,10 +123,16 @@ async function submitInquiry(fields: {
   }
 }
 
+type Channel = { name: string; value: string; href: string }
+type QuickTopic = { type: RequestTypeValue; label: string }
+
 export default function SupportPage() {
   const { t } = useTranslation()
   const [state, dispatch] = useReducer(supportReducer, INITIAL_SUPPORT_STATE)
   const { requestType, name, contact, message, status, errorDetail } = state
+
+  const channels = t('support.channels', { returnObjects: true }) as Channel[]
+  const quickTopics = t('support.quickTopics', { returnObjects: true }) as QuickTopic[]
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -145,18 +148,8 @@ export default function SupportPage() {
 
   if (status === 'success') {
     return (
-      <div className="catalog-shell">
-        <div
-          style={{
-            width: 'min(1280px, calc(100% - 32px))',
-            margin: '0 auto',
-            display: 'grid',
-            justifyItems: 'center',
-            textAlign: 'center',
-            gap: 20,
-            padding: '60px 0',
-          }}
-        >
+      <div className="page-shell">
+        <div className="page-container" style={{ justifyItems: 'center', textAlign: 'center', padding: '60px 0' }}>
           <div
             style={{
               width: 64,
@@ -193,197 +186,140 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="catalog-shell">
-      <div className="catalog-hero" style={{ gridTemplateColumns: '1fr', marginBottom: 24 }}>
-        <div>
-          <span className="catalog-hero__eyebrow">{t('support.eyebrow')}</span>
-          <h1 className="catalog-hero__title">{t('support.title')}</h1>
-          <p className="catalog-hero__note">{t('support.subtitle')}</p>
-        </div>
-      </div>
+    <div className="page-shell">
+      <div className="page-container">
+        <header className="partner-hero" style={{ textAlign: 'left', padding: '20px 0 0' }}>
+          <span className="page-eyebrow">{t('support.eyebrow')}</span>
+          <h1 className="partner-hero__title" style={{ marginTop: 8, marginBottom: 10 }}>{t('support.title')}</h1>
+          <p className="partner-hero__sub" style={{ marginLeft: 0 }}>{t('support.subtitle')}</p>
+        </header>
 
-      <div className="support-layout">
-        <form
-          onSubmit={(e) => { void handleSubmit(e) }}
-          style={{
-            display: 'grid',
-            gap: 16,
-            padding: '32px 36px',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-xl)',
-            background: 'var(--color-bg-elevated)',
-          }}
-        >
-          <div style={{ display: 'grid', gap: 10 }}>
-            <label
-              style={{
-                color: 'var(--color-text-dim)',
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-              }}
-            >
-              {t('support.requestTypeLabel')}
-            </label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        <div className="support-v2">
+          <form className="support-v2__form" onSubmit={(e) => { void handleSubmit(e) }}>
+            <h2 className="support-v2__form-title">{t('support.requestTypeLabel')}</h2>
+            <div className="support-chips">
               {REQUEST_TYPE_VALUES.map((value) => (
                 <button
                   key={value}
                   type="button"
-                  className={`catalog-tab ${requestType === value ? 'active' : ''}`}
+                  className={`support-chip ${requestType === value ? 'support-chip--active' : ''}`.trim()}
                   onClick={() => dispatch({ type: 'setRequestType', value })}
                 >
                   {t(`support.types.${value}`)}
                 </button>
               ))}
             </div>
-          </div>
 
-          <div className="support-fields-row">
+            <div className="support-fields-row">
+              <div className="catalog-field" style={{ gap: 10 }}>
+                <label className="catalog-field__label" htmlFor="support-name">{t('support.nameLabel')}</label>
+                <input
+                  id="support-name"
+                  className="catalog-search__input"
+                  placeholder={t('support.namePlaceholder')}
+                  value={name}
+                  onChange={(e) => dispatch({ type: 'setName', value: e.target.value })}
+                />
+              </div>
+              <div className="catalog-field" style={{ gap: 10 }}>
+                <label className="catalog-field__label" htmlFor="support-contact">{t('support.contactLabel')}</label>
+                <input
+                  id="support-contact"
+                  className="catalog-search__input"
+                  placeholder={t('support.contactPlaceholder')}
+                  value={contact}
+                  onChange={(e) => dispatch({ type: 'setContact', value: e.target.value })}
+                />
+              </div>
+            </div>
+
             <div className="catalog-field" style={{ gap: 10 }}>
-              <label className="catalog-field__label" htmlFor="support-name">
-                {t('support.nameLabel')}
-              </label>
-              <input
-                id="support-name"
+              <label className="catalog-field__label" htmlFor="support-message">{t('support.messageLabel')}</label>
+              <textarea
+                id="support-message"
                 className="catalog-search__input"
-                placeholder={t('support.namePlaceholder')}
-                value={name}
-                onChange={(e) => dispatch({ type: 'setName', value: e.target.value })}
+                placeholder={t('support.messagePlaceholder')}
+                rows={7}
+                required
+                value={message}
+                onChange={(e) => dispatch({ type: 'setMessage', value: e.target.value })}
+                style={{ resize: 'vertical', fontFamily: 'inherit' }}
               />
             </div>
-            <div className="catalog-field" style={{ gap: 10 }}>
-              <label className="catalog-field__label" htmlFor="support-contact">
-                {t('support.contactLabel')}
-              </label>
-              <input
-                id="support-contact"
-                className="catalog-search__input"
-                placeholder={t('support.contactPlaceholder')}
-                value={contact}
-                onChange={(e) => dispatch({ type: 'setContact', value: e.target.value })}
-              />
+
+            {status === 'error' && (
+              <p
+                style={{
+                  margin: 0,
+                  padding: '12px 16px',
+                  borderRadius: 12,
+                  background: 'rgba(225, 29, 29, 0.1)',
+                  border: '1px solid rgba(225, 29, 29, 0.25)',
+                  color: 'var(--color-main-hover)',
+                  fontSize: 13,
+                }}
+              >
+                {t('support.errorMsg')}{errorDetail ? ` (${errorDetail})` : ''}
+              </p>
+            )}
+
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <button
+                type="submit"
+                className="cta-btn"
+                disabled={status === 'loading' || !message.trim()}
+                style={{ opacity: status === 'loading' || !message.trim() ? 0.55 : 1, cursor: status === 'loading' ? 'wait' : 'pointer' }}
+              >
+                {status === 'loading' ? t('support.submitLoading') : t('support.submitBtn')}
+              </button>
+              <p style={{ margin: 0, color: 'var(--color-text-ghost)', fontSize: 12 }}>{t('support.replyTime')}</p>
             </div>
-          </div>
+          </form>
 
-          <div className="catalog-field" style={{ gap: 10 }}>
-            <label className="catalog-field__label" htmlFor="support-message">
-              {t('support.messageLabel')}
-            </label>
-            <textarea
-              id="support-message"
-              className="catalog-search__input"
-              placeholder={t('support.messagePlaceholder')}
-              rows={6}
-              required
-              value={message}
-              onChange={(e) => dispatch({ type: 'setMessage', value: e.target.value })}
-              style={{ resize: 'vertical', fontFamily: 'inherit' }}
-            />
-          </div>
-
-          {status === 'error' && (
-            <p
-              style={{
-                margin: 0,
-                padding: '12px 16px',
-                borderRadius: 12,
-                background: 'rgba(225, 29, 29, 0.1)',
-                border: '1px solid rgba(225, 29, 29, 0.25)',
-                color: 'var(--color-main-hover)',
-                fontSize: 13,
-              }}
-            >
-              {t('support.errorMsg')}{errorDetail ? ` (${errorDetail})` : ''}
-            </p>
-          )}
-
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button
-              type="submit"
-              className="cta-btn"
-              disabled={status === 'loading' || !message.trim()}
-              style={{ opacity: status === 'loading' || !message.trim() ? 0.55 : 1, cursor: status === 'loading' ? 'wait' : 'pointer' }}
-            >
-              {status === 'loading' ? t('support.submitLoading') : t('support.submitBtn')}
-            </button>
-            <p style={{ margin: 0, color: 'var(--color-text-ghost)', fontSize: 12 }}>
-              {t('support.replyTime')}
-            </p>
-          </div>
-        </form>
-
-        <aside style={{ display: 'grid', gap: 14 }}>
-          <div className="perk-card" style={{ flexDirection: 'column', gap: 16 }}>
-            <div className="perk-card__icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
+          <aside className="support-aside">
+            <div className="support-stat-card">
+              <div className="support-stat-card__value">{t('support.statResponse')}</div>
+              <div className="support-stat-card__label">{t('support.statResponseLabel')}</div>
             </div>
-            <div>
-              <h3 className="perk-card__title" style={{ marginBottom: 8 }}>{t('support.card1.title')}</h3>
-              <p className="perk-card__text">{t('support.card1.text')}</p>
-            </div>
-          </div>
 
-          <div className="perk-card" style={{ flexDirection: 'column', gap: 16 }}>
-            <div className="perk-card__icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
+            <div className="support-aside-card">
+              <h3 className="support-aside__title">{t('support.channelsTitle')}</h3>
+              {channels.map((ch) => (
+                <a
+                  key={ch.name}
+                  href={ch.href}
+                  target={ch.href.startsWith('http') ? '_blank' : undefined}
+                  rel={ch.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                  className="support-channel"
+                >
+                  <div>
+                    <span className="support-channel__name">{ch.name}</span>
+                    <span className="support-channel__value">{ch.value}</span>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </a>
+              ))}
             </div>
-            <div>
-              <h3 className="perk-card__title" style={{ marginBottom: 8 }}>{t('support.card2.title')}</h3>
-              <p className="perk-card__text">{t('support.card2.text')}</p>
-            </div>
-          </div>
 
-          <div
-            style={{
-              padding: '22px 24px',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-lg)',
-              background: 'var(--color-bg-elevated)',
-            }}
-          >
-            <p style={{ margin: '0 0 6px', color: 'var(--color-text-dim)', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              {t('support.directContact')}
-            </p>
-            <a
-              href="https://www.avito.ru/brands/ff6ecb53876080972365fc0b263271ac"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'block',
-                marginTop: 10,
-                color: 'var(--color-text-soft)',
-                fontSize: 13,
-                textDecoration: 'none',
-                transition: 'color 0.2s ease',
-              }}
-              onMouseEnter={(e) => ((e.target as HTMLAnchorElement).style.color = 'var(--color-main-hover)')}
-              onMouseLeave={(e) => ((e.target as HTMLAnchorElement).style.color = 'var(--color-text-soft)')}
-            >
-              авито →
-            </a>
-            <a
-              href="mailto:hello@kolman.shop"
-              style={{
-                display: 'block',
-                marginTop: 8,
-                color: 'var(--color-text-soft)',
-                fontSize: 13,
-                textDecoration: 'none',
-                transition: 'color 0.2s ease',
-              }}
-              onMouseEnter={(e) => ((e.target as HTMLAnchorElement).style.color = 'var(--color-main-hover)')}
-              onMouseLeave={(e) => ((e.target as HTMLAnchorElement).style.color = 'var(--color-text-soft)')}
-            >
-              hello@kolman.shop →
-            </a>
-          </div>
-        </aside>
+            <div className="support-aside-card support-aside-card--accent">
+              <h3 className="support-aside__title">{t('support.quickTopicsTitle')}</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {quickTopics.map((topic) => (
+                  <button
+                    key={topic.type}
+                    type="button"
+                    className={`support-chip ${requestType === topic.type ? 'support-chip--active' : ''}`.trim()}
+                    onClick={() => dispatch({ type: 'setRequestType', value: topic.type })}
+                  >
+                    {topic.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   )

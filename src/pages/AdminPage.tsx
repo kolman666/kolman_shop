@@ -845,6 +845,19 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 type HeroSlide = { tag: string; title: string; subtitle: string; accent: string; image: string; detailsUrl?: string }
 const BLANK_SLIDE: HeroSlide = { tag: '', title: '', subtitle: '', accent: '', image: '', detailsUrl: '' }
 
+type NewsItemAdmin = {
+  id: string
+  tag?: string
+  date?: string
+  readMin?: string
+  title: string
+  excerpt?: string
+  image?: string
+  url?: string
+}
+const BLANK_NEWS: NewsItemAdmin = { id: '', tag: '', date: '', readMin: '', title: '', excerpt: '', image: '', url: '' }
+const DEFAULT_NEWS: NewsItemAdmin[] = []
+
 const DEFAULT_SLIDES: HeroSlide[] = [
   { tag: 'новинка', title: 'atk gear ghost ultimate', subtitle: 'бескомпромиссная игровая мышь с уникальным дизайном', accent: 'никаких компромиссов в производительности', image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&q=80', detailsUrl: '' },
   { tag: 'хит продаж', title: 'razer viper v4 pro', subtitle: 'ультралегкая беспроводная имба', accent: 'оптический сенсор 50k dpi', image: 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=800&q=80', detailsUrl: '' },
@@ -997,42 +1010,62 @@ const DEFAULT_SEARCH_SECTIONS: SearchSectionAdmin[] = [
   { label: 'Кейкапы', catalogKey: '' },
 ]
 
+type ContentLang = 'ru' | 'en'
+
 function ContentTab() {
+  const [contentLang, setContentLang] = useState<ContentLang>('ru')
   const [slides, setSlides] = useState<HeroSlide[]>(DEFAULT_SLIDES)
   const [categories, setCategories] = useState<ContentCategory[]>(DEFAULT_CATEGORIES)
   const [perks, setPerks] = useState<ContentPerk[]>(DEFAULT_PERKS)
+  const [news, setNews] = useState<NewsItemAdmin[]>(DEFAULT_NEWS)
   const [searchSections, setSearchSections] = useState<SearchSectionAdmin[]>(DEFAULT_SEARCH_SECTIONS)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState<string | null>(null) // which section is saving
+  const [saving, setSaving] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [needsMigration, setNeedsMigration] = useState(false)
 
+  // Try `${baseKey}_${contentLang}` first, fall back to the legacy unsuffixed key.
+  async function loadLocalized<T>(baseKey: string): Promise<{ data: T | null; needsMigration: boolean }> {
+    const specific = await fetchSiteContent<T>(`${baseKey}_${contentLang}`)
+    if (specific.needsMigration) return { data: null, needsMigration: true }
+    if (!specific.error && specific.data && (!Array.isArray(specific.data) || specific.data.length > 0)) {
+      return { data: specific.data, needsMigration: false }
+    }
+    const legacy = await fetchSiteContent<T>(baseKey)
+    return { data: legacy.data, needsMigration: legacy.needsMigration }
+  }
+
   useEffect(() => {
+    setLoading(true)
     Promise.all([
-      fetchSiteContent<HeroSlide[]>('hero_slides'),
-      fetchSiteContent<ContentCategory[]>('homepage_categories'),
-      fetchSiteContent<ContentPerk[]>('homepage_perks'),
+      loadLocalized<HeroSlide[]>('hero_slides'),
+      loadLocalized<ContentCategory[]>('homepage_categories'),
+      loadLocalized<ContentPerk[]>('homepage_perks'),
+      loadLocalized<NewsItemAdmin[]>('homepage_news'),
       fetchSiteContent<SearchSectionAdmin[]>('search_popular_sections'),
-    ]).then(([slidesResult, catsResult, perksResult, searchResult]) => {
+    ]).then(([slidesResult, catsResult, perksResult, newsResult, searchResult]) => {
       if (slidesResult.needsMigration || catsResult.needsMigration || perksResult.needsMigration) {
         setNeedsMigration(true)
       } else {
-        if (!slidesResult.error && slidesResult.data && slidesResult.data.length > 0) setSlides(slidesResult.data)
-        if (!catsResult.error && catsResult.data && catsResult.data.length > 0) setCategories(catsResult.data)
-        if (!perksResult.error && perksResult.data && perksResult.data.length > 0) setPerks(perksResult.data)
+        setSlides(slidesResult.data && slidesResult.data.length > 0 ? slidesResult.data : DEFAULT_SLIDES)
+        setCategories(catsResult.data && catsResult.data.length > 0 ? catsResult.data : DEFAULT_CATEGORIES)
+        setPerks(perksResult.data && perksResult.data.length > 0 ? perksResult.data : DEFAULT_PERKS)
+        setNews(newsResult.data && newsResult.data.length > 0 ? newsResult.data : DEFAULT_NEWS)
         if (!searchResult.error && searchResult.data && searchResult.data.length > 0) setSearchSections(searchResult.data)
       }
       setLoading(false)
     })
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentLang])
 
-  async function saveSection(key: string, data: unknown) {
-    setSaving(key)
+  // Saves to actualKey but uses uiKey to drive saving/saved indicators in the UI.
+  async function saveSection(uiKey: string, actualKey: string, data: unknown) {
+    setSaving(uiKey)
     setError('')
     try {
-      await updateSiteContent(key, data)
-      setSaved(key)
+      await updateSiteContent(actualKey, data)
+      setSaved(uiKey)
       setTimeout(() => setSaved(null), 2500)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка сохранения')
@@ -1042,10 +1075,22 @@ function ContentTab() {
   }
 
   function saveContentSection(sectionKey: string) {
-    if (sectionKey === 'hero_slides') void saveSection('hero_slides', slides)
-    if (sectionKey === 'homepage_categories') void saveSection('homepage_categories', categories)
-    if (sectionKey === 'homepage_perks') void saveSection('homepage_perks', perks)
-    if (sectionKey === 'search_popular_sections') void saveSection('search_popular_sections', searchSections)
+    const suffix = `_${contentLang}`
+    if (sectionKey === 'hero_slides') void saveSection(sectionKey, `hero_slides${suffix}`, slides)
+    if (sectionKey === 'homepage_categories') void saveSection(sectionKey, `homepage_categories${suffix}`, categories)
+    if (sectionKey === 'homepage_perks') void saveSection(sectionKey, `homepage_perks${suffix}`, perks)
+    if (sectionKey === 'homepage_news') void saveSection(sectionKey, `homepage_news${suffix}`, news)
+    if (sectionKey === 'search_popular_sections') void saveSection(sectionKey, 'search_popular_sections', searchSections)
+  }
+
+  function updateNews(index: number, field: keyof NewsItemAdmin, value: string) {
+    setNews((prev) => prev.map((n, i) => i === index ? { ...n, [field]: value } : n))
+  }
+  function addNews() {
+    setNews((prev) => [...prev, { ...BLANK_NEWS, id: `news-${Date.now()}` }])
+  }
+  function removeNews(index: number) {
+    setNews((prev) => prev.filter((_, i) => i !== index))
   }
 
   function updateSlide(index: number, field: keyof HeroSlide, value: string) {
@@ -1094,6 +1139,26 @@ function ContentTab() {
 
   return (
     <div className="admin__content-tab">
+
+      {/* ── Language switcher ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <span className="admin__label" style={{ margin: 0 }}>Язык контента:</span>
+        <div className="admin__lang-tabs">
+          {(['ru', 'en'] as const).map((lng) => (
+            <button
+              key={lng}
+              type="button"
+              className={`admin__lang-tab ${contentLang === lng ? 'admin__lang-tab--active' : ''}`.trim()}
+              onClick={() => setContentLang(lng)}
+            >
+              {lng.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        <span className="admin__label-hint" style={{ margin: 0 }}>
+          Сохранение идёт в ключ <code>{`<секция>_${contentLang}`}</code>; если пусто — подгружается legacy/EN.
+        </span>
+      </div>
 
       {/* ── Hero slides ── */}
       <ContentSectionHeader title="Главный баннер" sectionKey="hero_slides" saved={saved} error={error} saving={saving} onSave={saveContentSection} />
@@ -1179,6 +1244,80 @@ function ContentTab() {
           </button>
         </>
       )}
+
+      {/* ── News (homepage blog block) ── */}
+      <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 28, marginTop: 8 }}>
+        <ContentSectionHeader title="Блок новостей на главной" sectionKey="homepage_news" saved={saved} error={error} saving={saving} onSave={saveContentSection} />
+        <p className="admin__label-hint" style={{ marginBottom: 16 }}>Карточки в горизонтальном слайдере «Наш блог» на главной. Заполняйте на текущем языке вкладки.</p>
+        {news.length === 0 ? (
+          <div className="admin__content-empty">
+            <p className="admin__empty-text">Новости не добавлены</p>
+            <button type="button" className="admin__new-btn admin__new-btn--auto" onClick={addNews}>+ Добавить новость</button>
+          </div>
+        ) : (
+          <>
+            <div className="admin__slides-list">
+              {news.map((item, index) => (
+                <div key={item.id || index} className="admin__slide-card">
+                  <div className="admin__slide-card-header">
+                    <span className="admin__slide-num">Новость {index + 1}</span>
+                    <button type="button" className="admin__icon-btn admin__icon-btn--danger" onClick={() => removeNews(index)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                        <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="admin__two-col">
+                    <div className="admin__field">
+                      <span className="admin__label">ID (уникальный)</span>
+                      <input className="admin__input" value={item.id ?? ''} onChange={(e) => updateNews(index, 'id', e.target.value)} placeholder="news-1" />
+                    </div>
+                    <div className="admin__field">
+                      <span className="admin__label">Тег</span>
+                      <input className="admin__input" value={item.tag ?? ''} onChange={(e) => updateNews(index, 'tag', e.target.value)} placeholder="обзоры / гайды" />
+                    </div>
+                  </div>
+                  <div className="admin__field">
+                    <span className="admin__label">Заголовок</span>
+                    <input className="admin__input" value={item.title ?? ''} onChange={(e) => updateNews(index, 'title', e.target.value)} />
+                  </div>
+                  <div className="admin__field">
+                    <span className="admin__label">Краткий текст</span>
+                    <input className="admin__input" value={item.excerpt ?? ''} onChange={(e) => updateNews(index, 'excerpt', e.target.value)} />
+                  </div>
+                  <div className="admin__two-col">
+                    <div className="admin__field">
+                      <span className="admin__label">Дата (свободный текст)</span>
+                      <input className="admin__input" value={item.date ?? ''} onChange={(e) => updateNews(index, 'date', e.target.value)} placeholder="05 мая 2026" />
+                    </div>
+                    <div className="admin__field">
+                      <span className="admin__label">Время чтения</span>
+                      <input className="admin__input" value={item.readMin ?? ''} onChange={(e) => updateNews(index, 'readMin', e.target.value)} placeholder="5 мин чтения" />
+                    </div>
+                  </div>
+                  <div className="admin__field">
+                    <span className="admin__label">Фото (URL)</span>
+                    <div className="admin__image-field">
+                      <input className="admin__input" type="url" value={item.image ?? ''} onChange={(e) => updateNews(index, 'image', e.target.value)} placeholder="https://..." />
+                      {item.image ? (
+                        <img className="admin__image-preview" src={item.image} alt="preview" />
+                      ) : (
+                        <div className="admin__image-preview admin__image-preview--empty" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="admin__field">
+                    <span className="admin__label">Ссылка</span>
+                    <input className="admin__input" type="text" value={item.url ?? ''} onChange={(e) => updateNews(index, 'url', e.target.value)} placeholder="/catalog или https://..." />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button type="button" className="admin__spec-add-btn" style={{ marginTop: 4 }} onClick={addNews}>+ Добавить новость</button>
+          </>
+        )}
+      </div>
 
       {/* ── Categories ── */}
       <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 28, marginTop: 8 }}>

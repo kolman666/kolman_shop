@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 type FaqItem = { q: string; a: string }
+type TimelineStep = { num: string; title: string; text: string }
+type PaymentMethod = { name: string; text: string }
+type CoverageRow = { region: string; text: string }
 
 function FaqRow({ item }: { item: FaqItem }) {
   const [open, setOpen] = useState(false)
@@ -29,62 +32,68 @@ function FaqRow({ item }: { item: FaqItem }) {
 export default function DeliveryPage() {
   const { t } = useTranslation()
   const faq = t('delivery.faq', { returnObjects: true }) as FaqItem[]
-
-  const infoCards = [
-    {
-      key: 'card1',
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <rect x="1" y="3" width="15" height="13" rx="2" />
-          <path d="M16 8h4l3 5v3h-7V8z" />
-          <circle cx="5.5" cy="18.5" r="2.5" />
-          <circle cx="18.5" cy="18.5" r="2.5" />
-        </svg>
-      ),
-    },
-    {
-      key: 'card2',
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <rect x="1" y="4" width="22" height="16" rx="2" />
-          <path d="M1 10h22" />
-        </svg>
-      ),
-    },
-    {
-      key: 'card3',
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        </svg>
-      ),
-    },
-  ]
+  const timeline = t('delivery.timeline', { returnObjects: true }) as TimelineStep[]
+  const payment = t('delivery.payment', { returnObjects: true }) as PaymentMethod[]
+  const coverage = t('delivery.coverage', { returnObjects: true }) as CoverageRow[]
 
   return (
-    <div className="catalog-shell">
-      <div className="catalog-hero" style={{ gridTemplateColumns: '1fr', marginBottom: 24 }}>
-        <div>
-          <span className="catalog-hero__eyebrow">{t('delivery.eyebrow')}</span>
-          <h1 className="catalog-hero__title">{t('delivery.title')}</h1>
-          <p className="catalog-hero__note">{t('delivery.subtitle')}</p>
-        </div>
-      </div>
+    <div className="page-shell">
+      <div className="page-container">
+        <header className="delivery-hero">
+          <div className="delivery-hero__copy">
+            <span className="page-eyebrow">{t('delivery.eyebrow')}</span>
+            <h1 className="delivery-hero__title">{t('delivery.title')}</h1>
+            <p className="delivery-hero__sub">{t('delivery.subtitle')}</p>
+          </div>
+          <span className="delivery-chip">
+            <span className="delivery-chip__dot" />
+            {t('delivery.statusChip')}
+          </span>
+        </header>
 
-      <div style={{ width: 'min(1280px, calc(100% - 32px))', margin: '0 auto', display: 'grid', gap: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-          {infoCards.map(({ key, icon }) => (
-            <article key={key} className="perk-card" style={{ flexDirection: 'column', gap: 20 }}>
-              <div className="perk-card__icon" style={{ width: 52, height: 52 }}>{icon}</div>
-              <div>
-                <h2 className="perk-card__title" style={{ fontSize: 18, marginBottom: 12 }}>{t(`delivery.${key}.title`)}</h2>
-                <p className="perk-card__text" style={{ fontSize: 14, lineHeight: 1.75 }}>{t(`delivery.${key}.text`)}</p>
-              </div>
-            </article>
-          ))}
-        </div>
+        <section>
+          <p className="section-block-title">{t('delivery.timelineTitle')}</p>
+          <div className="delivery-timeline">
+            {timeline.map((step) => (
+              <article key={step.num} className="delivery-tl-step">
+                <div className="delivery-tl-step__num">{step.num}</div>
+                <h3 className="delivery-tl-step__title">{step.title}</h3>
+                <p className="delivery-tl-step__text">{step.text}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
-        <div
+        <section className="delivery-bigrow">
+          <div>
+            <p className="section-block-title">{t('delivery.paymentTitle')}</p>
+            <div className="delivery-payment">
+              {payment.map((m) => (
+                <article key={m.name} className="delivery-payment__card">
+                  <h3 className="delivery-payment__card-title">{m.name}</h3>
+                  <p className="delivery-payment__card-text">{m.text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="section-block-title">&nbsp;</p>
+            <div className="delivery-coverage">
+              <h3 style={{ margin: 0, fontSize: 16, color: 'var(--color-text)' }}>{t('delivery.coverageTitle')}</h3>
+              <ul className="delivery-coverage__list">
+                {coverage.map((row) => (
+                  <li key={row.region} className="delivery-coverage__row">
+                    <span>{row.region}</span>
+                    <span className="delivery-coverage__time">{row.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section
           style={{
             padding: '32px 36px',
             border: '1px solid var(--color-border)',
@@ -92,15 +101,13 @@ export default function DeliveryPage() {
             background: 'var(--color-bg-elevated)',
           }}
         >
-          <p style={{ margin: '0 0 20px', color: 'var(--color-text-dim)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-            {t('delivery.faqTitle')}
-          </p>
+          <p className="section-block-title">{t('delivery.faqTitle')}</p>
           <div className="delivery-faq">
             {faq.map((item) => (
               <FaqRow key={`${item.q}-${item.a}`} item={item} />
             ))}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   )
