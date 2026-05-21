@@ -2,6 +2,7 @@ import { useReducer, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { sendTelegramMessage, TelegramSendError } from '../lib/telegram'
+import { usePageContent } from '../hooks/usePageContent'
 
 const REQUEST_TYPE_VALUES = ['order', 'product', 'choose', 'delivery', 'other'] as const
 type RequestTypeValue = (typeof REQUEST_TYPE_VALUES)[number]
@@ -128,6 +129,7 @@ type QuickTopic = { type: RequestTypeValue; label: string }
 
 export default function SupportPage() {
   const { t } = useTranslation()
+  const get = usePageContent('support', 'support')
   const [state, dispatch] = useReducer(supportReducer, INITIAL_SUPPORT_STATE)
   const { requestType, name, contact, message, status, errorDetail } = state
 
@@ -189,9 +191,9 @@ export default function SupportPage() {
     <div className="page-shell">
       <div className="page-container">
         <header className="partner-hero" style={{ textAlign: 'left', padding: '20px 0 0' }}>
-          <span className="page-eyebrow">{t('support.eyebrow')}</span>
-          <h1 className="partner-hero__title" style={{ marginTop: 8, marginBottom: 10 }}>{t('support.title')}</h1>
-          <p className="partner-hero__sub" style={{ marginLeft: 0 }}>{t('support.subtitle')}</p>
+          <span className="page-eyebrow">{get('eyebrow')}</span>
+          <h1 className="partner-hero__title" style={{ marginTop: 8, marginBottom: 10 }}>{get('title')}</h1>
+          <p className="partner-hero__sub" style={{ marginLeft: 0 }}>{get('subtitle')}</p>
         </header>
 
         <div className="support-v2">
@@ -278,8 +280,8 @@ export default function SupportPage() {
 
           <aside className="support-aside">
             <div className="support-stat-card">
-              <div className="support-stat-card__value">{t('support.statResponse')}</div>
-              <div className="support-stat-card__label">{t('support.statResponseLabel')}</div>
+              <div className="support-stat-card__value">{get('statResponse')}</div>
+              <div className="support-stat-card__label">{get('statResponseLabel')}</div>
             </div>
 
             <div className="support-aside-card">

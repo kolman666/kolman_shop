@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { fetchSiteContent } from '../lib/siteContent'
-import { safeBackgroundImage } from '../lib/safeUrl'
+import { safeBackgroundImage, safeHref } from '../lib/safeUrl'
 
 export type NewsItem = {
   id: string
@@ -15,45 +15,25 @@ export type NewsItem = {
   url?: string
 }
 
-const FALLBACK_NEWS: NewsItem[] = [
-  {
-    id: 'fenrir',
-    tag: 'обзоры',
-    readMin: '5 мин чтения',
-    title: 'удивительная малютка G-Wolves Fenrir Asym',
-    excerpt: 'сегодня мы подробно разберем игровую мышь G-Wolves Fenrir Asym. она была создана строго для одной цели — использования пальцевым хватом (fingertip grip). мы изучили её со всех сторон.',
-    image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=1200&q=80',
-    url: '/catalog',
-  },
-  {
-    id: 'zywoo',
-    tag: 'обзоры',
-    readMin: '4 мин чтения',
-    title: 'ZywOo x Pulsar: «оружие избранного»',
-    excerpt: 'компания pulsar совместно с главной звездой CS2 матье «zywoo» эрбо выпустили именную мышь. это не просто девайс с логотипом, а спроектированный под профессиональную игру инструмент.',
-    image: 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=1200&q=80',
-    url: '/catalog',
-  },
-  {
-    id: 'modding',
-    tag: 'гайды',
-    readMin: '7 мин чтения',
-    title: 'смазка свитчей: с чего начать новичку',
-    excerpt: 'выбираем смазку под свой кейкорд, разбираем порядок работ и показываем разницу до и после на тесте популярных свитчей.',
-    image: 'https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1200&q=80',
-    url: '/modding',
-  },
-]
+type NewsBlockProps = {
+  // Optional override for admin preview — when provided, this list is used
+  // verbatim and no fetch is made.
+  items?: NewsItem[]
+}
 
-export default function NewsBlock() {
+export default function NewsBlock({ items: itemsProp }: NewsBlockProps = {}) {
   const { t, i18n } = useTranslation()
-  const [items, setItems] = useState<NewsItem[]>(FALLBACK_NEWS)
+  const [items, setItems] = useState<NewsItem[]>(itemsProp ?? [])
   const [offset, setOffset] = useState(0)
   const [maxOffset, setMaxOffset] = useState(0)
   const trackRef = useRef<HTMLDivElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (itemsProp) {
+      setItems(itemsProp)
+      return
+    }
     let cancelled = false
     const lng = i18n.language.startsWith('en') ? 'en' : 'ru'
     void (async () => {
@@ -70,7 +50,7 @@ export default function NewsBlock() {
       }
     })()
     return () => { cancelled = true }
-  }, [i18n.language])
+  }, [i18n.language, itemsProp])
 
   // Recalculate max offset whenever items or viewport size change.
   useEffect(() => {
@@ -157,13 +137,13 @@ export default function NewsBlock() {
         <div ref={wrapRef} className="news-track-wrap">
           <div ref={trackRef} className="news-track" style={{ transform: `translateX(-${offset}px)` }}>
             {items.map((item) => {
-              const url = item.url ?? '/catalog'
-              const isExternal = /^https?:\/\//i.test(url)
+              const safeUrl = safeHref(item.url) ?? '/catalog'
+              const isExternal = /^https?:\/\//i.test(safeUrl)
               const bg = item.image ? safeBackgroundImage(item.image) : null
               return (
                 <a
                   key={item.id}
-                  href={url}
+                  href={safeUrl}
                   target={isExternal ? '_blank' : undefined}
                   rel={isExternal ? 'noopener noreferrer' : undefined}
                   className="news-card"

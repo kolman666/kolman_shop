@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { usePageContent } from '../hooks/usePageContent'
 
 type Option = { id: string; label: string; hint?: string }
 type Step = { question: string; options: Option[] }
 
 export default function HelpChoosePage() {
   const { t } = useTranslation()
+  const get = usePageContent('help_choose', 'helpChoose')
   const steps = t('helpChoose.steps', { returnObjects: true }) as Step[]
   const [answers, setAnswers] = useState<Record<number, string>>({})
 
@@ -23,9 +25,9 @@ export default function HelpChoosePage() {
     <div className="page-shell">
       <div className="page-container">
         <section className="quiz-hero">
-          <span className="page-eyebrow">{t('helpChoose.eyebrow')}</span>
-          <h1 className="quiz-hero__title">{t('helpChoose.title')}</h1>
-          <p className="quiz-hero__sub">{t('helpChoose.subtitle')}</p>
+          <span className="page-eyebrow">{get('eyebrow')}</span>
+          <h1 className="quiz-hero__title">{get('title')}</h1>
+          <p className="quiz-hero__sub">{get('subtitle')}</p>
         </section>
 
         {steps.map((step, idx) => (
@@ -57,7 +59,7 @@ export default function HelpChoosePage() {
             <p className="page-eyebrow" style={{ color: 'var(--color-text-soft)' }}>
               {allAnswered ? t('helpChoose.eyebrow') : `${t('helpChoose.stepLabel')} ${Object.keys(answers).length} / ${steps.length}`}
             </p>
-            <h2 className="quiz-result__title">{t('helpChoose.resultTitle')}</h2>
+            <h2 className="quiz-result__title">{get('resultTitle')}</h2>
 
             {selectionLabels.length > 0 && (
               <div className="quiz-result__pills">
@@ -67,7 +69,7 @@ export default function HelpChoosePage() {
               </div>
             )}
 
-            <p className="quiz-result__text">{t('helpChoose.resultText')}</p>
+            <p className="quiz-result__text">{get('resultText')}</p>
 
             <div className="quiz-result__actions">
               <a

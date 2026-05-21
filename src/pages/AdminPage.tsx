@@ -13,6 +13,7 @@ import {
   type ProductInput,
 } from '../lib/adminProducts'
 import { fetchSiteContent, updateSiteContent } from '../lib/siteContent'
+import NewsBlock from '../components/NewsBlock'
 import {
   fetchBloggersAdmin,
   createBlogger,
@@ -20,6 +21,22 @@ import {
   deleteBlogger,
   type BloggerRow,
 } from '../lib/fetchBloggers'
+import {
+  listOrders,
+  updateOrderStatus,
+  deleteOrder,
+  ORDER_STATUSES,
+  type AdminOrder,
+  type OrderStatus,
+  listInquiries,
+  updateInquiryStatus,
+  deleteInquiry,
+  INQUIRY_STATUSES,
+  INQUIRY_CATEGORIES,
+  type AdminInquiry,
+  type InquiryStatus,
+  type InquiryCategory,
+} from '../lib/adminInbox'
 
 const CATEGORIES = [
   { key: 'products.categories.mice', label: 'Мышки' },
@@ -194,7 +211,7 @@ export default function AdminPage() {
   return <AdminPanel onLogout={() => { clearAdminSecret(); setAuthStatus('guest') }} />
 }
 
-type AdminTab = 'products' | 'content' | 'bloggers'
+type AdminTab = 'products' | 'content' | 'pages' | 'orders' | 'inquiries' | 'bloggers'
 
 // ── Admin panel inner ─────────────────────────────────────────────────────────
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
@@ -383,7 +400,16 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           Товары
         </button>
         <button type="button" className={`admin__tab-btn${activeTab === 'content' ? ' active' : ''}`} onClick={() => setActiveTab('content')}>
-          Контент
+          Главная
+        </button>
+        <button type="button" className={`admin__tab-btn${activeTab === 'pages' ? ' active' : ''}`} onClick={() => setActiveTab('pages')}>
+          Страницы
+        </button>
+        <button type="button" className={`admin__tab-btn${activeTab === 'orders' ? ' active' : ''}`} onClick={() => setActiveTab('orders')}>
+          Заказы
+        </button>
+        <button type="button" className={`admin__tab-btn${activeTab === 'inquiries' ? ' active' : ''}`} onClick={() => setActiveTab('inquiries')}>
+          Заявки
         </button>
         <button type="button" className={`admin__tab-btn${activeTab === 'bloggers' ? ' active' : ''}`} onClick={() => setActiveTab('bloggers')}>
           Блогеры
@@ -391,6 +417,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       </div>
 
       {activeTab === 'content' && <ContentTab />}
+      {activeTab === 'pages' && <PagesTab />}
+      {activeTab === 'orders' && <OrdersTab />}
+      {activeTab === 'inquiries' && <InquiriesTab />}
       {activeTab === 'bloggers' && <BloggersTab allProducts={allProducts} />}
 
       {activeTab === 'products' && (
@@ -1317,6 +1346,13 @@ function ContentTab() {
             <button type="button" className="admin__spec-add-btn" style={{ marginTop: 4 }} onClick={addNews}>+ Добавить новость</button>
           </>
         )}
+
+        {news.length > 0 && (
+          <div className="admin__preview">
+            <span className="admin__preview-label">Превью на сайте</span>
+            <NewsBlock items={news} />
+          </div>
+        )}
       </div>
 
       {/* ── Categories ── */}
@@ -1823,6 +1859,464 @@ function BloggersTab({ allProducts }: { allProducts: Product[] }) {
               <button type="button" className="admin__confirm-delete" onClick={() => void handleDelete(deleteConfirm)}>Удалить</button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Orders tab ────────────────────────────────────────────────────────────────
+function OrdersTab() {
+  const [orders, setOrders] = useState<AdminOrder[]>([])
+  const [filter, setFilter] = useState<OrderStatus | ''>('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [busyId, setBusyId] = useState<number | null>(null)
+
+  async function load() {
+    setLoading(true)
+    setError('')
+    try {
+      const list = await listOrders(filter ? { status: filter } : {})
+      setOrders(list)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'load failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { void load() }, [filter])
+
+  async function setStatus(id: number, status: OrderStatus) {
+    setBusyId(id)
+    try {
+      const updated = await updateOrderStatus(id, status)
+      setOrders((prev) => prev.map((o) => o.id === id ? updated : o))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'update failed')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function remove(id: number) {
+    if (!confirm(`Удалить заказ #${id}?`)) return
+    setBusyId(id)
+    try {
+      await deleteOrder(id)
+      setOrders((prev) => prev.filter((o) => o.id !== id))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'delete failed')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  return (
+    <div className="admin__content-tab">
+      <div className="admin__content-header">
+        <h2 className="admin__content-title">Заказы</h2>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {error && <span style={{ color: 'var(--color-main)', fontSize: 13 }}>{error}</span>}
+          <select className="admin__input" value={filter} onChange={(e) => setFilter(e.target.value as OrderStatus | '')} style={{ width: 200 }}>
+            <option value="">Все статусы</option>
+            {ORDER_STATUSES.map((s) => <option key={s} value={s}>{ORDER_STATUS_LABELS[s]}</option>)}
+          </select>
+          <button type="button" className="admin__save-btn" onClick={() => void load()} disabled={loading}>
+            {loading ? 'Обновляем...' : 'Обновить'}
+          </button>
+        </div>
+      </div>
+      <p className="admin__label-hint" style={{ marginBottom: 16 }}>
+        Заказы из формы корзины + изменения статусов из Telegram-бота приходят в эту таблицу. Редактирование статуса здесь сразу отправляется в БД, бот тоже её читает.
+      </p>
+
+      {orders.length === 0 ? (
+        <div className="admin__content-empty">
+          <p className="admin__empty-text">{loading ? 'Загрузка...' : 'Заказов нет'}</p>
+        </div>
+      ) : (
+        <div className="admin__inbox-list">
+          {orders.map((o) => (
+            <div key={o.id} className="admin__inbox-card">
+              <div className="admin__inbox-card-head">
+                <div>
+                  <span className="admin__inbox-id">#{o.id}</span>
+                  <span className={`admin__inbox-status admin__inbox-status--${o.status}`}>
+                    {ORDER_STATUS_LABELS[o.status]}
+                  </span>
+                </div>
+                <span className="admin__inbox-date">{new Date(o.created_at).toLocaleString('ru-RU')}</span>
+              </div>
+              <div className="admin__inbox-meta">
+                <div><b>Имя:</b> {o.customer_name || '—'}</div>
+                <div><b>Контакт:</b> {o.customer_contact || '—'}</div>
+                <div><b>Доставка:</b> {o.delivery || '—'}</div>
+              </div>
+              {o.comment && <p className="admin__inbox-text">{o.comment}</p>}
+              <ul className="admin__inbox-items">
+                {(o.items ?? []).map((it, i) => (
+                  <li key={`${o.id}-${i}`}>
+                    <span>{it.title}</span>
+                    <span>{it.quantity} × {it.price.toLocaleString('ru-RU')} ₽</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="admin__inbox-total">
+                <span>Итого</span>
+                <strong>{o.total.toLocaleString('ru-RU')} ₽</strong>
+              </div>
+              <div className="admin__inbox-actions">
+                <div className="admin__inbox-statuses">
+                  {ORDER_STATUSES.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className={`admin__inbox-status-btn ${o.status === s ? 'admin__inbox-status-btn--active' : ''}`}
+                      onClick={() => void setStatus(o.id, s)}
+                      disabled={busyId === o.id || o.status === s}
+                    >
+                      {ORDER_STATUS_LABELS[s]}
+                    </button>
+                  ))}
+                </div>
+                <button type="button" className="admin__inbox-delete" onClick={() => void remove(o.id)} disabled={busyId === o.id}>
+                  удалить
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  new: 'новый',
+  in_progress: 'в работе',
+  done: 'выполнен',
+  cancelled: 'отменён',
+}
+
+// ── Inquiries tab ─────────────────────────────────────────────────────────────
+const INQUIRY_STATUS_LABELS: Record<InquiryStatus, string> = {
+  new: 'новая',
+  in_progress: 'в работе',
+  done: 'закрыта',
+}
+const INQUIRY_CATEGORY_LABELS: Record<InquiryCategory, string> = {
+  order: 'заказ',
+  product: 'товар',
+  choose: 'помощь с выбором',
+  delivery: 'доставка',
+  other: 'другое',
+}
+
+function InquiriesTab() {
+  const [items, setItems] = useState<AdminInquiry[]>([])
+  const [statusFilter, setStatusFilter] = useState<InquiryStatus | ''>('')
+  const [categoryFilter, setCategoryFilter] = useState<InquiryCategory | ''>('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [busyId, setBusyId] = useState<number | null>(null)
+
+  async function load() {
+    setLoading(true)
+    setError('')
+    try {
+      const list = await listInquiries({
+        status: statusFilter || undefined,
+        category: categoryFilter || undefined,
+      })
+      setItems(list)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'load failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { void load() }, [statusFilter, categoryFilter])
+
+  async function setStatus(id: number, status: InquiryStatus) {
+    setBusyId(id)
+    try {
+      const updated = await updateInquiryStatus(id, status)
+      setItems((prev) => prev.map((o) => o.id === id ? updated : o))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'update failed')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function remove(id: number) {
+    if (!confirm(`Удалить заявку #${id}?`)) return
+    setBusyId(id)
+    try {
+      await deleteInquiry(id)
+      setItems((prev) => prev.filter((o) => o.id !== id))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'delete failed')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  return (
+    <div className="admin__content-tab">
+      <div className="admin__content-header">
+        <h2 className="admin__content-title">Заявки в поддержку</h2>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {error && <span style={{ color: 'var(--color-main)', fontSize: 13 }}>{error}</span>}
+          <select className="admin__input" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as InquiryCategory | '')} style={{ width: 180 }}>
+            <option value="">Все категории</option>
+            {INQUIRY_CATEGORIES.map((c) => <option key={c} value={c}>{INQUIRY_CATEGORY_LABELS[c]}</option>)}
+          </select>
+          <select className="admin__input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as InquiryStatus | '')} style={{ width: 160 }}>
+            <option value="">Все статусы</option>
+            {INQUIRY_STATUSES.map((s) => <option key={s} value={s}>{INQUIRY_STATUS_LABELS[s]}</option>)}
+          </select>
+          <button type="button" className="admin__save-btn" onClick={() => void load()} disabled={loading}>
+            {loading ? 'Обновляем...' : 'Обновить'}
+          </button>
+        </div>
+      </div>
+      <p className="admin__label-hint" style={{ marginBottom: 16 }}>
+        Заявки из формы поддержки и со страниц «помощь с выбором». Telegram-бот пишет сюда же — обновления синхронны.
+      </p>
+
+      {items.length === 0 ? (
+        <div className="admin__content-empty">
+          <p className="admin__empty-text">{loading ? 'Загрузка...' : 'Заявок нет'}</p>
+        </div>
+      ) : (
+        <div className="admin__inbox-list">
+          {items.map((q) => (
+            <div key={q.id} className="admin__inbox-card">
+              <div className="admin__inbox-card-head">
+                <div>
+                  <span className="admin__inbox-id">#{q.id}</span>
+                  <span className={`admin__inbox-status admin__inbox-status--${q.status}`}>
+                    {INQUIRY_STATUS_LABELS[q.status]}
+                  </span>
+                  <span className="admin__inbox-tag">{INQUIRY_CATEGORY_LABELS[q.category]}</span>
+                </div>
+                <span className="admin__inbox-date">{new Date(q.created_at).toLocaleString('ru-RU')}</span>
+              </div>
+              <div className="admin__inbox-meta">
+                <div><b>Имя:</b> {q.customer_name || '—'}</div>
+                <div><b>Контакт:</b> {q.customer_contact || '—'}</div>
+              </div>
+              <p className="admin__inbox-text">{q.message}</p>
+              <div className="admin__inbox-actions">
+                <div className="admin__inbox-statuses">
+                  {INQUIRY_STATUSES.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className={`admin__inbox-status-btn ${q.status === s ? 'admin__inbox-status-btn--active' : ''}`}
+                      onClick={() => void setStatus(q.id, s)}
+                      disabled={busyId === q.id || q.status === s}
+                    >
+                      {INQUIRY_STATUS_LABELS[s]}
+                    </button>
+                  ))}
+                </div>
+                <button type="button" className="admin__inbox-delete" onClick={() => void remove(q.id)} disabled={busyId === q.id}>
+                  удалить
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Pages tab (editable content for about/partnership/help-choose/delivery/modding/support) ─
+type PageId = 'about' | 'partnership' | 'support' | 'help_choose' | 'delivery' | 'modding'
+
+const PAGE_LABELS: Record<PageId, string> = {
+  about: 'О нас',
+  partnership: 'Партнёрство',
+  support: 'Поддержка',
+  help_choose: 'Помощь с выбором',
+  delivery: 'Доставка и оплата',
+  modding: 'Моддинг',
+}
+
+// Each page exposes a minimal set of overridable text fields. The page reads
+// `page_<id>_<lang>.<field>` from site_content and falls back to the i18n value
+// shipped in the app bundle when the field is empty/missing.
+const PAGE_FIELDS: Record<PageId, Array<{ key: string; label: string; multiline?: boolean }>> = {
+  about: [
+    { key: 'eyebrow', label: 'Eyebrow (мелкая надпись)' },
+    { key: 'title', label: 'Заголовок' },
+    { key: 'subtitle', label: 'Подзаголовок', multiline: true },
+    { key: 'storyTitle', label: 'Заголовок секции "story"' },
+    { key: 'storyText', label: 'Текст секции "story"', multiline: true },
+    { key: 'contactTitle', label: 'CTA: заголовок' },
+    { key: 'contactText', label: 'CTA: текст', multiline: true },
+  ],
+  partnership: [
+    { key: 'eyebrow', label: 'Eyebrow' },
+    { key: 'title', label: 'Заголовок' },
+    { key: 'subtitle', label: 'Подзаголовок', multiline: true },
+    { key: 'ctaLabel', label: 'CTA: подпись' },
+    { key: 'ctaText', label: 'CTA: текст', multiline: true },
+  ],
+  support: [
+    { key: 'eyebrow', label: 'Eyebrow' },
+    { key: 'title', label: 'Заголовок' },
+    { key: 'subtitle', label: 'Подзаголовок', multiline: true },
+    { key: 'statResponse', label: 'Stat: значение' },
+    { key: 'statResponseLabel', label: 'Stat: подпись' },
+  ],
+  help_choose: [
+    { key: 'eyebrow', label: 'Eyebrow' },
+    { key: 'title', label: 'Заголовок' },
+    { key: 'subtitle', label: 'Подзаголовок', multiline: true },
+    { key: 'resultTitle', label: 'Результат: заголовок' },
+    { key: 'resultText', label: 'Результат: текст', multiline: true },
+  ],
+  delivery: [
+    { key: 'eyebrow', label: 'Eyebrow' },
+    { key: 'title', label: 'Заголовок' },
+    { key: 'subtitle', label: 'Подзаголовок', multiline: true },
+    { key: 'statusChip', label: 'Статус-чип (рядом с hero)' },
+    { key: 'timelineTitle', label: 'Заголовок таймлайна' },
+    { key: 'paymentTitle', label: 'Заголовок секции оплаты' },
+    { key: 'coverageTitle', label: 'Заголовок сроков по регионам' },
+    { key: 'faqTitle', label: 'Заголовок FAQ' },
+  ],
+  modding: [
+    { key: 'eyebrow', label: 'Eyebrow' },
+    { key: 'titleStart', label: 'Заголовок (начало)' },
+    { key: 'titleAccent', label: 'Заголовок (акцент)' },
+    { key: 'titleEnd', label: 'Заголовок (конец)' },
+    { key: 'subtitle', label: 'Подзаголовок', multiline: true },
+    { key: 'processTitle', label: 'Заголовок "Процесс работы"' },
+    { key: 'bundlesTitle', label: 'Заголовок секции комплектов' },
+    { key: 'bundlesSubtitle', label: 'Подзаголовок секции комплектов' },
+  ],
+}
+
+function PagesTab() {
+  const [pageId, setPageId] = useState<PageId>('about')
+  const [lang, setLang] = useState<'ru' | 'en'>('ru')
+  const [data, setData] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
+
+  const storageKey = `page_${pageId}_${lang}`
+
+  useEffect(() => {
+    setLoading(true)
+    setError('')
+    setSaved(false)
+    fetchSiteContent<Record<string, string>>(storageKey).then((result) => {
+      setData(result.data ?? {})
+      setLoading(false)
+    })
+  }, [storageKey])
+
+  function setField(field: string, value: string) {
+    setData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  async function save() {
+    setSaving(true)
+    setError('')
+    setSaved(false)
+    try {
+      await updateSiteContent(storageKey, data)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'save failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const fields = PAGE_FIELDS[pageId]
+
+  return (
+    <div className="admin__content-tab">
+      <div className="admin__content-header">
+        <h2 className="admin__content-title">Контент страниц</h2>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {saved && <span className="admin__saved-toast">Сохранено ✓</span>}
+          {error && <span style={{ color: 'var(--color-main)', fontSize: 13 }}>{error}</span>}
+          <button type="button" className="admin__save-btn" onClick={() => void save()} disabled={saving || loading}>
+            {saving ? 'Сохраняем...' : 'Сохранить'}
+          </button>
+        </div>
+      </div>
+      <p className="admin__label-hint" style={{ marginBottom: 16 }}>
+        Перетекстовка заголовков и подписей на сервисных страницах. Пустое поле = текст из приложения по умолчанию.
+      </p>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div className="admin__field" style={{ flex: 1, minWidth: 220 }}>
+          <span className="admin__label">Страница</span>
+          <select className="admin__input" value={pageId} onChange={(e) => setPageId(e.target.value as PageId)}>
+            {(Object.keys(PAGE_LABELS) as PageId[]).map((id) => (
+              <option key={id} value={id}>{PAGE_LABELS[id]}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <span className="admin__label" style={{ display: 'block', marginBottom: 6 }}>Язык</span>
+          <div className="admin__lang-tabs">
+            {(['ru', 'en'] as const).map((lng) => (
+              <button
+                key={lng}
+                type="button"
+                className={`admin__lang-tab ${lang === lng ? 'admin__lang-tab--active' : ''}`.trim()}
+                onClick={() => setLang(lng)}
+              >
+                {lng.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="admin__content-empty">
+          <p className="admin__empty-text">Загрузка...</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 14 }}>
+          {fields.map((f) => (
+            <div key={f.key} className="admin__field">
+              <span className="admin__label">{f.label}</span>
+              {f.multiline ? (
+                <textarea
+                  className="admin__input"
+                  rows={3}
+                  value={data[f.key] ?? ''}
+                  onChange={(e) => setField(f.key, e.target.value)}
+                  placeholder="оставьте пустым для дефолтного текста"
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              ) : (
+                <input
+                  className="admin__input"
+                  value={data[f.key] ?? ''}
+                  onChange={(e) => setField(f.key, e.target.value)}
+                  placeholder="оставьте пустым для дефолтного текста"
+                />
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

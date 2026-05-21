@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { usePageContent } from '../hooks/usePageContent'
 
 type Tier = {
   id: string
@@ -13,6 +14,7 @@ type PerkItem = { title: string; text: string }
 
 export default function PartnershipPage() {
   const { t } = useTranslation()
+  const get = usePageContent('partnership', 'partnership')
 
   const tiers = t('partnership.tiers', { returnObjects: true }) as Tier[]
   const perks = t('partnership.perks', { returnObjects: true }) as PerkItem[]
@@ -21,9 +23,9 @@ export default function PartnershipPage() {
     <div className="page-shell">
       <div className="page-container">
         <header className="partner-hero">
-          <span className="page-eyebrow">{t('partnership.eyebrow')}</span>
-          <h1 className="partner-hero__title">{t('partnership.title')}</h1>
-          <p className="partner-hero__sub">{t('partnership.subtitle')}</p>
+          <span className="page-eyebrow">{get('eyebrow')}</span>
+          <h1 className="partner-hero__title">{get('title')}</h1>
+          <p className="partner-hero__sub">{get('subtitle')}</p>
         </header>
 
         <section className="partner-tiers" aria-label={t('partnership.title')}>
@@ -73,9 +75,9 @@ export default function PartnershipPage() {
         </section>
 
         <section className="about-cta">
-          <p className="page-eyebrow">{t('partnership.ctaLabel')}</p>
-          <h2 className="about-cta__title">{t('partnership.title')}</h2>
-          <p className="about-cta__text">{t('partnership.ctaText')}</p>
+          <p className="page-eyebrow">{get('ctaLabel')}</p>
+          <h2 className="about-cta__title">{get('title')}</h2>
+          <p className="about-cta__text">{get('ctaText')}</p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <a
               href="https://t.me/kolman_shop_bot"

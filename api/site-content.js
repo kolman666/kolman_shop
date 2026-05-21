@@ -8,12 +8,21 @@ function getSupabase() {
   return createClient(url, key, { auth: { persistSession: false } })
 }
 
-const ALLOWED_KEYS = new Set([
+// Localized keys may have an optional _ru / _en suffix; the same validator applies
+// to both the bare key and the suffixed variants.
+const LOCALIZABLE_BASE_KEYS = new Set([
   'hero_slides',
   'homepage_categories',
   'homepage_perks',
-  'search_popular_sections',
+  'homepage_news',
 ])
+
+// Page text content keys: page_<pageId>_<lang>. Validated as a flat object of short strings.
+const PAGE_IDS = new Set(['about', 'partnership', 'support', 'help_choose', 'delivery', 'modding'])
+const PAGE_KEY_RE = /^page_([a-z_]+)_(ru|en)$/
+
+// Exact-match keys with no language variants.
+const EXACT_KEYS = new Set(['search_popular_sections'])
 
 // Strip ASCII control characters and clamp length.
 const CONTROL_CHARS_RE = new RegExp('[\\u0000-\\u001F\\u007F]', 'g')
@@ -23,6 +32,11 @@ function clean(s, max) {
 }
 
 const FORBIDDEN_KEY_CHARS_RE = /[\s"'<>`]/
+const LANG_SUFFIX_RE = /_(ru|en)$/
+
+function baseKey(key) {
+  return key.replace(LANG_SUFFIX_RE, '')
+}
 
 const VALIDATORS = {
   hero_slides(value) {
@@ -85,6 +99,37 @@ const VALIDATORS = {
     }
     return { ok: true, value: cleaned }
   },
+  homepage_news(value) {
+    if (!Array.isArray(value)) return { ok: false, error: 'homepage_news must be an array' }
+    if (value.length > 24) return { ok: false, error: 'too many news items' }
+    const cleaned = []
+    const seenIds = new Set()
+    for (const item of value) {
+      if (!item || typeof item !== 'object') return { ok: false, error: 'each news item must be an object' }
+      const id = clean(item.id, 80).trim() || `news-${cleaned.length + 1}`
+      if (seenIds.has(id)) return { ok: false, error: `duplicate news id: ${id}` }
+      seenIds.add(id)
+      const image = typeof item.image === 'string' ? item.image.trim() : ''
+      if (image && !isSafeHttpUrl(image, { allowEmpty: true })) {
+        return { ok: false, error: 'news image must be http(s)' }
+      }
+      const url = typeof item.url === 'string' ? item.url.trim() : ''
+      if (url && !isSafeLinkOrPath(url, { allowEmpty: true })) {
+        return { ok: false, error: 'news url must be /path or http(s) URL' }
+      }
+      cleaned.push({
+        id,
+        tag: clean(item.tag, 60),
+        date: clean(item.date, 60),
+        readMin: clean(item.readMin, 40),
+        title: clean(item.title, 200),
+        excerpt: clean(item.excerpt, 600),
+        image,
+        url,
+      })
+    }
+    return { ok: true, value: cleaned }
+  },
   search_popular_sections(value) {
     if (!Array.isArray(value)) return { ok: false, error: 'search_popular_sections must be an array' }
     if (value.length > 50) return { ok: false, error: 'too many sections' }
@@ -102,6 +147,77 @@ const VALIDATORS = {
     }
     return { ok: true, value: cleaned }
   },
+  // Page text content: flat object whose values are strings, arrays of strings,
+  // or arrays of small string objects (e.g. cards/faq). All strings are cleaned
+  // and clamped. Total field count is capped.
+  __page(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return { ok: false, error: 'page content must be an object' }
+    }
+    const out = {}
+    let total = 0
+    for (const [k, raw] of Object.entries(value)) {
+      total++
+      if (total > 120) return { ok: false, error: 'too many fields' }
+      const safeKey = clean(k, 60)
+      if (!safeKey || FORBIDDEN_KEY_CHARS_RE.test(safeKey)) {
+        return { ok: false, error: `invalid field key: ${k}` }
+      }
+      out[safeKey] = sanitizePageValue(raw, 0)
+      if (out[safeKey] === undefined) {
+        return { ok: false, error: `invalid value at ${safeKey}` }
+      }
+    }
+    return { ok: true, value: out }
+  },
+}
+
+function sanitizePageValue(v, depth) {
+  if (depth > 3) return undefined
+  if (v === null) return ''
+  if (typeof v === 'string') return clean(v, 2000)
+  if (typeof v === 'number' || typeof v === 'boolean') return v
+  if (Array.isArray(v)) {
+    if (v.length > 40) return undefined
+    const arr = []
+    for (const item of v) {
+      const x = sanitizePageValue(item, depth + 1)
+      if (x === undefined) return undefined
+      arr.push(x)
+    }
+    return arr
+  }
+  if (typeof v === 'object') {
+    const out = {}
+    let n = 0
+    for (const [k, val] of Object.entries(v)) {
+      n++
+      if (n > 30) return undefined
+      const sk = clean(k, 60)
+      if (!sk || FORBIDDEN_KEY_CHARS_RE.test(sk)) return undefined
+      const x = sanitizePageValue(val, depth + 1)
+      if (x === undefined) return undefined
+      out[sk] = x
+    }
+    return out
+  }
+  return undefined
+}
+
+function getValidator(key) {
+  if (EXACT_KEYS.has(key)) return VALIDATORS[key]
+  const base = baseKey(key)
+  if (LOCALIZABLE_BASE_KEYS.has(base)) return VALIDATORS[base]
+  const pageMatch = PAGE_KEY_RE.exec(key)
+  if (pageMatch && PAGE_IDS.has(pageMatch[1])) return VALIDATORS.__page
+  return null
+}
+
+function isAllowedKey(key) {
+  if (typeof key !== 'string') return false
+  if (key.length > 80) return false
+  if (FORBIDDEN_KEY_CHARS_RE.test(key)) return false
+  return getValidator(key) !== null
 }
 
 export default async function handler(req, res) {
@@ -117,7 +233,7 @@ export default async function handler(req, res) {
     if (!key || typeof key !== 'string') {
       return res.status(400).json({ error: 'key query param required' })
     }
-    if (!ALLOWED_KEYS.has(key)) {
+    if (!isAllowedKey(key)) {
       return res.status(400).json({ error: 'unknown key' })
     }
     const { data, error } = await supabase
@@ -140,11 +256,10 @@ export default async function handler(req, res) {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: 'unauthorized' })
 
     const { key, value } = req.body ?? {}
-    if (!key || typeof key !== 'string') return res.status(400).json({ error: 'key required' })
-    if (!ALLOWED_KEYS.has(key)) return res.status(400).json({ error: 'unknown key' })
+    if (!isAllowedKey(key)) return res.status(400).json({ error: 'unknown key' })
     if (value === undefined) return res.status(400).json({ error: 'value required' })
 
-    const validator = VALIDATORS[key]
+    const validator = getValidator(key)
     if (!validator) return res.status(400).json({ error: 'no validator for key' })
     const result = validator(value)
     if (!result.ok) return res.status(400).json({ error: result.error })

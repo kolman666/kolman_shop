@@ -6948,3 +6948,202 @@ background: linear-gradient(120deg, #0a0a0a 10%, #0000 60%);
   background: var(--color-bg-elevated);
   border-color: var(--color-border-strong);
 }
+
+/* ===== Admin: Orders + Inquiries (inbox cards) ===== */
+.admin__inbox-list {
+  display: grid;
+  gap: 14px;
+}
+
+.admin__inbox-card {
+  padding: 22px 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-elevated);
+  display: grid;
+  gap: 12px;
+}
+
+.admin__inbox-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin__inbox-card-head > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin__inbox-id {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+.admin__inbox-tag {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--color-bg-soft);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-dim);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin__inbox-status {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin__inbox-status--new { background: rgba(46, 213, 115, 0.18); color: #4ade80; }
+.admin__inbox-status--in_progress { background: rgba(255, 200, 0, 0.14); color: #ffc800; }
+.admin__inbox-status--done { background: rgba(150, 150, 150, 0.18); color: #ccc; }
+.admin__inbox-status--cancelled { background: rgba(225, 29, 29, 0.18); color: var(--color-main-hover); }
+
+.admin__inbox-date {
+  color: var(--color-text-dim);
+  font-size: 12px;
+}
+
+.admin__inbox-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 6px 18px;
+  color: var(--color-text-soft);
+  font-size: 13px;
+}
+
+.admin__inbox-meta b {
+  color: var(--color-text-dim);
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.admin__inbox-text {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--color-main);
+  background: var(--color-bg-soft);
+  border-radius: 4px;
+  color: var(--color-text-soft);
+  font-size: 13.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.admin__inbox-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.admin__inbox-items li {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-text-soft);
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.admin__inbox-items li:last-child { border-bottom: none; }
+
+.admin__inbox-total {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.admin__inbox-total strong {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--color-main);
+}
+
+.admin__inbox-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.admin__inbox-statuses {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin__inbox-status-btn {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-soft);
+  color: var(--color-text-soft);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin__inbox-status-btn:hover:not(:disabled) {
+  border-color: var(--color-main);
+  color: var(--color-text);
+}
+
+.admin__inbox-status-btn--active {
+  background: var(--color-main);
+  border-color: var(--color-main);
+  color: var(--color-text);
+}
+
+.admin__inbox-status-btn:disabled { cursor: not-allowed; }
+
+.admin__inbox-delete {
+  background: transparent;
+  border: none;
+  color: var(--color-text-dim);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+}
+
+.admin__inbox-delete:hover { color: var(--color-main); }
+
+/* ===== Admin: live preview frame ===== */
+.admin__preview {
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+}
+
+.admin__preview-label {
+  display: inline-block;
+  padding: 4px 10px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  background: var(--color-bg-soft);
+  color: var(--color-text-dim);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

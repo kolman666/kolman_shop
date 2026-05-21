@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { usePageContent } from '../hooks/usePageContent'
 
 type Perk = { title: string; text: string }
 type ProcessStep = { step: string; title: string; text: string }
@@ -53,6 +54,7 @@ function CheckIcon() {
 
 export default function ModdingPage() {
   const { t } = useTranslation()
+  const get = usePageContent('modding', 'modding')
   const [tab, setTab] = useState<'all' | ServiceCategory>('all')
 
   const perks = t('modding.perks', { returnObjects: true }) as Perk[]
@@ -70,12 +72,12 @@ export default function ModdingPage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M14.7 6.3a4 4 0 0 1 0 5.6L11 15.6l-2.6-2.6 3.7-3.7a4 4 0 0 1 2.6-1zM9 13.4 3 19.4V21h1.6L10.6 15" />
             </svg>
-            {t('modding.eyebrow')}
+            {get('eyebrow')}
           </span>
           <h1 className="modding-hero__title">
-            {t('modding.titleStart')} <span className="modding-hero__accent">{t('modding.titleAccent')}</span> {t('modding.titleEnd')}
+            {get('titleStart')} <span className="modding-hero__accent">{get('titleAccent')}</span> {get('titleEnd')}
           </h1>
-          <p className="modding-hero__sub">{t('modding.subtitle')}</p>
+          <p className="modding-hero__sub">{get('subtitle')}</p>
         </section>
 
         <section className="modding-perks" aria-label={t('modding.eyebrow')}>
@@ -95,7 +97,7 @@ export default function ModdingPage() {
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
-            {t('modding.processTitle')}
+            {get('processTitle')}
           </h2>
           <div className="modding-process__steps">
             {processSteps.map((step) => (
@@ -159,8 +161,8 @@ export default function ModdingPage() {
 
         <section style={{ display: 'grid', gap: 18 }}>
           <header className="modding-bundles-head">
-            <h2 className="modding-bundles-head__title">{t('modding.bundlesTitle')}</h2>
-            <p className="modding-bundles-head__sub">{t('modding.bundlesSubtitle')}</p>
+            <h2 className="modding-bundles-head__title">{get('bundlesTitle')}</h2>
+            <p className="modding-bundles-head__sub">{get('bundlesSubtitle')}</p>
           </header>
 
           <div className="modding-bundles">

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { usePageContent } from '../hooks/usePageContent'
 
 type Stat = { value: string; label: string }
 type TimelineItem = { num: string; title: string; text: string }
@@ -7,6 +8,7 @@ type ValueItem = { num: string; title: string; text: string }
 
 export default function AboutPage() {
   const { t } = useTranslation()
+  const get = usePageContent('about', 'about')
 
   const stats = t('about.stats', { returnObjects: true }) as Stat[]
   const timeline = t('about.timeline', { returnObjects: true }) as TimelineItem[]
@@ -17,9 +19,9 @@ export default function AboutPage() {
       <div className="page-container">
         <section className="about-hero">
           <div>
-            <span className="page-eyebrow">{t('about.eyebrow')}</span>
-            <h1 className="about-hero__title">{t('about.title')}</h1>
-            <p className="about-hero__sub">{t('about.subtitle')}</p>
+            <span className="page-eyebrow">{get('eyebrow')}</span>
+            <h1 className="about-hero__title">{get('title')}</h1>
+            <p className="about-hero__sub">{get('subtitle')}</p>
             <div className="about-hero__actions">
               <Link to="/catalog" className="cta-btn">{t('about.heroPrimary')}</Link>
               <a
@@ -52,8 +54,8 @@ export default function AboutPage() {
         <section className="about-story">
           <div className="about-story__text">
             <p className="section-block-title">{t('about.catalogLabel')}</p>
-            <h2 className="about-story__title">{t('about.storyTitle')}</h2>
-            <p className="about-story__body">{t('about.storyText')}</p>
+            <h2 className="about-story__title">{get('storyTitle')}</h2>
+            <p className="about-story__body">{get('storyText')}</p>
           </div>
 
           <div className="about-timeline">
@@ -84,8 +86,8 @@ export default function AboutPage() {
 
         <section className="about-cta">
           <p className="page-eyebrow">{t('about.contactLabel')}</p>
-          <h2 className="about-cta__title">{t('about.contactTitle')}</h2>
-          <p className="about-cta__text">{t('about.contactText')}</p>
+          <h2 className="about-cta__title">{get('contactTitle')}</h2>
+          <p className="about-cta__text">{get('contactText')}</p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <a
               href="https://www.avito.ru/brands/ff6ecb53876080972365fc0b263271ac"

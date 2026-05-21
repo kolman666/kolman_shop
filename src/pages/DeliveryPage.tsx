@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { usePageContent } from '../hooks/usePageContent'
 
 type FaqItem = { q: string; a: string }
 type TimelineStep = { num: string; title: string; text: string }
@@ -31,6 +32,7 @@ function FaqRow({ item }: { item: FaqItem }) {
 
 export default function DeliveryPage() {
   const { t } = useTranslation()
+  const get = usePageContent('delivery', 'delivery')
   const faq = t('delivery.faq', { returnObjects: true }) as FaqItem[]
   const timeline = t('delivery.timeline', { returnObjects: true }) as TimelineStep[]
   const payment = t('delivery.payment', { returnObjects: true }) as PaymentMethod[]
@@ -41,18 +43,18 @@ export default function DeliveryPage() {
       <div className="page-container">
         <header className="delivery-hero">
           <div className="delivery-hero__copy">
-            <span className="page-eyebrow">{t('delivery.eyebrow')}</span>
-            <h1 className="delivery-hero__title">{t('delivery.title')}</h1>
-            <p className="delivery-hero__sub">{t('delivery.subtitle')}</p>
+            <span className="page-eyebrow">{get('eyebrow')}</span>
+            <h1 className="delivery-hero__title">{get('title')}</h1>
+            <p className="delivery-hero__sub">{get('subtitle')}</p>
           </div>
           <span className="delivery-chip">
             <span className="delivery-chip__dot" />
-            {t('delivery.statusChip')}
+            {get('statusChip')}
           </span>
         </header>
 
         <section>
-          <p className="section-block-title">{t('delivery.timelineTitle')}</p>
+          <p className="section-block-title">{get('timelineTitle')}</p>
           <div className="delivery-timeline">
             {timeline.map((step) => (
               <article key={step.num} className="delivery-tl-step">
@@ -66,7 +68,7 @@ export default function DeliveryPage() {
 
         <section className="delivery-bigrow">
           <div>
-            <p className="section-block-title">{t('delivery.paymentTitle')}</p>
+            <p className="section-block-title">{get('paymentTitle')}</p>
             <div className="delivery-payment">
               {payment.map((m) => (
                 <article key={m.name} className="delivery-payment__card">
@@ -80,7 +82,7 @@ export default function DeliveryPage() {
           <div>
             <p className="section-block-title">&nbsp;</p>
             <div className="delivery-coverage">
-              <h3 style={{ margin: 0, fontSize: 16, color: 'var(--color-text)' }}>{t('delivery.coverageTitle')}</h3>
+              <h3 style={{ margin: 0, fontSize: 16, color: 'var(--color-text)' }}>{get('coverageTitle')}</h3>
               <ul className="delivery-coverage__list">
                 {coverage.map((row) => (
                   <li key={row.region} className="delivery-coverage__row">
@@ -101,7 +103,7 @@ export default function DeliveryPage() {
             background: 'var(--color-bg-elevated)',
           }}
         >
-          <p className="section-block-title">{t('delivery.faqTitle')}</p>
+          <p className="section-block-title">{get('faqTitle')}</p>
           <div className="delivery-faq">
             {faq.map((item) => (
               <FaqRow key={`${item.q}-${item.a}`} item={item} />
