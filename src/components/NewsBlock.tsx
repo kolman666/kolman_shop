@@ -49,6 +49,7 @@ export default function NewsBlock() {
   const { t, i18n } = useTranslation()
   const [items, setItems] = useState<NewsItem[]>(FALLBACK_NEWS)
   const [offset, setOffset] = useState(0)
+  const [maxOffset, setMaxOffset] = useState(0)
   const trackRef = useRef<HTMLDivElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -71,13 +72,26 @@ export default function NewsBlock() {
     return () => { cancelled = true }
   }, [i18n.language])
 
+  // Recalculate max offset whenever items or viewport size change.
+  useEffect(() => {
+    const recalc = () => {
+      const track = trackRef.current
+      const wrap = wrapRef.current
+      if (!track || !wrap) return
+      const max = Math.max(0, track.scrollWidth - wrap.clientWidth)
+      setMaxOffset(max)
+      setOffset((prev) => Math.min(prev, max))
+    }
+    recalc()
+    window.addEventListener('resize', recalc)
+    return () => window.removeEventListener('resize', recalc)
+  }, [items])
+
   const slideBy = (dir: 1 | -1) => {
     const track = trackRef.current
-    const wrap = wrapRef.current
-    if (!track || !wrap) return
+    if (!track) return
     const firstCard = track.querySelector<HTMLElement>('.news-card')
-    const step = firstCard ? firstCard.offsetWidth + 18 : 540
-    const maxOffset = Math.max(0, track.scrollWidth - wrap.clientWidth)
+    const step = firstCard ? firstCard.offsetWidth + 20 : 540
     setOffset((prev) => {
       const next = prev + dir * step
       if (next < 0) return 0
@@ -87,6 +101,9 @@ export default function NewsBlock() {
   }
 
   if (items.length === 0) return null
+
+  const canPrev = offset > 0
+  const canNext = offset < maxOffset
 
   return (
     <section className="news-section" aria-labelledby="news-title">
@@ -109,18 +126,32 @@ export default function NewsBlock() {
               <path d="M5 12h14M13 5l7 7-7 7" />
             </svg>
           </Link>
-          <div className="news-section__nav">
-            <button type="button" className="news-section__nav-btn" onClick={() => slideBy(-1)} aria-label="previous">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-            </button>
-            <button type="button" className="news-section__nav-btn" onClick={() => slideBy(1)} aria-label="next">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 18l6-6-6-6" />
-              </svg>
-            </button>
-          </div>
+          {maxOffset > 0 && (
+            <div className="news-section__nav">
+              <button
+                type="button"
+                className="news-section__nav-btn"
+                onClick={() => slideBy(-1)}
+                aria-label="previous"
+                disabled={!canPrev}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="news-section__nav-btn"
+                onClick={() => slideBy(1)}
+                aria-label="next"
+                disabled={!canNext}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
+            </div>
+          )}
         </aside>
 
         <div ref={wrapRef} className="news-track-wrap">

@@ -6534,6 +6534,8 @@ background: linear-gradient(120deg, #0a0a0a 10%, #0000 60%);
 }
 
 .news-section__intro {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -6758,4 +6760,191 @@ background: linear-gradient(120deg, #0a0a0a 10%, #0000 60%);
 .admin__lang-tab--active {
   background: var(--color-main);
   color: var(--color-text);
+}
+
+/* ===== Modal: auth + ask question ===== */
+.auth-modal,
+.ask-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeSlide 0.2s ease;
+}
+
+.auth-modal__overlay,
+.ask-modal__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+
+.auth-modal__body,
+.ask-modal__body {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 32px 32px 28px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--color-main) 16%, transparent), transparent 50%),
+    var(--color-bg-elevated);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+}
+
+.auth-modal__title,
+.ask-modal__title {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.auth-modal__lead {
+  margin: 0 0 22px;
+  color: var(--color-text-dim);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.auth-modal__form,
+.ask-modal__form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-modal__field {
+  display: grid;
+  gap: 6px;
+}
+
+.auth-modal__field > span {
+  color: var(--color-text-dim);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-modal__field > input,
+.ask-modal__body input,
+.ask-modal__body textarea {
+  padding: 12px 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-soft);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.auth-modal__field > input:focus,
+.ask-modal__body input:focus,
+.ask-modal__body textarea:focus {
+  border-color: var(--color-main);
+}
+
+.ask-modal__body textarea { resize: vertical; min-height: 110px; }
+
+.auth-modal__error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(225, 29, 29, 0.3);
+  background: rgba(225, 29, 29, 0.1);
+  color: var(--color-main-hover);
+  font-size: 13px;
+}
+
+.auth-modal__actions,
+.ask-modal__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.auth-modal__cancel,
+.ask-modal__cancel {
+  padding: 10px 18px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-soft);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-modal__cancel:hover,
+.ask-modal__cancel:hover {
+  border-color: var(--color-main);
+  color: var(--color-text);
+}
+
+.auth-modal__submit,
+.ask-modal__submit {
+  padding: 10px 22px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-main);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.auth-modal__submit:hover,
+.ask-modal__submit:hover {
+  background: var(--color-main-hover);
+  transform: translateY(-1px);
+}
+
+.auth-modal__submit[disabled],
+.ask-modal__submit[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.auth-modal__switch {
+  display: block;
+  margin: 16px auto 0;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-main);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.auth-modal__switch:hover { color: var(--color-main-hover); }
+
+/* ===== News block: disabled nav state ===== */
+.news-section__nav-btn[disabled] {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.news-section__nav-btn[disabled]:hover {
+  background: var(--color-bg-elevated);
+  border-color: var(--color-border-strong);
 }

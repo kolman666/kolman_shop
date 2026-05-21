@@ -5,7 +5,9 @@ import { useProducts } from '../hooks/useProducts'
 import { getCartCount } from '../lib/cart'
 import CartDrawer from './CartDrawer'
 import SearchDropdown, { type SearchSection } from './SearchDropdown'
+import AuthModal from './AuthModal'
 import { fetchSiteContent } from '../lib/siteContent'
+import { AUTH_EVENT, getUser, type User } from '../lib/auth'
 
 type SiteChromeProps = {
   children: ReactNode
@@ -56,8 +58,28 @@ export default function SiteChrome({ children }: SiteChromeProps) {
   const [isBurgerOpen, setIsBurgerOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [popularSections, setPopularSections] = useState<SearchSection[]>([])
+  const [authOpen, setAuthOpen] = useState(false)
+  const [currentUser, setCurrentUser] = useState<User | null>(() => getUser())
   const searchWrapRef = useRef<HTMLDivElement>(null)
   const { products: allProducts } = useProducts()
+
+  useEffect(() => {
+    const syncUser = () => setCurrentUser(getUser())
+    window.addEventListener(AUTH_EVENT, syncUser)
+    window.addEventListener('storage', syncUser)
+    return () => {
+      window.removeEventListener(AUTH_EVENT, syncUser)
+      window.removeEventListener('storage', syncUser)
+    }
+  }, [])
+
+  const handleAccountClick = () => {
+    if (currentUser) {
+      navigate('/profile')
+    } else {
+      setAuthOpen(true)
+    }
+  }
 
   useEffect(() => {
     const nextSearchValue = pathname === '/catalog' ? new URLSearchParams(search).get('q') ?? '' : ''
@@ -135,6 +157,9 @@ export default function SiteChrome({ children }: SiteChromeProps) {
     'products.categories.accessories',
     '',
   ]
+  const navHrefOverrides: Record<number, string> = {
+    9: '/modding',
+  }
 
   const pathParts = pathname.split('/').filter(Boolean)
   const breadcrumbs: Array<{ to?: string; label: string }> = [{ to: '/', label: t('ui.breadcrumbs.home') }]
@@ -144,6 +169,8 @@ export default function SiteChrome({ children }: SiteChromeProps) {
   if (pathParts[0] === 'partnership') breadcrumbs.push({ label: 'партнерство' })
   if (pathParts[0] === 'help-choose') breadcrumbs.push({ label: 'помочь с выбором' })
   if (pathParts[0] === 'delivery') breadcrumbs.push({ label: 'доставка и оплата' })
+  if (pathParts[0] === 'modding') breadcrumbs.push({ label: 'моддинг' })
+  if (pathParts[0] === 'profile') breadcrumbs.push({ label: 'личный кабинет' })
   if (pathParts[0] === 'privacy') breadcrumbs.push({ label: 'политика конфиденциальности' })
 
   if (pathParts[0] === 'catalog') {
@@ -232,11 +259,25 @@ export default function SiteChrome({ children }: SiteChromeProps) {
               {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
             </button>
 
-            <button type="button" className="icon-button" aria-label="account">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="account"
+              onClick={handleAccountClick}
+              title={currentUser ? (currentUser.firstName || currentUser.name) : t('ui.auth.loginTitle')}
+            >
+              {currentUser?.photo ? (
+                <img
+                  src={currentUser.photo}
+                  alt=""
+                  style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }}
+                />
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              )}
             </button>
 
             <button type="button" className="burger-btn" aria-label="menu" onClick={() => setIsBurgerOpen(true)}>
@@ -252,11 +293,15 @@ export default function SiteChrome({ children }: SiteChromeProps) {
         <nav className="main-nav">
           <div className="container main-nav__inner">
             {navLinks.map((link, index) => {
+              const override = navHrefOverrides[index]
               const categoryKey = navCategoryTargets[index] ?? ''
-              const href = categoryKey ? `/catalog?category=${encodeURIComponent(categoryKey)}` : '/catalog'
-              const isActive = categoryKey
-                ? pathname === '/catalog' && new URLSearchParams(search).get('category') === categoryKey
-                : false
+              const href = override
+                ?? (categoryKey ? `/catalog?category=${encodeURIComponent(categoryKey)}` : '/catalog')
+              const isActive = override
+                ? pathname === override
+                : (categoryKey
+                  ? pathname === '/catalog' && new URLSearchParams(search).get('category') === categoryKey
+                  : false)
 
               return (
                 <Link
@@ -360,6 +405,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
       </div>
 
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 
       <footer className="site-footer">
         <div className="container footer-grid">
