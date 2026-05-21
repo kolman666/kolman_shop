@@ -6539,8 +6539,11 @@ background: linear-gradient(120deg, #0a0a0a 10%, #0000 60%);
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding-top: 16px;
+  padding: 16px 32px 16px 0;
   max-width: 360px;
+  /* Solid page-color background: when cards translate left under us, the panel
+     visually clips them rather than letting them show through the text. */
+  background: var(--color-bg);
 }
 
 .news-section__kicker {
@@ -6611,8 +6614,14 @@ background: linear-gradient(120deg, #0a0a0a 10%, #0000 60%);
 .news-track-wrap {
   position: relative;
   width: 100%;
-  /* the wrap itself is NOT clipped — cards bleed past viewport on the right.
-     .news-section's overflow:hidden clips the bleed cleanly at the viewport edge. */
+  min-width: 0;
+  /* Clip cards at this column's own bounding box so a translated track never
+     spills left into the intro column. The right edge of this wrap aligns with
+     the viewport right edge (no right padding on the layout), so the bleed
+     effect still works visually — the right-overflow is the viewport edge. */
+  overflow: hidden;
+  /* Add some left/right padding so cards don't sit flush against edges */
+  padding-block: 4px;
 }
 
 .news-track {
