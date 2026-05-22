@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { fetchSiteContent, updateSiteContent } from '../../lib/siteContent'
 import NewsBlock, { type NewsItem } from '../../components/NewsBlock'
 import { AccordionSection } from './AccordionSection'
@@ -478,12 +479,14 @@ function SelectField({ label, value, options, onChange }: { label: string; value
   )
 }
 
-// ── Real hero preview (uses actual .hero-card CSS so admin sees what the
-//    homepage will render). Renders the current slide with prev/next arrows
-//    so the admin can step through all of them.
-//    Wrapped in a 1280px container + faked hero-grid so card proportions
-//    match the real homepage (which has a 300px side panel next to it). ──
+// ── Real hero preview ──
+//
+// Mirrors what HomePage actually renders: the hero-card with the current
+// slide on the left, and the full side-panel (promo "ready to gear up" +
+// catalog status) on the right. Uses the live i18n strings so the side panel
+// matches what shoppers see in their language.
 function HeroPreview({ slides }: { slides: HeroSlide[] }) {
+  const { t } = useTranslation()
   const [current, setCurrent] = useState(0)
   if (slides.length === 0) {
     return <p style={{ padding: 40, color: 'var(--color-text-dim)' }}>Слайды не добавлены.</p>
@@ -545,14 +548,29 @@ function HeroPreview({ slides }: { slides: HeroSlide[] }) {
           </div>
         )}
       </div>
-      {/* Empty placeholder for the side panel — keeps the 1fr / 300px column
-          split intact so the hero card has the same width it has on the site. */}
-      <div aria-hidden="true" style={{
-        background: 'var(--color-bg-elevated)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-hero)',
-        opacity: 0.35,
-      }} />
+      {/* Real side panel — same markup as the live homepage's <aside>. */}
+      <aside className="side-panel">
+        <div className="promo-card promo-card--accent" role="presentation">
+          <svg className="promo-card__shape" width="180" height="180" viewBox="0 0 180 180" aria-hidden="true">
+            <rect x="60" y="-30" width="120" height="120" rx="30" fill="#fff" transform="rotate(20 90 90)" />
+            <rect x="90" y="40" width="100" height="100" rx="24" fill="#fff" transform="rotate(10 90 90)" />
+          </svg>
+          <p className="promo-label">{t('ui.readyToGearUp')}</p>
+          <h2 className="promo-title">{t('ui.startShopping')}</h2>
+          <span className="promo-arrow" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </span>
+        </div>
+        <div className="promo-card promo-card--catalog" role="presentation">
+          <div className="catalog-status">
+            <span className="catalog-status__dot" />
+            <span>{t('ui.fullCatalog')}</span>
+          </div>
+          <p className="catalog-text">{t('ui.catalogText')}</p>
+        </div>
+      </aside>
       </div>
     </div>
   )
@@ -567,30 +585,42 @@ const previewFrame: React.CSSProperties = {
 }
 
 function CategoriesPreview({ items }: { items: ContentCategory[] }) {
+  const { t } = useTranslation()
   if (items.length === 0) {
     return <p style={{ padding: 40, color: 'var(--color-text-dim)' }}>Категории не добавлены.</p>
   }
-  // Re-use the homepage `.category-card` markup so the preview is pixel-accurate.
+  // Wrap in the same `.showcase-section` + `.section-heading` that the homepage
+  // uses so the admin sees the kicker, title and note rendered together with
+  // the category grid — not just a bare row of cards.
   return (
     <div style={previewFrame}>
-      <div className="category-grid">
-        {items.map((c, i) => (
-          <div key={i} className="category-card" style={{ cursor: 'default' }}>
-            <div className="category-card__top">
-              <h3 className="category-card__title">{c.title}</h3>
-              <span className="category-card__arrow" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-              </span>
-            </div>
-            <div
-              className="category-card__image"
-              style={c.image ? { backgroundImage: `url("${c.image}")` } : undefined}
-            />
+      <section className="showcase-section">
+        <div className="section-heading">
+          <div>
+            <p className="section-kicker">{t('ui.catalogHighlights')}</p>
+            <h2 className="section-title">{t('ui.categoriesTitle')}</h2>
           </div>
-        ))}
-      </div>
+          <p className="section-note">{t('ui.categoriesNote')}</p>
+        </div>
+        <div className="category-grid">
+          {items.map((c, i) => (
+            <div key={i} className="category-card" style={{ cursor: 'default' }}>
+              <div className="category-card__top">
+                <h3 className="category-card__title">{c.title}</h3>
+                <span className="category-card__arrow" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </span>
+              </div>
+              <div
+                className="category-card__image"
+                style={c.image ? { backgroundImage: `url("${c.image}")` } : undefined}
+              />
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }
