@@ -9309,6 +9309,9 @@
 
 .brand-page__website {
   margin-top: 8px;
+  background: var(--color-main);
+  border-color: transparent;
+  color: #fff;
 }
 
 .brand-page__about {
