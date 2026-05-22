@@ -84,6 +84,23 @@ export async function adminFetchMessages(threadEmail: string): Promise<ChatMessa
   )
 }
 
+export type AdminThread = {
+  email: string
+  last_body: string
+  last_at: string
+  last_sender: 'user' | 'admin'
+  unread_user_messages: number
+}
+
+// All chat threads, derived from the messages table itself. Replaces the old
+// approach of guessing threads from inquiries/orders, which missed customers
+// who never placed an order.
+export async function adminListThreads(): Promise<AdminThread[]> {
+  return handle<AdminThread[]>(
+    await fetch('/api/messages?threads=1', { headers: adminHeaders() }),
+  )
+}
+
 export async function adminReply(threadEmail: string, body: string): Promise<ChatMessage> {
   return handle<ChatMessage>(
     await fetch('/api/messages', {

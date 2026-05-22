@@ -37,7 +37,7 @@ import {
   type InquiryStatus,
   type InquiryCategory,
 } from '../lib/adminInbox'
-import { adminFetchMessages, adminReply, type ChatMessage } from '../lib/customerInbox'
+import { adminFetchMessages, adminReply, adminListThreads, type ChatMessage, type AdminThread } from '../lib/customerInbox'
 import { supabase } from '../lib/supabase'
 
 const CATEGORIES = [
@@ -219,6 +219,33 @@ type AdminTab = 'products' | 'content' | 'pages' | 'orders' | 'inquiries' | 'cha
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const { products: allProducts, loading: productsLoading, refresh } = useProducts()
   const [activeTab, setActiveTab] = useState<AdminTab>('products')
+  // Counter for new user-side chat messages that arrived while admin was on a
+  // different tab. Resets when the admin opens the chat tab. Realtime hook
+  // below increments it whenever an INSERT(sender='user') hits messages.
+  const [unreadChat, setUnreadChat] = useState(0)
+
+  useEffect(() => {
+    const sb = supabase
+    if (!sb) return
+    const channel = sb
+      .channel('admin-chat-tab-badge')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          const row = payload?.new as { sender?: string } | null
+          if (row?.sender !== 'user') return
+          if (activeTab === 'chat') return
+          setUnreadChat((n) => n + 1)
+        },
+      )
+      .subscribe()
+    return () => { void sb.removeChannel(channel) }
+  }, [activeTab])
+
+  useEffect(() => {
+    if (activeTab === 'chat') setUnreadChat(0)
+  }, [activeTab])
 
   const [editingId, setEditingId] = useState<number | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -415,6 +442,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         </button>
         <button type="button" className={`admin__tab-btn${activeTab === 'chat' ? ' active' : ''}`} onClick={() => setActiveTab('chat')}>
           Чат
+          {unreadChat > 0 && <span className="admin__tab-badge">{unreadChat}</span>}
         </button>
         <button type="button" className={`admin__tab-btn${activeTab === 'bloggers' ? ' active' : ''}`} onClick={() => setActiveTab('bloggers')}>
           Блогеры
@@ -1566,7 +1594,7 @@ function InquiriesTab() {
 // Lists customer chat threads (one per email) on the left, opens a conversation
 // pane on the right. Admin replies are stored with sender='admin'; the customer
 // sees them in their /profile → чат tab. Both sides poll the API every 8s.
-type ThreadRow = { email: string; lastBody: string; lastAt: string; unread: number }
+type ThreadRow = { email: string; lastBody: string; lastAt: string; lastSender: 'user' | 'admin'; unread: number }
 
 function ChatTab() {
   const [threads, setThreads] = useState<ThreadRow[]>([])
@@ -1587,25 +1615,41 @@ function ChatTab() {
     setLoadingThreads(true)
     setError('')
     try {
+      // Source of truth = the messages table itself. Pull distinct threads
+      // straight from there so customers who chat without placing an order
+      // still show up.
+      const remote: AdminThread[] = await adminListThreads().catch(() => [])
+      const map = new Map<string, ThreadRow>()
+      for (const t of remote) {
+        const email = t.email.trim().toLowerCase()
+        if (!email) continue
+        map.set(email, {
+          email,
+          lastBody: t.last_body ?? '',
+          lastAt: t.last_at ?? '',
+          lastSender: t.last_sender,
+          unread: t.unread_user_messages ?? 0,
+        })
+      }
+
+      // Add inquiry / order customers as empty threads so the admin can
+      // proactively reach out even if the customer never sent a chat message.
       const secret = sessionStorage.getItem('admin_secret') ?? ''
       const headers = { 'X-Admin-Secret': secret }
       const [inqRes, ordRes] = await Promise.all([
-        fetch('/api/inquiries?limit=200', { headers }),
-        fetch('/api/orders?limit=200', { headers }),
+        fetch('/api/inquiries?limit=200', { headers }).catch(() => null),
+        fetch('/api/orders?limit=200', { headers }).catch(() => null),
       ])
-      const inqJson = inqRes.ok ? await inqRes.json() : []
-      const ordJson = ordRes.ok ? await ordRes.json() : []
-      const map = new Map<string, ThreadRow>()
+      const inqJson = inqRes && inqRes.ok ? await inqRes.json() : []
+      const ordJson = ordRes && ordRes.ok ? await ordRes.json() : []
       for (const row of [...inqJson, ...ordJson]) {
         const email = (row.customer_email ?? '').trim().toLowerCase()
-        if (!email) continue
+        if (!email || map.has(email)) continue
         const lastAt = row.created_at ?? ''
         const lastBody = row.message ?? (row.comment ?? '')
-        const existing = map.get(email)
-        if (!existing || new Date(lastAt) > new Date(existing.lastAt)) {
-          map.set(email, { email, lastBody, lastAt, unread: 0 })
-        }
+        map.set(email, { email, lastBody, lastAt, lastSender: 'admin', unread: 0 })
       }
+
       const list = Array.from(map.values()).sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime())
       setThreads(list)
     } catch (e) {
@@ -1628,6 +1672,49 @@ function ChatTab() {
   }
 
   useEffect(() => { void loadThreads() }, [])
+
+  // Global realtime listener for any new INSERT into messages — keeps the
+  // thread list fresh (new emails appear immediately) and pings the admin
+  // with a browser notification + audible beep when a customer writes in.
+  useEffect(() => {
+    const sb = supabase
+    if (!sb) return
+    // Ask once on mount; rejection is fine, we just won't pop notifications.
+    if ('Notification' in window && Notification.permission === 'default') {
+      try { void Notification.requestPermission() } catch { /* ignore */ }
+    }
+    const channel = sb
+      .channel('admin-chat-threads')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          const row = payload?.new as { sender?: string; thread_email?: string; body?: string } | null
+          if (!row) return
+          // Refresh thread list so new customers + unread counts appear.
+          void loadThreads()
+          // Only notify on customer → admin messages, not on our own replies.
+          if (row.sender !== 'user') return
+          // If the admin is already looking at this exact thread, skip the popup.
+          if (active && row.thread_email === active) return
+          try {
+            if ('Notification' in window && Notification.permission === 'granted') {
+              const n = new Notification('Новое сообщение в чате', {
+                body: `${row.thread_email}: ${(row.body ?? '').slice(0, 140)}`,
+                tag: `chat-${row.thread_email}`,
+              })
+              n.onclick = () => {
+                window.focus()
+                if (row.thread_email) setActive(row.thread_email)
+              }
+            }
+          } catch { /* ignore */ }
+        },
+      )
+      .subscribe()
+    return () => { void sb.removeChannel(channel) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active])
 
   useEffect(() => {
     if (!active) return
@@ -1705,11 +1792,14 @@ function ChatTab() {
                 <li key={th.email}>
                   <button
                     type="button"
-                    className={`admin__chat-thread ${active === th.email ? 'admin__chat-thread--active' : ''}`.trim()}
+                    className={`admin__chat-thread ${active === th.email ? 'admin__chat-thread--active' : ''} ${th.unread > 0 ? 'admin__chat-thread--unread' : ''}`.trim()}
                     onClick={() => setActive(th.email)}
                   >
-                    <span className="admin__chat-thread-email">{th.email}</span>
-                    <span className="admin__chat-thread-time">{new Date(th.lastAt).toLocaleString('ru-RU')}</span>
+                    <span className="admin__chat-thread-email">
+                      {th.email}
+                      {th.unread > 0 && <span className="admin__chat-thread-badge">{th.unread}</span>}
+                    </span>
+                    <span className="admin__chat-thread-time">{th.lastAt ? new Date(th.lastAt).toLocaleString('ru-RU') : ''}</span>
                     {th.lastBody && <span className="admin__chat-thread-snip">{th.lastBody.slice(0, 80)}</span>}
                   </button>
                 </li>
