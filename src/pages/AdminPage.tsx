@@ -37,7 +37,14 @@ import {
   type InquiryStatus,
   type InquiryCategory,
 } from '../lib/adminInbox'
-import { adminFetchMessages, adminReply, adminListThreads, type ChatMessage, type AdminThread } from '../lib/customerInbox'
+import {
+  adminFetchThreadMessages,
+  adminReply,
+  adminListAllChatThreads,
+  adminSetThreadStatus,
+  type ChatMessage,
+  type ChatThread,
+} from '../lib/customerInbox'
 import { supabase } from '../lib/supabase'
 
 const CATEGORIES = [
@@ -957,10 +964,47 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS messages_thread_idx ON messages(thread_email, created_at);
+
+-- Multi-thread chat: customers can have several ongoing conversations and
+-- close them when resolved. Each chat_threads row groups its messages by
+-- thread_id; older messages without a thread are migrated below.
+CREATE TABLE IF NOT EXISTS chat_threads (
+  id BIGSERIAL PRIMARY KEY,
+  user_email TEXT NOT NULL,
+  title TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'open',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_message_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS chat_threads_user_idx ON chat_threads (user_email, last_message_at DESC);
+CREATE INDEX IF NOT EXISTS chat_threads_status_idx ON chat_threads (status, last_message_at DESC);
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS thread_id BIGINT REFERENCES chat_threads(id) ON DELETE CASCADE;
+
+-- One-time migration: any pre-existing message without thread_id gets bucketed
+-- into a single thread per email so nothing disappears.
+DO $$
+DECLARE
+  rec RECORD;
+  new_id BIGINT;
+BEGIN
+  FOR rec IN
+    SELECT thread_email, MIN(created_at) AS first_at, MAX(created_at) AS last_at
+    FROM messages
+    WHERE thread_id IS NULL
+    GROUP BY thread_email
+  LOOP
+    INSERT INTO chat_threads (user_email, title, created_at, last_message_at)
+    VALUES (rec.thread_email, 'Архив', rec.first_at, rec.last_at)
+    RETURNING id INTO new_id;
+    UPDATE messages SET thread_id = new_id WHERE thread_email = rec.thread_email AND thread_id IS NULL;
+  END LOOP;
+END $$;
+
 -- Enable Realtime for chat. After running this, also flip the toggle for the
 -- "messages" table in Supabase Studio → Database → Replication if it doesn't
 -- show up automatically.
 ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE chat_threads;
 
 -- Customer accounts (replaces the old localStorage-only auth). PBKDF2-SHA256
 -- password hashes are computed server-side; the client only ever holds a
@@ -1594,11 +1638,10 @@ function InquiriesTab() {
 // Lists customer chat threads (one per email) on the left, opens a conversation
 // pane on the right. Admin replies are stored with sender='admin'; the customer
 // sees them in their /profile → чат tab. Both sides poll the API every 8s.
-type ThreadRow = { email: string; lastBody: string; lastAt: string; lastSender: 'user' | 'admin'; unread: number }
 
 function ChatTab() {
-  const [threads, setThreads] = useState<ThreadRow[]>([])
-  const [active, setActive] = useState<string | null>(null)
+  const [threads, setThreads] = useState<ChatThread[]>([])
+  const [active, setActive] = useState<number | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [draft, setDraft] = useState('')
   const [loadingThreads, setLoadingThreads] = useState(true)
@@ -1606,52 +1649,15 @@ function ChatTab() {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [filter, setFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'closed'>('open')
   const listRef = useRef<HTMLDivElement>(null)
 
-  // Derive threads from the list of inquiries and orders — both have
-  // `customer_email`. The admin chat endpoint stores messages keyed by email,
-  // so seeing every email that ever wrote in gives us the thread list.
   async function loadThreads() {
     setLoadingThreads(true)
     setError('')
     try {
-      // Source of truth = the messages table itself. Pull distinct threads
-      // straight from there so customers who chat without placing an order
-      // still show up.
-      const remote: AdminThread[] = await adminListThreads().catch(() => [])
-      const map = new Map<string, ThreadRow>()
-      for (const t of remote) {
-        const email = t.email.trim().toLowerCase()
-        if (!email) continue
-        map.set(email, {
-          email,
-          lastBody: t.last_body ?? '',
-          lastAt: t.last_at ?? '',
-          lastSender: t.last_sender,
-          unread: t.unread_user_messages ?? 0,
-        })
-      }
-
-      // Add inquiry / order customers as empty threads so the admin can
-      // proactively reach out even if the customer never sent a chat message.
-      const secret = sessionStorage.getItem('admin_secret') ?? ''
-      const headers = { 'X-Admin-Secret': secret }
-      const [inqRes, ordRes] = await Promise.all([
-        fetch('/api/inquiries?limit=200', { headers }).catch(() => null),
-        fetch('/api/orders?limit=200', { headers }).catch(() => null),
-      ])
-      const inqJson = inqRes && inqRes.ok ? await inqRes.json() : []
-      const ordJson = ordRes && ordRes.ok ? await ordRes.json() : []
-      for (const row of [...inqJson, ...ordJson]) {
-        const email = (row.customer_email ?? '').trim().toLowerCase()
-        if (!email || map.has(email)) continue
-        const lastAt = row.created_at ?? ''
-        const lastBody = row.message ?? (row.comment ?? '')
-        map.set(email, { email, lastBody, lastAt, lastSender: 'admin', unread: 0 })
-      }
-
-      const list = Array.from(map.values()).sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime())
-      setThreads(list)
+      const rows = await adminListAllChatThreads()
+      setThreads(rows)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'failed')
     } finally {
@@ -1659,10 +1665,10 @@ function ChatTab() {
     }
   }
 
-  async function loadMessages(email: string) {
+  async function loadMessages(threadId: number) {
     setLoadingMessages(true)
     try {
-      const rows = await adminFetchMessages(email)
+      const rows = await adminFetchThreadMessages(threadId)
       setMessages(rows)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'failed')
@@ -1673,60 +1679,65 @@ function ChatTab() {
 
   useEffect(() => { void loadThreads() }, [])
 
-  // Global realtime listener for any new INSERT into messages — keeps the
-  // thread list fresh (new emails appear immediately) and pings the admin
-  // with a browser notification + audible beep when a customer writes in.
+  // Global realtime listener — keeps the threads list fresh and pings the
+  // admin with a desktop notification when a customer writes in.
   useEffect(() => {
     const sb = supabase
     if (!sb) return
-    // Ask once on mount; rejection is fine, we just won't pop notifications.
     if ('Notification' in window && Notification.permission === 'default') {
       try { void Notification.requestPermission() } catch { /* ignore */ }
     }
-    const channel = sb
-      .channel('admin-chat-threads')
+    const msgChannel = sb
+      .channel('admin-chat-threads-global')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
-          const row = payload?.new as { sender?: string; thread_email?: string; body?: string } | null
+          const row = payload?.new as { sender?: string; thread_email?: string; body?: string; thread_id?: number } | null
           if (!row) return
-          // Refresh thread list so new customers + unread counts appear.
           void loadThreads()
-          // Only notify on customer → admin messages, not on our own replies.
           if (row.sender !== 'user') return
-          // If the admin is already looking at this exact thread, skip the popup.
-          if (active && row.thread_email === active) return
+          if (active && row.thread_id === active) return
           try {
             if ('Notification' in window && Notification.permission === 'granted') {
               const n = new Notification('Новое сообщение в чате', {
-                body: `${row.thread_email}: ${(row.body ?? '').slice(0, 140)}`,
-                tag: `chat-${row.thread_email}`,
+                body: `${row.thread_email ?? ''}: ${(row.body ?? '').slice(0, 140)}`,
+                tag: `chat-${row.thread_id}`,
               })
               n.onclick = () => {
                 window.focus()
-                if (row.thread_email) setActive(row.thread_email)
+                if (row.thread_id) setActive(row.thread_id)
               }
             }
           } catch { /* ignore */ }
         },
       )
       .subscribe()
-    return () => { void sb.removeChannel(channel) }
+    const threadChannel = sb
+      .channel('admin-chat-threads-rows')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_threads' },
+        () => { void loadThreads() },
+      )
+      .subscribe()
+    return () => {
+      void sb.removeChannel(msgChannel)
+      void sb.removeChannel(threadChannel)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active])
 
   useEffect(() => {
     if (!active) return
     void loadMessages(active)
-    // Prefer realtime over polling — see ProfilePage chat for the same pattern.
     const sb = supabase
     if (sb) {
       const channel = sb
         .channel(`admin-chat-${active}`)
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_email=eq.${active}` },
+          { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${active}` },
           () => { void loadMessages(active) },
         )
         .subscribe()
@@ -1741,21 +1752,23 @@ function ChatTab() {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
   }, [messages.length])
 
+  const activeThread = threads.find((th) => th.id === active) ?? null
+
   async function send(e: React.FormEvent) {
     e.preventDefault()
-    if (!active) return
+    if (!activeThread) return
     const text = draft.trim()
     if (!text) return
     setSending(true)
     setError('')
     try {
-      const sent = await adminReply(active, text)
+      const sent = await adminReply(activeThread.user_email, text, activeThread.id)
       setMessages((prev) => [...prev, sent])
       setDraft('')
     } catch (e) {
       const raw = e instanceof Error ? e.message : 'failed'
       if (/table_not_found|schema cache|public\.messages/.test(raw)) {
-        setError('Таблица messages не создана в Supabase. Перейдите в «Заявки» → скопируйте SQL миграции и запустите в Supabase SQL Editor.')
+        setError('Таблица messages не создана. Откройте «Заявки» в админке, скопируйте SQL и запустите в Supabase.')
       } else {
         setError(raw)
       }
@@ -1764,9 +1777,23 @@ function ChatTab() {
     }
   }
 
-  const filteredThreads = filter.trim()
-    ? threads.filter((th) => th.email.includes(filter.toLowerCase()))
-    : threads
+  async function toggleStatus(thread: ChatThread) {
+    try {
+      const updated = await adminSetThreadStatus(thread.id, thread.status === 'open' ? 'closed' : 'open')
+      setThreads((prev) => prev.map((th) => (th.id === thread.id ? updated : th)))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'failed')
+    }
+  }
+
+  const filteredThreads = threads.filter((th) => {
+    if (statusFilter !== 'all' && th.status !== statusFilter) return false
+    if (filter.trim()) {
+      const q = filter.toLowerCase()
+      return th.user_email.toLowerCase().includes(q) || th.title.toLowerCase().includes(q)
+    }
+    return true
+  })
 
   return (
     <div className="admin__content-tab">
@@ -1778,9 +1805,21 @@ function ChatTab() {
               {loadingThreads ? '...' : 'Обновить'}
             </button>
           </div>
+          <div className="admin__chat-filters">
+            {(['open', 'closed', 'all'] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={`admin__chat-filter ${statusFilter === s ? 'admin__chat-filter--active' : ''}`.trim()}
+                onClick={() => setStatusFilter(s)}
+              >
+                {s === 'open' ? 'открытые' : s === 'closed' ? 'закрытые' : 'все'}
+              </button>
+            ))}
+          </div>
           <input
             className="admin__input"
-            placeholder="поиск по email"
+            placeholder="поиск по email или теме"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />
@@ -1789,18 +1828,20 @@ function ChatTab() {
           ) : (
             <ul className="admin__chat-threads">
               {filteredThreads.map((th) => (
-                <li key={th.email}>
+                <li key={th.id}>
                   <button
                     type="button"
-                    className={`admin__chat-thread ${active === th.email ? 'admin__chat-thread--active' : ''} ${th.unread > 0 ? 'admin__chat-thread--unread' : ''}`.trim()}
-                    onClick={() => setActive(th.email)}
+                    className={`admin__chat-thread ${active === th.id ? 'admin__chat-thread--active' : ''} admin__chat-thread--${th.status}`.trim()}
+                    onClick={() => setActive(th.id)}
                   >
-                    <span className="admin__chat-thread-email">
-                      {th.email}
-                      {th.unread > 0 && <span className="admin__chat-thread-badge">{th.unread}</span>}
+                    <span className="admin__chat-thread-email">{th.user_email}</span>
+                    <span className="admin__chat-thread-title">{th.title || 'новый чат'}</span>
+                    <span className="admin__chat-thread-meta">
+                      <span className={`profile-chat-thread__status profile-chat-thread__status--${th.status}`}>
+                        {th.status === 'open' ? 'открыт' : 'закрыт'}
+                      </span>
+                      <span className="admin__chat-thread-time">{new Date(th.last_message_at).toLocaleString('ru-RU')}</span>
                     </span>
-                    <span className="admin__chat-thread-time">{th.lastAt ? new Date(th.lastAt).toLocaleString('ru-RU') : ''}</span>
-                    {th.lastBody && <span className="admin__chat-thread-snip">{th.lastBody.slice(0, 80)}</span>}
                   </button>
                 </li>
               ))}
@@ -1809,21 +1850,26 @@ function ChatTab() {
         </aside>
 
         <section className="admin__chat-conversation">
-          {!active ? (
+          {!activeThread ? (
             <div className="admin__content-empty" style={{ padding: 60 }}>
-              <p className="admin__empty-text">Выберите клиента слева, чтобы открыть переписку</p>
+              <p className="admin__empty-text">Выберите чат слева, чтобы открыть переписку</p>
             </div>
           ) : (
             <>
               <header className="admin__chat-head">
                 <div>
-                  <h3 style={{ margin: 0, fontSize: 15, color: 'var(--color-text)' }}>{active}</h3>
+                  <h3 style={{ margin: 0, fontSize: 15, color: 'var(--color-text)' }}>
+                    {activeThread.title || 'новый чат'} · {activeThread.user_email}
+                  </h3>
                   <p className="admin__label-hint" style={{ margin: '4px 0 0' }}>
-                    клиент видит этот чат у себя в Личном кабинете → «Чат с поддержкой»
+                    клиент видит этот чат в Личном кабинете → «Чат с поддержкой»
                   </p>
                 </div>
+                <button type="button" className="accordion__btn" onClick={() => void toggleStatus(activeThread)}>
+                  {activeThread.status === 'open' ? 'Закрыть чат' : 'Открыть снова'}
+                </button>
               </header>
-              <div ref={listRef} className="admin__chat-messages">
+              <div ref={listRef} className="admin__chat-messages admin-chat-flipped">
                 {loadingMessages && messages.length === 0 ? (
                   <p className="profile-chat__empty">Загрузка...</p>
                 ) : messages.length === 0 ? (
@@ -1832,7 +1878,7 @@ function ChatTab() {
                   messages.map((m) => (
                     <div key={m.id} className={`profile-chat__msg profile-chat__msg--${m.sender}`}>
                       <div className="profile-chat__bubble">
-                        <span className="profile-chat__sender">{m.sender === 'admin' ? 'вы (поддержка)' : active}</span>
+                        <span className="profile-chat__sender">{m.sender === 'admin' ? 'вы (поддержка)' : activeThread.user_email}</span>
                         <p>{m.body}</p>
                         <time>{new Date(m.created_at).toLocaleString('ru-RU')}</time>
                       </div>
@@ -1840,20 +1886,24 @@ function ChatTab() {
                   ))
                 )}
               </div>
-              <form className="admin__chat-form" onSubmit={(e) => { void send(e) }}>
-                <textarea
-                  className="admin__input"
-                  rows={2}
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder="ваш ответ клиенту..."
-                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
-                  disabled={sending}
-                />
-                <button type="submit" className="admin__save-btn" disabled={sending || !draft.trim()}>
-                  {sending ? 'Отправляем...' : 'Отправить'}
-                </button>
-              </form>
+              {activeThread.status === 'open' ? (
+                <form className="admin__chat-form" onSubmit={(e) => { void send(e) }}>
+                  <textarea
+                    className="admin__input"
+                    rows={2}
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder="ваш ответ клиенту..."
+                    style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                    disabled={sending}
+                  />
+                  <button type="submit" className="admin__save-btn" disabled={sending || !draft.trim()}>
+                    {sending ? 'Отправляем...' : 'Отправить'}
+                  </button>
+                </form>
+              ) : (
+                <p className="profile-chat__closed-note">Чат закрыт. Откройте его снова, чтобы ответить.</p>
+              )}
               {error && <p style={{ color: 'var(--color-main)', fontSize: 13 }}>{error}</p>}
             </>
           )}

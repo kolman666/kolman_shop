@@ -480,7 +480,9 @@ function SelectField({ label, value, options, onChange }: { label: string; value
 
 // ── Real hero preview (uses actual .hero-card CSS so admin sees what the
 //    homepage will render). Renders the current slide with prev/next arrows
-//    so the admin can step through all of them. ──
+//    so the admin can step through all of them.
+//    Wrapped in a 1280px container + faked hero-grid so card proportions
+//    match the real homepage (which has a 300px side panel next to it). ──
 function HeroPreview({ slides }: { slides: HeroSlide[] }) {
   const [current, setCurrent] = useState(0)
   if (slides.length === 0) {
@@ -489,7 +491,8 @@ function HeroPreview({ slides }: { slides: HeroSlide[] }) {
   const idx = current % slides.length
   const slide = slides[idx]
   return (
-    <div style={{ padding: 24 }}>
+    <div style={previewFrame}>
+      <div className="hero-grid">
       <div className="hero-card" style={{ minHeight: 420 }}>
         {slide.image && (
           <div className="hero-card__image" style={{ backgroundImage: `url("${slide.image}")` }} />
@@ -542,8 +545,25 @@ function HeroPreview({ slides }: { slides: HeroSlide[] }) {
           </div>
         )}
       </div>
+      {/* Empty placeholder for the side panel — keeps the 1fr / 300px column
+          split intact so the hero card has the same width it has on the site. */}
+      <div aria-hidden="true" style={{
+        background: 'var(--color-bg-elevated)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-hero)',
+        opacity: 0.35,
+      }} />
+      </div>
     </div>
   )
+}
+
+// 1280px max-width frame matching the real `.container`. Used by every
+// preview that's NOT full-bleed (news section is full-bleed by design).
+const previewFrame: React.CSSProperties = {
+  width: 'min(1280px, 100%)',
+  margin: '0 auto',
+  padding: '24px 16px',
 }
 
 function CategoriesPreview({ items }: { items: ContentCategory[] }) {
@@ -552,7 +572,7 @@ function CategoriesPreview({ items }: { items: ContentCategory[] }) {
   }
   // Re-use the homepage `.category-card` markup so the preview is pixel-accurate.
   return (
-    <div style={{ padding: 32 }}>
+    <div style={previewFrame}>
       <div className="category-grid">
         {items.map((c, i) => (
           <div key={i} className="category-card" style={{ cursor: 'default' }}>
@@ -603,7 +623,7 @@ function PerksPreview({ items }: { items: ContentPerk[] }) {
     return <p style={{ padding: 40, color: 'var(--color-text-dim)' }}>Преимущества не добавлены.</p>
   }
   return (
-    <div style={{ padding: 32 }}>
+    <div style={previewFrame}>
       <div className="perks-grid">
         {items.map((perk, i) => (
           <article key={i} className="perk-card">

@@ -4,7 +4,18 @@ import { useTranslation } from 'react-i18next'
 import { AUTH_EVENT, getUser, logout, updateProfile, type User } from '../lib/auth'
 import { FAVORITES_EVENT, getFavorites, removeFavorite } from '../lib/favorites'
 import { getOrders, getReviews, removeReview, USER_DATA_EVENT, type Order as LocalOrder } from '../lib/userData'
-import { fetchMyOrders, fetchMyInquiries, fetchChatMessages, sendChatMessage, type ChatMessage, type RemoteInquiry } from '../lib/customerInbox'
+import {
+  fetchMyOrders,
+  fetchMyInquiries,
+  fetchThreadMessages,
+  fetchMyThreads,
+  createThread,
+  setThreadStatus,
+  sendChatMessage,
+  type ChatMessage,
+  type ChatThread,
+  type RemoteInquiry,
+} from '../lib/customerInbox'
 import { supabase } from '../lib/supabase'
 import { useProducts } from '../hooks/useProducts'
 import { productPath } from '../lib/productRoute'
@@ -465,62 +476,78 @@ function InquiriesTab({ email }: { email: string }) {
 
 function ChatTab({ email, userName }: { email: string; userName: string }) {
   const { t } = useTranslation()
+  const [threads, setThreads] = useState<ChatThread[]>([])
+  const [activeId, setActiveId] = useState<number | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
 
-  async function load() {
-    setLoading(true)
-    const rows = await fetchChatMessages(email)
+  async function loadThreads() {
+    const rows = await fetchMyThreads(email)
+    setThreads(rows)
+    return rows
+  }
+
+  async function loadMessages(threadId: number) {
+    const rows = await fetchThreadMessages(threadId)
     setMessages(rows)
-    setLoading(false)
   }
 
   useEffect(() => {
-    void load()
-    // Prefer Supabase Realtime when configured: new admin replies appear
-    // instantly without polling. Falls back to an 8s poll if either Realtime
-    // isn't enabled for the `messages` table or the supabase client isn't
-    // configured (e.g. dev env without env vars).
+    setLoading(true)
+    void loadThreads().then((rows) => {
+      // Pre-select the most recent open thread, or just the most recent one.
+      const pick = rows.find((th) => th.status === 'open') ?? rows[0] ?? null
+      setActiveId(pick ? pick.id : null)
+      setLoading(false)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email])
+
+  useEffect(() => {
+    if (!activeId) { setMessages([]); return }
+    void loadMessages(activeId)
     const sb = supabase
     if (sb) {
       const channel = sb
-        .channel(`chat-${email}`)
+        .channel(`chat-thread-${activeId}`)
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_email=eq.${email}` },
-          () => { void load() },
+          { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${activeId}` },
+          () => { void loadMessages(activeId) },
         )
         .subscribe()
       return () => { void sb.removeChannel(channel) }
     }
-    const t = window.setInterval(load, 8_000)
-    return () => window.clearInterval(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [email])
+    const tm = window.setInterval(() => { void loadMessages(activeId) }, 8_000)
+    return () => window.clearInterval(tm)
+  }, [activeId])
 
   useEffect(() => {
     if (!listRef.current) return
     listRef.current.scrollTop = listRef.current.scrollHeight
   }, [messages.length])
 
+  const activeThread = threads.find((th) => th.id === activeId) ?? null
+
   async function send(e: React.FormEvent) {
     e.preventDefault()
+    if (!activeId) return
     const text = draft.trim()
     if (!text) return
     setSending(true)
     setError('')
     try {
-      const sent = await sendChatMessage(email, text)
+      const sent = await sendChatMessage(email, text, activeId)
       setMessages((prev) => [...prev, sent])
       setDraft('')
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err)
-      // Friendlier message when the backend table hasn't been migrated yet —
-      // the API returns `table_not_found` for that case.
       if (/table_not_found|schema cache|public\.messages/.test(raw)) {
         setError(t('ui.profile.chatUnavailable'))
       } else {
@@ -531,45 +558,151 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
     }
   }
 
+  async function handleCreate() {
+    const title = newTitle.trim() || t('ui.profile.chatNewDefault')
+    setError('')
+    try {
+      const created = await createThread(email, title)
+      setThreads((prev) => [created, ...prev])
+      setActiveId(created.id)
+      setNewTitle('')
+      setCreating(false)
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : String(err)
+      if (/table_not_found|schema cache/.test(raw)) {
+        setError(t('ui.profile.chatUnavailable'))
+      } else {
+        setError(raw)
+      }
+    }
+  }
+
+  async function closeThread(id: number) {
+    if (!confirm(t('ui.profile.chatCloseConfirm'))) return
+    try {
+      const updated = await setThreadStatus(id, email, 'closed')
+      setThreads((prev) => prev.map((th) => (th.id === id ? updated : th)))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'failed')
+    }
+  }
+
+  async function reopenThread(id: number) {
+    try {
+      const updated = await setThreadStatus(id, email, 'open')
+      setThreads((prev) => prev.map((th) => (th.id === id ? updated : th)))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'failed')
+    }
+  }
+
   return (
-    <div className="profile-chat">
-      <header className="profile-chat__head">
-        <h3>{t('ui.profile.chatTitle')}</h3>
-        <p className="profile-chat__meta">{t('ui.profile.chatMeta')}</p>
-      </header>
-      <div ref={listRef} className="profile-chat__list">
-        {loading && messages.length === 0 ? (
-          <p className="profile-chat__empty">{t('ui.profile.chatLoading')}</p>
-        ) : messages.length === 0 ? (
-          <p className="profile-chat__empty">{t('ui.profile.chatEmpty')}</p>
-        ) : (
-          messages.map((m) => (
-            <div key={m.id} className={`profile-chat__msg profile-chat__msg--${m.sender}`}>
-              <div className="profile-chat__bubble">
-                <span className="profile-chat__sender">
-                  {m.sender === 'user' ? userName : t('ui.profile.chatAdmin')}
-                </span>
-                <p>{m.body}</p>
-                <time>{new Date(m.created_at).toLocaleString('ru-RU')}</time>
-              </div>
-            </div>
-          ))
+    <div className="profile-chat-shell">
+      <aside className="profile-chat-threads">
+        <header className="profile-chat-threads__head">
+          <h3>{t('ui.profile.chatYourThreads')}</h3>
+          <button type="button" className="ghost-btn" onClick={() => setCreating((v) => !v)}>
+            {creating ? t('ui.profile.chatCancel') : t('ui.profile.chatNewBtn')}
+          </button>
+        </header>
+        {creating && (
+          <div className="profile-chat-threads__new">
+            <input
+              className="profile-chat__input"
+              placeholder={t('ui.profile.chatNewPlaceholder')}
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              autoFocus
+            />
+            <button type="button" className="cta-btn" onClick={() => void handleCreate()}>
+              {t('ui.profile.chatCreate')}
+            </button>
+          </div>
         )}
-      </div>
-      <form className="profile-chat__form" onSubmit={(e) => { void send(e) }}>
-        <textarea
-          className="profile-chat__input"
-          rows={2}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder={t('ui.profile.chatPlaceholder')}
-          disabled={sending}
-        />
-        <button type="submit" className="cta-btn" disabled={sending || !draft.trim()}>
-          {sending ? t('ui.profile.chatSending') : t('ui.profile.chatSend')}
-        </button>
-      </form>
-      {error && <p className="profile-chat__error">{error}</p>}
+        {loading ? (
+          <p className="profile-chat__empty">{t('ui.profile.chatLoading')}</p>
+        ) : threads.length === 0 ? (
+          <p className="profile-chat__empty">{t('ui.profile.chatNoThreads')}</p>
+        ) : (
+          <ul className="profile-chat-threads__list">
+            {threads.map((th) => (
+              <li key={th.id}>
+                <button
+                  type="button"
+                  className={`profile-chat-thread ${activeId === th.id ? 'profile-chat-thread--active' : ''} profile-chat-thread--${th.status}`.trim()}
+                  onClick={() => setActiveId(th.id)}
+                >
+                  <span className="profile-chat-thread__title">{th.title || t('ui.profile.chatNewDefault')}</span>
+                  <span className={`profile-chat-thread__status profile-chat-thread__status--${th.status}`}>
+                    {th.status === 'open' ? t('ui.profile.chatStatusOpen') : t('ui.profile.chatStatusClosed')}
+                  </span>
+                  <span className="profile-chat-thread__time">
+                    {new Date(th.last_message_at).toLocaleString('ru-RU')}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </aside>
+
+      <section className="profile-chat">
+        <header className="profile-chat__head">
+          <div>
+            <h3>{activeThread?.title || t('ui.profile.chatTitle')}</h3>
+            <p className="profile-chat__meta">{t('ui.profile.chatMeta')}</p>
+          </div>
+          {activeThread && (
+            activeThread.status === 'open' ? (
+              <button type="button" className="ghost-btn" onClick={() => void closeThread(activeThread.id)}>
+                {t('ui.profile.chatCloseBtn')}
+              </button>
+            ) : (
+              <button type="button" className="ghost-btn" onClick={() => void reopenThread(activeThread.id)}>
+                {t('ui.profile.chatReopenBtn')}
+              </button>
+            )
+          )}
+        </header>
+        <div ref={listRef} className="profile-chat__list">
+          {!activeThread ? (
+            <p className="profile-chat__empty">{t('ui.profile.chatPickOrCreate')}</p>
+          ) : messages.length === 0 ? (
+            <p className="profile-chat__empty">{t('ui.profile.chatEmpty')}</p>
+          ) : (
+            messages.map((m) => (
+              <div key={m.id} className={`profile-chat__msg profile-chat__msg--${m.sender}`}>
+                <div className="profile-chat__bubble">
+                  <span className="profile-chat__sender">
+                    {m.sender === 'user' ? userName : t('ui.profile.chatAdmin')}
+                  </span>
+                  <p>{m.body}</p>
+                  <time>{new Date(m.created_at).toLocaleString('ru-RU')}</time>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        {activeThread && activeThread.status === 'open' && (
+          <form className="profile-chat__form" onSubmit={(e) => { void send(e) }}>
+            <textarea
+              className="profile-chat__input"
+              rows={2}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={t('ui.profile.chatPlaceholder')}
+              disabled={sending}
+            />
+            <button type="submit" className="cta-btn" disabled={sending || !draft.trim()}>
+              {sending ? t('ui.profile.chatSending') : t('ui.profile.chatSend')}
+            </button>
+          </form>
+        )}
+        {activeThread && activeThread.status === 'closed' && (
+          <p className="profile-chat__closed-note">{t('ui.profile.chatClosedNote')}</p>
+        )}
+        {error && <p className="profile-chat__error">{error}</p>}
+      </section>
     </div>
   )
 }

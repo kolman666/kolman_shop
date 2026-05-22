@@ -8175,3 +8175,236 @@ background: linear-gradient(120deg, #0a0a0a 10%, #0000 60%);
   font-size: 10.5px;
   font-weight: 700;
 }
+
+/* ===== Mobile fixes: profile tabs + admin chat ===== */
+@media (max-width: 760px) {
+  .profile-tabs {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    border-radius: 28px;
+    padding: 5px;
+  }
+  .profile-tabs::-webkit-scrollbar { display: none; }
+  .profile-tab {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+  /* The profile hero stack already collapses to one column on mobile, but
+     justify-items: center pushed the logout button outside on narrow phones.
+     Keep things left-aligned and full-width. */
+  .profile-hero {
+    justify-items: stretch;
+    text-align: left;
+  }
+  .profile-hero__copy { width: 100%; }
+}
+
+/* When the chat bubbles are rendered inside the admin UI, flip their
+   alignment: the admin is the "self" voice (right + red), the customer is
+   "other" (left + grey). Customer-side ProfilePage keeps the original
+   meanings. */
+.admin-chat-flipped .profile-chat__msg--admin { justify-content: flex-end; }
+.admin-chat-flipped .profile-chat__msg--user { justify-content: flex-start; }
+
+.admin-chat-flipped .profile-chat__msg--admin .profile-chat__bubble {
+  background: var(--color-main);
+  border-color: var(--color-main);
+  color: var(--color-text);
+  border-bottom-right-radius: 4px;
+  border-bottom-left-radius: 14px;
+}
+.admin-chat-flipped .profile-chat__msg--user .profile-chat__bubble {
+  background: var(--color-bg-soft);
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+  border-bottom-right-radius: 14px;
+  border-bottom-left-radius: 4px;
+}
+
+/* ===== Multi-thread chat (profile side) ===== */
+.profile-chat-shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.profile-chat-threads {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-elevated);
+  position: sticky;
+  top: 16px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.profile-chat-threads__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-chat-threads__head h3 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.profile-chat-threads__new {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-chat-threads__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.profile-chat-thread {
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-soft);
+  color: var(--color-text);
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+  font-family: inherit;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.profile-chat-thread:hover { border-color: var(--color-main); }
+
+.profile-chat-thread--active {
+  background: var(--color-bg-muted);
+  border-color: var(--color-main);
+}
+
+.profile-chat-thread--closed {
+  opacity: 0.6;
+}
+
+.profile-chat-thread__title {
+  font-size: 13.5px;
+  font-weight: 600;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.profile-chat-thread__status {
+  align-self: flex-start;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.profile-chat-thread__status--open {
+  background: rgba(46, 213, 115, 0.16);
+  color: #4ade80;
+}
+
+.profile-chat-thread__status--closed {
+  background: rgba(150, 150, 150, 0.18);
+  color: var(--color-text-dim);
+}
+
+.profile-chat-thread__time {
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+
+.profile-chat__closed-note {
+  margin: 0;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-soft);
+  border: 1px dashed var(--color-border-strong);
+  color: var(--color-text-dim);
+  font-size: 13px;
+  text-align: center;
+}
+
+.profile-chat__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 880px) {
+  .profile-chat-shell { grid-template-columns: 1fr; }
+  .profile-chat-threads { position: static; max-height: 240px; }
+}
+
+/* ===== Admin chat: thread-based list ===== */
+.admin__chat-filters {
+  display: flex;
+  gap: 4px;
+}
+
+.admin__chat-filter {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-soft);
+  color: var(--color-text-dim);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin__chat-filter:hover { color: var(--color-text); }
+
+.admin__chat-filter--active {
+  background: var(--color-main);
+  border-color: var(--color-main);
+  color: var(--color-text);
+}
+
+.admin__chat-thread-title {
+  font-size: 13px;
+  color: var(--color-text-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.admin__chat-thread-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin__chat-thread--closed {
+  opacity: 0.65;
+}

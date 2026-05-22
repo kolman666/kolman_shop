@@ -25,6 +25,7 @@ import HelpChoosePage from './pages/HelpChoosePage'
 import DeliveryPage from './pages/DeliveryPage'
 import ModdingPage from './pages/ModdingPage'
 import NewsArticlePage from './pages/NewsArticlePage'
+import NotFoundPage from './pages/NotFoundPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import { getCartCount } from './lib/cart'
 import SearchDropdown, { type SearchSection } from './components/SearchDropdown'
@@ -957,6 +958,14 @@ export default function App() {
           element={
             <SiteChrome>
               <PrivacyPolicyPage />
+            </SiteChrome>
+          }
+        />
+        <Route
+          path="*"
+          element={
+            <SiteChrome>
+              <NotFoundPage />
             </SiteChrome>
           }
         />

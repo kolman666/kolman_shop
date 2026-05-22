@@ -7,7 +7,8 @@ import { addToCart, updateQuantity, getCart } from '../lib/cart'
 import { variantGroupLabel } from '../lib/variantGroups'
 import { FAVORITES_EVENT, isFavorite, toggleFavorite } from '../lib/favorites'
 import { AUTH_EVENT, getUser, type User } from '../lib/auth'
-import { addReview, getProductReviews, removeReview, USER_DATA_EVENT, type Review } from '../lib/userData'
+import { addReview, getOrders, getProductReviews, removeReview, USER_DATA_EVENT, type Review } from '../lib/userData'
+import { fetchMyOrders } from '../lib/customerInbox'
 
 export default function ProductPage() {
   const { t } = useTranslation()
@@ -21,6 +22,9 @@ export default function ProductPage() {
   const [reviewText, setReviewText] = useState('')
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewError, setReviewError] = useState('')
+  // Tracks whether the logged-in user has ever purchased this product —
+  // we only allow them to leave a review after a real purchase.
+  const [hasPurchased, setHasPurchased] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [isAskModalOpen, setIsAskModalOpen] = useState(false)
   const [questionName, setQuestionName] = useState('')
@@ -61,6 +65,25 @@ export default function ProductPage() {
     window.addEventListener(AUTH_EVENT, sync)
     return () => window.removeEventListener(AUTH_EVENT, sync)
   }, [])
+
+  // Re-check purchase status whenever the user or product changes. Looks at
+  // both the local order mirror (instant feedback after checkout) and remote
+  // orders from /api/orders?my=<email>.
+  useEffect(() => {
+    if (!user || !product) { setHasPurchased(false); return }
+    let cancelled = false
+    const productId = product.id
+    // Local check is sync — gives instant UI feedback.
+    const local = getOrders(user.email).some((o) => o.items.some((it) => it.productId === productId))
+    if (local) { setHasPurchased(true); return }
+    // Remote check covers orders placed on other devices.
+    void fetchMyOrders(user.email).then((rows) => {
+      if (cancelled) return
+      const found = rows.some((o) => (o.items ?? []).some((it) => it.id === productId))
+      setHasPurchased(found)
+    })
+    return () => { cancelled = true }
+  }, [user, product?.id])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -333,7 +356,7 @@ export default function ProductPage() {
 
           {activeTab === 'reviews' && (
             <div className="product-reviews">
-              {user ? (
+              {user && hasPurchased ? (
                 <form
                   className="product-reviews__form"
                   onSubmit={(e) => {
@@ -382,8 +405,10 @@ export default function ProductPage() {
                   {reviewError && <p className="product-reviews__error">{reviewError}</p>}
                   <button type="submit" className="cta-btn">{t('ui.productPage.reviewSubmit')}</button>
                 </form>
-              ) : (
+              ) : !user ? (
                 <p className="product-reviews__login-hint">{t('ui.productPage.reviewLoginHint')}</p>
+              ) : (
+                <p className="product-reviews__login-hint">{t('ui.productPage.reviewPurchaseHint')}</p>
               )}
 
               {reviews.length === 0 ? (

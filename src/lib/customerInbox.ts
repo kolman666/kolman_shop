@@ -26,6 +26,16 @@ export type ChatMessage = {
   sender: 'user' | 'admin'
   body: string
   created_at: string
+  thread_id?: number | null
+}
+
+export type ChatThread = {
+  id: number
+  user_email: string
+  title: string
+  status: 'open' | 'closed'
+  created_at: string
+  last_message_at: string
 }
 
 async function handle<T>(res: Response): Promise<T> {
@@ -60,12 +70,50 @@ export async function fetchChatMessages(email: string): Promise<ChatMessage[]> {
   }
 }
 
-export async function sendChatMessage(email: string, body: string): Promise<ChatMessage> {
+// Per-thread variants — preferred once the multi-thread schema is live.
+export async function fetchThreadMessages(threadId: number): Promise<ChatMessage[]> {
+  try {
+    return await handle<ChatMessage[]>(await fetch(`/api/messages?thread=${threadId}`))
+  } catch {
+    return []
+  }
+}
+
+export async function sendChatMessage(email: string, body: string, threadId?: number): Promise<ChatMessage> {
   return handle<ChatMessage>(
     await fetch('/api/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, body }),
+      body: JSON.stringify({ email, body, thread_id: threadId }),
+    }),
+  )
+}
+
+// Customer-facing thread management.
+export async function fetchMyThreads(email: string): Promise<ChatThread[]> {
+  try {
+    return await handle<ChatThread[]>(await fetch(`/api/chat-threads?my=${encodeURIComponent(email)}`))
+  } catch {
+    return []
+  }
+}
+
+export async function createThread(email: string, title: string): Promise<ChatThread> {
+  return handle<ChatThread>(
+    await fetch('/api/chat-threads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, title }),
+    }),
+  )
+}
+
+export async function setThreadStatus(id: number, email: string, status: 'open' | 'closed'): Promise<ChatThread> {
+  return handle<ChatThread>(
+    await fetch('/api/chat-threads', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, email, status }),
     }),
   )
 }
@@ -81,6 +129,28 @@ function adminHeaders(): Record<string, string> {
 export async function adminFetchMessages(threadEmail: string): Promise<ChatMessage[]> {
   return handle<ChatMessage[]>(
     await fetch(`/api/messages?email=${encodeURIComponent(threadEmail)}`, { headers: adminHeaders() }),
+  )
+}
+
+export async function adminFetchThreadMessages(threadId: number): Promise<ChatMessage[]> {
+  return handle<ChatMessage[]>(
+    await fetch(`/api/messages?thread=${threadId}`, { headers: adminHeaders() }),
+  )
+}
+
+export async function adminFetchUserThreads(email: string): Promise<ChatThread[]> {
+  return handle<ChatThread[]>(
+    await fetch(`/api/chat-threads?email=${encodeURIComponent(email)}`, { headers: adminHeaders() }),
+  )
+}
+
+export async function adminSetThreadStatus(id: number, status: 'open' | 'closed'): Promise<ChatThread> {
+  return handle<ChatThread>(
+    await fetch('/api/chat-threads', {
+      method: 'PATCH',
+      headers: adminHeaders(),
+      body: JSON.stringify({ id, status }),
+    }),
   )
 }
 
@@ -101,12 +171,19 @@ export async function adminListThreads(): Promise<AdminThread[]> {
   )
 }
 
-export async function adminReply(threadEmail: string, body: string): Promise<ChatMessage> {
+// All chat_threads rows across all customers — used by the admin chat view.
+export async function adminListAllChatThreads(): Promise<ChatThread[]> {
+  return handle<ChatThread[]>(
+    await fetch('/api/chat-threads', { headers: adminHeaders() }),
+  )
+}
+
+export async function adminReply(threadEmail: string, body: string, threadId?: number): Promise<ChatMessage> {
   return handle<ChatMessage>(
     await fetch('/api/messages', {
       method: 'POST',
       headers: adminHeaders(),
-      body: JSON.stringify({ email: threadEmail, body }),
+      body: JSON.stringify({ email: threadEmail, body, thread_id: threadId }),
     }),
   )
 }
