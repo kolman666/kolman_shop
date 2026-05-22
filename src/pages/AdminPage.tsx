@@ -1925,8 +1925,7 @@ function ChatTab() {
 
   const activeThread = threads.find((th) => th.id === active) ?? null
 
-  async function send(e: React.FormEvent) {
-    e.preventDefault()
+  async function sendMessage() {
     if (!activeThread) return
     const text = draft.trim()
     if (!text) return
@@ -1949,6 +1948,18 @@ function ChatTab() {
       }
     } finally {
       setSending(false)
+    }
+  }
+
+  async function send(e: React.FormEvent) {
+    e.preventDefault()
+    await sendMessage()
+  }
+
+  const handleDraftKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      void sendMessage()
     }
   }
 
@@ -2077,6 +2088,7 @@ function ChatTab() {
                     rows={2}
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={handleDraftKeyDown}
                     placeholder="ваш ответ клиенту..."
                     style={{ resize: 'vertical', fontFamily: 'inherit' }}
                     disabled={sending}

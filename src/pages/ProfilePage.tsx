@@ -672,8 +672,7 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
 
   const activeThread = threads.find((th) => th.id === activeId) ?? null
 
-  async function send(e: React.FormEvent) {
-    e.preventDefault()
+  async function sendMessage() {
     if (!activeId || activeThread?.status !== 'open') return
     const text = draft.trim()
     if (!text) return
@@ -698,6 +697,18 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
       }
     } finally {
       setSending(false)
+    }
+  }
+
+  async function send(e: React.FormEvent) {
+    e.preventDefault()
+    await sendMessage()
+  }
+
+  const handleDraftKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      void sendMessage()
     }
   }
 
@@ -820,6 +831,7 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
               rows={2}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={handleDraftKeyDown}
               placeholder={t('ui.profile.chatPlaceholder')}
               disabled={sending}
             />
