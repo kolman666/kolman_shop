@@ -372,7 +372,7 @@
   white-space: nowrap;
   color: var(--color-text-dim);
   font-size: 13px;
-  transition: color var(--transition-fast);
+  transition: color var(--transition-base);
 }
 
 .nav-link::after {
@@ -388,6 +388,7 @@
 
 .nav-link:hover {
   color: #ccc;
+  transition: color var(--transition-base);
 }
 
 .nav-link.active {
