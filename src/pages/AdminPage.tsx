@@ -49,6 +49,10 @@ import {
   type UserLookup,
 } from '../lib/customerInbox'
 import { formatChatTime, formatThreadTime } from '../lib/chatFormat'
+import ChatBubbleContent from '../components/ChatBubbleContent'
+import { fileToPhotoMarker } from '../lib/chatMessage'
+import PhotoLightbox, { type LightboxState } from '../components/PhotoLightbox'
+import { isOnline, formatLastSeen } from '../lib/presence'
 import { supabase } from '../lib/supabase'
 import { initializeChatNotificationAudio, playChatNotificationSound, showBrowserChatNotification } from '../lib/chatNotifications'
 
@@ -243,7 +247,7 @@ export default function AdminPage() {
   return <AdminPanel onLogout={() => { clearAdminSecret(); setAuthStatus('guest') }} />
 }
 
-type AdminTab = 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers'
+type AdminTab = 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat'
 
 // ── Admin panel inner ─────────────────────────────────────────────────────────
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
@@ -526,9 +530,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           Чат
           {unreadChatCount > 0 && <span className="admin__tab-badge">{unreadChatCount}</span>}
         </button>
-        <button type="button" className={`admin__tab-btn${activeTab === 'bloggers' ? ' active' : ''}`} onClick={() => setActiveTab('bloggers')}>
-          Блогеры
-        </button>
+        {/* Стандартный таб «Блогеры» удалён — управление блогерами теперь
+          * живёт внутри «Контент главной страницы» как отдельная секция
+          * (см. ниже, под основными аккордеонами). */}
       </div>
 
       <div className={`chat-site-toast chat-site-toast--admin ${chatToast ? 'chat-site-toast--visible' : ''}`}>
@@ -536,13 +540,28 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         <span>{chatToast?.body}</span>
       </div>
 
-      {activeTab === 'content' && <ContentTabV2 />}
+      {activeTab === 'content' && (
+        <>
+          <ContentTabV2 />
+          {/* Управление блогерами — раньше это был отдельный таб, теперь
+            * рендерится прямо под аккордеонами контента, чтобы редактирование
+            * блока «Выбор блогеров» жило рядом с превью этого же блока. */}
+          <section className="admin__content-tab" style={{ marginTop: 36 }}>
+            <header className="admin__content-tab-head" style={{ marginBottom: 12 }}>
+              <h2 className="admin__content-title">Блогеры</h2>
+              <p className="admin__content-subtitle">
+                Карточки в блоке «Выбор блогеров» на главной. Превью самого блока — выше, в аккордеоне «Блок «Выбор блогеров».
+              </p>
+            </header>
+            <BloggersTab allProducts={allProducts} />
+          </section>
+        </>
+      )}
       {activeTab === 'pages' && <PagesTabV2 />}
       {activeTab === 'brands' && <BrandPagesTab />}
       {activeTab === 'orders' && <OrdersTab />}
       {activeTab === 'inquiries' && <InquiriesTab />}
       {activeTab === 'chat' && <ChatTab />}
-      {activeTab === 'bloggers' && <BloggersTab allProducts={allProducts} />}
 
       {activeTab === 'products' && (
       <div className="admin__body">
@@ -1850,6 +1869,9 @@ function ChatTab() {
   // Bumped whenever the read-map changes (open a thread, etc.) so the JSX
   // re-evaluates `unreadFor(thread)`.
   const [readTick, setReadTick] = useState(0)
+  const [pendingPhotos, setPendingPhotos] = useState<string[]>([])
+  const [attaching, setAttaching] = useState(false)
+  const [chatLightbox, setChatLightbox] = useState<LightboxState | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
   async function loadThreads(silent = false) {
@@ -1997,13 +2019,17 @@ function ChatTab() {
   async function sendMessage() {
     if (!activeThread) return
     const text = draft.trim()
-    if (!text) return
+    if (!text && pendingPhotos.length === 0) return
+    // Inline photos via `[[photo:DATAURL]]` markers — same encoding as the
+    // customer side, decoded by ChatBubbleContent on render.
+    const fullBody = [text, ...pendingPhotos].filter(Boolean).join('\n')
     setSending(true)
     setError('')
     try {
-      const sent = await adminReply(activeThread.user_email, text, activeThread.id)
+      const sent = await adminReply(activeThread.user_email, fullBody, activeThread.id)
       setMessages((prev) => [...prev, sent])
       setDraft('')
+      setPendingPhotos([])
       void loadThreads(true)
     } catch (e) {
       const raw = e instanceof Error ? e.message : 'failed'
@@ -2121,25 +2147,35 @@ function ChatTab() {
             </div>
           ) : (
             <>
-              <header className="admin__chat-head">
-                <div>
-                  <h3 style={{ margin: 0, fontSize: 15, color: 'var(--color-text)' }}>
-                    {activeThread.title || 'новый чат'} · {displayNameFor(activeThread.user_email)}
-                    <span style={{ display: 'block', color: 'var(--color-text-dim)', fontSize: 12, fontWeight: 400, marginTop: 2 }}>
-                      {activeThread.user_email}
-                      {userLookup[activeThread.user_email]?.telegram && (
-                        <> · {userLookup[activeThread.user_email].telegram}</>
-                      )}
-                    </span>
-                  </h3>
-                  <p className="admin__label-hint" style={{ margin: '4px 0 0' }}>
-                    клиент видит этот чат в Личном кабинете → «Чат с поддержкой»
-                  </p>
-                </div>
-                <button type="button" className="accordion__btn" onClick={() => void toggleStatus(activeThread)}>
-                  {activeThread.status === 'open' ? 'Закрыть чат' : 'Открыть снова'}
-                </button>
-              </header>
+              {/* New compact head: customer name (large) + presence on the
+                * top line; email + thread title underneath in muted weight. */}
+              {(() => {
+                const lookup = userLookup[activeThread.user_email]
+                const online = isOnline(lookup?.lastSeenAt)
+                return (
+                  <header className="admin__chat-head">
+                    <div style={{ minWidth: 0 }}>
+                      <h3 className="admin__chat-head-name">
+                        <span className={`presence-dot ${online ? 'presence-dot--online' : ''}`.trim()} aria-hidden="true" />
+                        {displayNameFor(activeThread.user_email)}
+                        <span className={`presence-label ${online ? 'presence-label--online' : ''}`.trim()}>
+                          {online ? 'в сети' : formatLastSeen(lookup?.lastSeenAt)}
+                        </span>
+                      </h3>
+                      <div className="admin__chat-head-sub">
+                        {activeThread.user_email}
+                        {lookup?.telegram && <> · {lookup.telegram}</>}
+                      </div>
+                      <p className="admin__chat-head-title">
+                        <strong>тема:</strong> {activeThread.title || 'новый чат'}
+                      </p>
+                    </div>
+                    <button type="button" className="accordion__btn" onClick={() => void toggleStatus(activeThread)}>
+                      {activeThread.status === 'open' ? 'Закрыть чат' : 'Открыть снова'}
+                    </button>
+                  </header>
+                )
+              })()}
               <div ref={listRef} className="admin__chat-messages admin-chat-flipped">
                 {loadingMessages && messages.length === 0 ? (
                   <p className="profile-chat__empty">Загрузка...</p>
@@ -2149,13 +2185,13 @@ function ChatTab() {
                   messages.map((m) => (
                     <div key={m.id} className={`profile-chat__msg profile-chat__msg--${m.sender}`}>
                       <div className="profile-chat__bubble">
-                        {/* Sender label hidden for own (admin) messages — bubble
-                          * alignment already conveys who sent it. Only show the
-                          * customer's name on their bubbles for context. */}
-                        {m.sender === 'user' && (
-                          <span className="profile-chat__sender">{displayNameFor(activeThread.user_email)}</span>
-                        )}
-                        <p>{m.body}</p>
+                        {/* No sender label — the customer's name lives in the
+                          * conversation header (top of this column), bubble
+                          * alignment + colour convey direction. */}
+                        <ChatBubbleContent
+                          body={m.body}
+                          onOpenPhoto={(urls, index) => setChatLightbox({ images: urls, index })}
+                        />
                         <time>{formatChatTime(m.created_at)}</time>
                       </div>
                     </div>
@@ -2163,21 +2199,72 @@ function ChatTab() {
                 )}
               </div>
               {activeThread.status === 'open' ? (
-                <form className="admin__chat-form" onSubmit={(e) => { void send(e) }}>
-                  <textarea
-                    className="admin__input"
-                    rows={2}
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    onKeyDown={handleDraftKeyDown}
-                    placeholder="ваш ответ клиенту..."
-                    style={{ resize: 'vertical', fontFamily: 'inherit' }}
-                    disabled={sending}
-                  />
-                  <button type="submit" className="admin__save-btn" disabled={sending || !draft.trim()}>
-                    {sending ? 'Отправляем...' : 'Отправить'}
-                  </button>
-                </form>
+                <>
+                  {pendingPhotos.length > 0 && (
+                    <div className="chat-attach-preview">
+                      {pendingPhotos.map((marker, i) => {
+                        const src = marker.replace(/^\[\[photo:/, '').replace(/\]\]$/, '')
+                        return (
+                          <div key={i} className="chat-attach-preview__item">
+                            <img src={src} alt="" />
+                            <button
+                              type="button"
+                              className="chat-attach-preview__remove"
+                              onClick={() => setPendingPhotos((prev) => prev.filter((_, idx) => idx !== i))}
+                              aria-label="убрать"
+                            >×</button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  <form className="admin__chat-form" onSubmit={(e) => { void send(e) }}>
+                    <label className={`chat-attach-btn ${attaching ? 'chat-attach-btn--busy' : ''}`.trim()} title="прикрепить фото">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                      </svg>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        disabled={attaching || sending}
+                        onChange={async (e) => {
+                          const files = Array.from(e.target.files ?? [])
+                          if (files.length === 0) return
+                          setAttaching(true)
+                          try {
+                            const markers: string[] = []
+                            for (const f of files.slice(0, 4)) {
+                              const m2 = await fileToPhotoMarker(f)
+                              if (m2) markers.push(m2)
+                            }
+                            setPendingPhotos((prev) => [...prev, ...markers].slice(0, 4))
+                          } finally {
+                            setAttaching(false)
+                            e.target.value = ''
+                          }
+                        }}
+                      />
+                    </label>
+                    <textarea
+                      className="admin__input"
+                      rows={2}
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onKeyDown={handleDraftKeyDown}
+                      placeholder="ваш ответ клиенту..."
+                      style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                      disabled={sending}
+                    />
+                    <button
+                      type="submit"
+                      className="admin__save-btn"
+                      disabled={sending || (!draft.trim() && pendingPhotos.length === 0)}
+                    >
+                      {sending ? 'Отправляем...' : 'Отправить'}
+                    </button>
+                  </form>
+                </>
               ) : (
                 <p className="profile-chat__closed-note">Чат закрыт. Откройте его снова, чтобы ответить.</p>
               )}
@@ -2186,6 +2273,12 @@ function ChatTab() {
           )}
         </section>
       </div>
+
+      <PhotoLightbox
+        state={chatLightbox}
+        onClose={() => setChatLightbox(null)}
+        onChange={setChatLightbox}
+      />
     </div>
   )
 }

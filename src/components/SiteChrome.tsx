@@ -8,6 +8,7 @@ import SearchDropdown, { type SearchSection } from './SearchDropdown'
 import AuthModal from './AuthModal'
 import { fetchSiteContent } from '../lib/siteContent'
 import { useCustomerChatNotifications } from '../hooks/useCustomerChatNotifications'
+import { usePresenceHeartbeat } from '../hooks/usePresenceHeartbeat'
 import { markChatNotificationsRead, initializeChatNotificationAudio } from '../lib/chatNotifications'
 
 type SiteChromeContent = {
@@ -71,9 +72,14 @@ export default function SiteChrome({ children }: SiteChromeProps) {
   const [authOpen, setAuthOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState<User | null>(() => getUser())
   const [chrome, setChrome] = useState<SiteChromeContent>({})
+  // Loaded once so the breadcrumbs on /brand/:slug can show the brand's real
+  // display name instead of a raw slug. Cheap fetch — same data is already
+  // pulled by the home page's brand carousel.
+  const [brandLogos, setBrandLogos] = useState<Array<{ name: string; slug?: string }>>([])
   const searchWrapRef = useRef<HTMLDivElement>(null)
   const { products: allProducts } = useProducts()
   const chatNotifications = useCustomerChatNotifications(currentUser?.email)
+  usePresenceHeartbeat(Boolean(currentUser))
 
   useEffect(() => {
     const lng = i18n.language.startsWith('en') ? 'en' : 'ru'
@@ -172,6 +178,11 @@ export default function SiteChrome({ children }: SiteChromeProps) {
         setPopularSections(result.data)
       }
     })
+    // Mirror the home page's brand carousel data into the chrome so the
+    // breadcrumb on /brand/:slug can resolve the brand name.
+    fetchSiteContent<Array<{ name: string; slug?: string }>>('brand_logos').then((result) => {
+      if (!result.error && result.data) setBrandLogos(result.data)
+    })
   }, [])
 
   const topLinkTargets = ['/about', '/partnership', '/support', '/help-choose', '/delivery']
@@ -207,7 +218,20 @@ export default function SiteChrome({ children }: SiteChromeProps) {
     if (pathParts[1]) breadcrumbs.push({ label: t('ui.breadcrumbs.article') })
   }
   if (pathParts[0] === 'used') breadcrumbs.push({ label: t('ui.breadcrumbs.usedMarket') })
-  if (pathParts[0] === 'brand') breadcrumbs.push({ label: t('ui.breadcrumbs.brand') })
+  if (pathParts[0] === 'brand') {
+    // Show: Главная / Бренды / <имя бренда>
+    // The intermediate "Бренды" sends users back to the catalog (where every
+    // brand is filterable). Brand display name is resolved from the live
+    // brand_logos content if the slug matches; otherwise fall back to a
+    // capitalised slug so the crumb still reads naturally.
+    breadcrumbs.push({ to: '/catalog', label: t('ui.breadcrumbs.brand') })
+    if (pathParts[1]) {
+      const slug = decodeURIComponent(pathParts[1])
+      const fromLogos = (brandLogos ?? []).find((b) => (b.slug || b.name).toLowerCase() === slug.toLowerCase())
+      const displayName = fromLogos?.name || slug.replace(/-/g, ' ')
+      breadcrumbs.push({ label: displayName })
+    }
+  }
   if (pathParts[0] === 'profile') breadcrumbs.push({ label: 'личный кабинет' })
   if (pathParts[0] === 'privacy') breadcrumbs.push({ label: 'политика конфиденциальности' })
 

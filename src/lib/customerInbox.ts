@@ -188,6 +188,9 @@ export type UserLookup = {
   lastName: string
   telegram: string
   photo: string
+  // ISO timestamp of the last time the user pinged /api/auth?action=heartbeat.
+  // Null while the SQL migration adding last_seen_at hasn't been applied yet.
+  lastSeenAt: string | null
 }
 
 // Batch lookup of public user info for a set of emails. Used by admin chat

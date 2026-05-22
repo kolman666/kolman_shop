@@ -4,6 +4,7 @@ import { BrowserRouter, Link, Route, Routes, useNavigate } from 'react-router-do
 import './App.css'
 import { useProducts } from './hooks/useProducts'
 import { useCustomerChatNotifications } from './hooks/useCustomerChatNotifications'
+import { usePresenceHeartbeat } from './hooks/usePresenceHeartbeat'
 import SiteChrome from './components/SiteChrome'
 import CartDrawer from './components/CartDrawer'
 import BrandSpotlight from './components/BrandSpotlight'
@@ -267,6 +268,9 @@ function HomePage() {
   const [dbBrandSpotlight, setDbBrandSpotlight] = useState<HomepageBrandSpotlight | null>(null)
   const { products } = useProducts()
   const chatNotifications = useCustomerChatNotifications(currentUser?.email)
+  // Ping /api/auth?action=heartbeat while a logged-in user has the site open
+  // so admin can see them as online + show last-seen in the chat sidebar.
+  usePresenceHeartbeat(Boolean(currentUser))
 
   useEffect(() => {
     const lng = i18n.language.startsWith('en') ? 'en' : 'ru'

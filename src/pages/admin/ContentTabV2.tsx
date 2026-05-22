@@ -7,6 +7,7 @@ import { useProducts } from '../../hooks/useProducts'
 import { AccordionSection } from './AccordionSection'
 import { PreviewModal } from './PreviewModal'
 import { ArrayEditor } from './ArrayEditor'
+import BBCodeEditor from '../../components/BBCodeEditor'
 
 type HeroSlide = { tag: string; title: string; subtitle: string; accent: string; image: string; detailsUrl?: string }
 type ContentCategory = { catalogKey: string; title: string; image: string }
@@ -350,10 +351,10 @@ export function ContentTabV2() {
                   </div>
                   <Field label="Заголовок" value={item.title} onChange={(v) => update({ title: v })} />
                   <MultilineField label="Краткий анонс" rows={2} value={item.excerpt ?? ''} onChange={(v) => update({ excerpt: v })} />
-                  <MultilineField
+                  <BBCodeEditor
                     label="Полный текст статьи"
-                    hint="Открывается на /news/<id>. Абзацы разделяйте пустой строкой."
-                    rows={6}
+                    hint="Открывается на /news/<id>. Поддерживается лёгкий BBCode: [b], [i], [c]красный[/c], [h]заголовок[/h], [img]URL[/img], [url=...]текст[/url], [quote]…[/quote], [list][*]…[/list]. Абзацы — пустая строка."
+                    rows={9}
                     value={item.body ?? ''}
                     onChange={(v) => update({ body: v })}
                   />
@@ -369,8 +370,8 @@ export function ContentTabV2() {
           </AccordionSection>
 
           <AccordionSection
-            title="Блогеры (превью)"
-            description="Состав блока «выбор блогеров» — карточки с фото, бренды-партнёры и сетапы. Редактируется в отдельной вкладке «Блогеры» сверху, здесь только превью."
+            title="Блок «Выбор блогеров»"
+            description="Состав блока «выбор блогеров» — карточки с фото, бренды-партнёры и сетапы. Редактируется секцией «Блогеры» ниже, под аккордеонами."
             actions={
               <button
                 type="button"
@@ -382,7 +383,7 @@ export function ContentTabV2() {
             }
           >
             <p className="admin__label-hint" style={{ margin: 0 }}>
-              Чтобы добавить или поменять блогеров — откройте вкладку «Блогеры» в верхней панели админки. Этот аккордеон только показывает текущее состояние и даёт быстрый предпросмотр.
+              Чтобы добавить / отредактировать блогеров — прокрутите ниже до секции «Блогеры». Этот аккордеон только показывает текущее состояние и даёт быстрый предпросмотр блока.
             </p>
           </AccordionSection>
 
@@ -390,6 +391,15 @@ export function ContentTabV2() {
             title="Шапка и подвал сайта"
             description="Контакты (адрес, часы работы, email) и подписи кнопок верхней панели. Применяются к шапке и футеру всех страниц."
             dirty={dirty.has('site_chrome')}
+            actions={
+              <button
+                type="button"
+                className="accordion__btn"
+                onClick={() => setPreview({ title: 'Шапка и подвал — превью', node: <ChromePreview data={data.site_chrome} /> })}
+              >
+                Превью
+              </button>
+            }
           >
             <Field
               label="Заголовок секции «всегда на связи»"
@@ -443,6 +453,15 @@ export function ContentTabV2() {
             description="Логотипы в бегущей строке внизу главной. Slug = идентификатор страницы бренда (/brand/<slug>). Если пустой — клик ведёт на каталог по этому бренду."
             count={data.brand_logos.length}
             dirty={dirty.has('brand_logos')}
+            actions={
+              <button
+                type="button"
+                className="accordion__btn"
+                onClick={() => setPreview({ title: 'Бренды — превью', node: <BrandLogosPreview items={data.brand_logos} /> })}
+              >
+                Превью
+              </button>
+            }
           >
             <ArrayEditor<BrandLogo>
               items={data.brand_logos}
@@ -473,6 +492,15 @@ export function ContentTabV2() {
             title="Рекламный блок бренда на главной"
             description="Управляет блоком брендовой промо-зоны на главной странице. Здесь можно поменять бренд, ссылку и фон."
             dirty={dirty.has('homepage_brand_spotlight')}
+            actions={
+              <button
+                type="button"
+                className="accordion__btn"
+                onClick={() => setPreview({ title: 'Рекламный блок бренда — превью', node: <BrandSpotlightPreview data={data.homepage_brand_spotlight} /> })}
+              >
+                Превью
+              </button>
+            }
           >
             <Field
               label="Slug бренда"
@@ -511,6 +539,15 @@ export function ContentTabV2() {
             description="Чипы в выпадашке поиска. Не зависят от языка контента."
             count={data.search_popular_sections.length}
             dirty={dirty.has('search_popular_sections')}
+            actions={
+              <button
+                type="button"
+                className="accordion__btn"
+                onClick={() => setPreview({ title: 'Чипы поиска — превью', node: <SearchSectionsPreview items={data.search_popular_sections} /> })}
+              >
+                Превью
+              </button>
+            }
           >
             <ArrayEditor<SearchSectionAdmin>
               items={data.search_popular_sections}
@@ -791,6 +828,143 @@ function BloggersLivePreview() {
   return (
     <div style={previewFrame}>
       <BloggersBlock products={products} />
+    </div>
+  )
+}
+
+// ── New simple previews for the remaining accordions ──────────────────────────
+
+function ChromePreview({ data }: { data: State['site_chrome'] }) {
+  const links: string[] = data.topLinks ?? []
+  return (
+    <div style={previewFrame}>
+      <div style={{ padding: 24, display: 'grid', gap: 18 }}>
+        <p style={{ margin: 0, color: 'var(--color-text-dim)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          верхняя плашка
+        </p>
+        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 13, color: 'var(--color-text-soft)' }}>
+          {links.filter(Boolean).map((l, i) => <span key={i}>{l}</span>)}
+        </div>
+        <hr style={{ border: 0, borderTop: '1px solid var(--color-border)' }} />
+        <p style={{ margin: 0, color: 'var(--color-text-dim)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          подвал / контакты
+        </p>
+        <div style={{ display: 'grid', gap: 6, fontSize: 13 }}>
+          <strong>{data.alwaysAvailable || '—'}</strong>
+          {data.address && <span style={{ color: 'var(--color-text-soft)' }}>📍 {data.address}</span>}
+          {data.workHours && <span style={{ color: 'var(--color-text-soft)' }}>🕒 {data.workHours}</span>}
+          {data.email && <span style={{ color: 'var(--color-main)' }}>✉ {data.email}</span>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BrandLogosPreview({ items }: { items: BrandLogo[] }) {
+  if (items.length === 0) {
+    return <p style={{ padding: 40, color: 'var(--color-text-dim)' }}>Бренды не добавлены.</p>
+  }
+  return (
+    <div style={previewFrame}>
+      <div style={{
+        padding: 24,
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 18,
+        background: 'var(--color-bg)',
+        alignItems: 'center',
+      }}>
+        {items.map((b, i) => (
+          <div
+            key={i}
+            style={{
+              padding: '14px 18px',
+              border: '1px solid var(--color-border)',
+              borderRadius: 8,
+              minWidth: 120,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            {b.image
+              ? <img src={b.image} alt={b.name} style={{ height: 28, maxWidth: 120, objectFit: 'contain' }} />
+              : <div style={{ height: 28, width: 80, background: 'var(--color-bg-soft)', borderRadius: 4 }} />}
+            <span style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>{b.name}{b.slug ? ` · /brand/${b.slug}` : ''}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function BrandSpotlightPreview({ data }: { data: HomepageBrandSpotlight }) {
+  return (
+    <div style={previewFrame}>
+      <div style={{
+        position: 'relative',
+        height: 220,
+        backgroundImage: data.bannerImage ? `url(${data.bannerImage})` : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundColor: 'var(--color-bg-elevated)',
+        borderRadius: 14,
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'flex-end',
+        padding: 24,
+      }}>
+        <div style={{ background: 'rgba(0,0,0,0.55)', padding: '12px 18px', borderRadius: 8, color: '#fff' }}>
+          <div style={{ fontSize: 11, opacity: 0.7, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{data.brandSlug || '— slug —'}</div>
+          <strong style={{ fontSize: 22 }}>{data.brandLabel || '— название —'}</strong>
+          <div style={{ marginTop: 8 }}>
+            <span style={{
+              display: 'inline-block',
+              padding: '8px 14px',
+              borderRadius: 999,
+              background: 'var(--color-main)',
+              color: '#fff',
+              fontSize: 12,
+              fontWeight: 600,
+            }}>{data.buttonText || 'перейти →'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SearchSectionsPreview({ items }: { items: SearchSectionAdmin[] }) {
+  if (items.length === 0) {
+    return <p style={{ padding: 40, color: 'var(--color-text-dim)' }}>Чипы не добавлены.</p>
+  }
+  return (
+    <div style={previewFrame}>
+      <div style={{
+        padding: 24,
+        background: 'var(--color-bg-elevated)',
+        borderRadius: 14,
+        maxWidth: 640,
+      }}>
+        <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          популярные разделы
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {items.map((s, i) => (
+            <span key={i} style={{
+              padding: '6px 12px',
+              borderRadius: 999,
+              border: '1px solid var(--color-border-strong)',
+              background: 'var(--color-bg-soft)',
+              fontSize: 12,
+            }}>
+              {s.label || '— без подписи —'}
+              {s.catalogKey && <span style={{ marginLeft: 6, color: 'var(--color-text-dim)' }}>· {s.catalogKey}</span>}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

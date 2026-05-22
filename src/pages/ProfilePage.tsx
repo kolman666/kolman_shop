@@ -6,7 +6,10 @@ import { FAVORITES_EVENT, getFavorites, removeFavorite } from '../lib/favorites'
 import { getOrders, USER_DATA_EVENT, type Order as LocalOrder } from '../lib/userData'
 import { fetchMyReviewsRemote, deleteReviewRemote, type RemoteReview } from '../lib/reviews'
 import PhotoLightbox, { type LightboxState } from '../components/PhotoLightbox'
+import ChatBubbleContent from '../components/ChatBubbleContent'
+import { fileToPhotoMarker } from '../lib/chatMessage'
 import { formatChatTime, formatThreadTime } from '../lib/chatFormat'
+import { isOnline, formatLastSeen } from '../lib/presence'
 import {
   fetchMyOrders,
   fetchMyInquiries,
@@ -114,7 +117,18 @@ export default function ProfilePage() {
             <h1 className="profile-hero__title">
               {t('ui.profile.hello')}, {user.firstName || user.name}
             </h1>
-            <p className="profile-hero__email">{user.email}</p>
+            <p className="profile-hero__email">
+              {user.email}
+              {/* Presence — only meaningful once the last_seen_at migration is
+                * applied, otherwise we just don't show anything. */}
+              {user.lastSeenAt && (
+                <span style={{ marginLeft: 8 }}>
+                  · <span className={`presence-label ${isOnline(user.lastSeenAt) ? 'presence-label--online' : ''}`.trim()}>
+                    {isOnline(user.lastSeenAt) ? 'в сети' : formatLastSeen(user.lastSeenAt)}
+                  </span>
+                </span>
+              )}
+            </p>
           </div>
           <button
             type="button"
@@ -592,11 +606,15 @@ function ChatTab({ email, userName: _userName }: { email: string; userName: stri
   const [activeId, setActiveId] = useState<number | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [draft, setDraft] = useState('')
+  // Pending photo markers — appended to the body on send, then cleared.
+  const [pendingPhotos, setPendingPhotos] = useState<string[]>([])
+  const [attaching, setAttaching] = useState(false)
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
   const [newTitle, setNewTitle] = useState('')
+  const [chatLightbox, setChatLightbox] = useState<LightboxState | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
   async function loadThreads() {
@@ -690,13 +708,18 @@ function ChatTab({ email, userName: _userName }: { email: string; userName: stri
   async function sendMessage() {
     if (!activeId || activeThread?.status !== 'open') return
     const text = draft.trim()
-    if (!text) return
+    // Allow sending if there's either text or attached photos.
+    if (!text && pendingPhotos.length === 0) return
+    // Photos are appended after the text — the renderer (ChatBubbleContent)
+    // strips and lays them out separately.
+    const fullBody = [text, ...pendingPhotos].filter(Boolean).join('\n')
     setSending(true)
     setError('')
     try {
-      const sent = await sendChatMessage(email, text, activeId)
+      const sent = await sendChatMessage(email, fullBody, activeId)
       setMessages((prev) => [...prev, sent])
       setDraft('')
+      setPendingPhotos([])
       void loadThreads()
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err)
@@ -829,12 +852,13 @@ function ChatTab({ email, userName: _userName }: { email: string; userName: stri
             messages.map((m) => (
               <div key={m.id} className={`profile-chat__msg profile-chat__msg--${m.sender}`}>
                 <div className="profile-chat__bubble">
-                  {/* Own (user) bubble: no sender label — alignment alone is
-                    * enough. Only label admin replies as "поддержка". */}
-                  {m.sender === 'admin' && (
-                    <span className="profile-chat__sender">{t('ui.profile.chatAdmin')}</span>
-                  )}
-                  <p>{m.body}</p>
+                  {/* No sender label at all — the bubble's side/colour and the
+                    * conversation header at the top of the chat panel already
+                    * make it obvious who's writing. */}
+                  <ChatBubbleContent
+                    body={m.body}
+                    onOpenPhoto={(urls, index) => setChatLightbox({ images: urls, index })}
+                  />
                   <time>{formatChatTime(m.created_at)}</time>
                 </div>
               </div>
@@ -842,26 +866,84 @@ function ChatTab({ email, userName: _userName }: { email: string; userName: stri
           )}
         </div>
         {activeThread && activeThread.status === 'open' && (
-          <form className="profile-chat__form" onSubmit={(e) => { void send(e) }}>
-            <textarea
-              className="profile-chat__input"
-              rows={2}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={handleDraftKeyDown}
-              placeholder={t('ui.profile.chatPlaceholder')}
-              disabled={sending}
-            />
-            <button type="submit" className="cta-btn" disabled={sending || !draft.trim()}>
-              {sending ? t('ui.profile.chatSending') : t('ui.profile.chatSend')}
-            </button>
-          </form>
+          <>
+            {pendingPhotos.length > 0 && (
+              <div className="chat-attach-preview">
+                {pendingPhotos.map((marker, i) => {
+                  // marker is `[[photo:DATAURL]]` — strip wrapper for thumb src
+                  const src = marker.replace(/^\[\[photo:/, '').replace(/\]\]$/, '')
+                  return (
+                    <div key={i} className="chat-attach-preview__item">
+                      <img src={src} alt="" />
+                      <button
+                        type="button"
+                        className="chat-attach-preview__remove"
+                        onClick={() => setPendingPhotos((prev) => prev.filter((_, idx) => idx !== i))}
+                        aria-label="убрать фото"
+                      >×</button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <form className="profile-chat__form" onSubmit={(e) => { void send(e) }}>
+              <label className={`chat-attach-btn ${attaching ? 'chat-attach-btn--busy' : ''}`.trim()} title="прикрепить фото">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={attaching || sending}
+                  onChange={async (e) => {
+                    const files = Array.from(e.target.files ?? [])
+                    if (files.length === 0) return
+                    setAttaching(true)
+                    try {
+                      const markers: string[] = []
+                      for (const f of files.slice(0, 4)) {
+                        const m = await fileToPhotoMarker(f)
+                        if (m) markers.push(m)
+                      }
+                      setPendingPhotos((prev) => [...prev, ...markers].slice(0, 4))
+                    } finally {
+                      setAttaching(false)
+                      e.target.value = ''
+                    }
+                  }}
+                />
+              </label>
+              <textarea
+                className="profile-chat__input"
+                rows={2}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={handleDraftKeyDown}
+                placeholder={t('ui.profile.chatPlaceholder')}
+                disabled={sending}
+              />
+              <button
+                type="submit"
+                className="cta-btn"
+                disabled={sending || (!draft.trim() && pendingPhotos.length === 0)}
+              >
+                {sending ? t('ui.profile.chatSending') : t('ui.profile.chatSend')}
+              </button>
+            </form>
+          </>
         )}
         {activeThread && activeThread.status === 'closed' && (
           <p className="profile-chat__closed-note">{t('ui.profile.chatClosedNote')}</p>
         )}
         {error && <p className="profile-chat__error">{error}</p>}
       </section>
+
+      <PhotoLightbox
+        state={chatLightbox}
+        onClose={() => setChatLightbox(null)}
+        onChange={setChatLightbox}
+      />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { fetchSiteContent } from '../lib/siteContent'
 import { safeBackgroundImage, safeHref } from '../lib/safeUrl'
 import type { NewsItem } from '../components/NewsBlock'
+import { renderBBCode } from '../lib/bbcode'
 
 type NewsItemFull = NewsItem & {
   body?: string
@@ -84,9 +85,10 @@ export default function NewsArticlePage() {
 
         {item.body ? (
           <div className="news-article__body">
-            {item.body.split(/\n{2,}/).map((para, i) => (
-              <p key={i}>{para}</p>
-            ))}
+            {/* Body uses lightweight BBCode (see lib/bbcode.ts). Old plain-text
+              * articles without any tags continue to render as paragraphs split
+              * by blank lines — that path is preserved inside the parser. */}
+            {renderBBCode(item.body)}
           </div>
         ) : (
           <div className="news-article__body">

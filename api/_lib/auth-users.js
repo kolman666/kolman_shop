@@ -113,5 +113,8 @@ export function publicUser(row) {
     phone: row.phone || '',
     photo: row.photo || '',
     telegram: row.telegram || '',
+    // Optional — only present once the SQL migration adding the column is
+    // applied (see /api/auth?action=heartbeat for the migration snippet).
+    lastSeenAt: row.last_seen_at ?? null,
   }
 }

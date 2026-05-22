@@ -22,6 +22,9 @@ export type User = {
   phone?: string
   photo?: string
   telegram?: string
+  // Only present after the auth_users.last_seen_at migration is applied.
+  // Used by the profile to show the user their own "в сети / был X назад".
+  lastSeenAt?: string | null
 }
 
 export type AuthErrorCode =
