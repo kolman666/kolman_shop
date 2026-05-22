@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import {
   CHAT_NOTIFICATIONS_READ_EVENT,
@@ -7,6 +7,7 @@ import {
   playChatNotificationSound,
   showBrowserChatNotification,
 } from '../lib/chatNotifications'
+import { fetchChatMessages } from '../lib/customerInbox'
 
 type ToastState = {
   title: string
@@ -25,6 +26,7 @@ export function useCustomerChatNotifications(email?: string | null) {
   const normalizedEmail = useMemo(() => (email ?? '').trim().toLowerCase(), [email])
   const [unreadThreadIds, setUnreadThreadIds] = useState<Set<number | string>>(() => new Set())
   const [toast, setToast] = useState<ToastState>(null)
+  const lastMessageAtRef = useRef('')
 
   useEffect(() => {
     const clear = () => {
@@ -65,6 +67,7 @@ export function useCustomerChatNotifications(email?: string | null) {
 
     const sb = supabase
     if (sb) {
+      lastMessageAtRef.current = ''
       const unlockAudio = () => initializeChatNotificationAudio()
       window.addEventListener('pointerdown', unlockAudio, { once: true })
 
@@ -81,9 +84,25 @@ export function useCustomerChatNotifications(email?: string | null) {
           (payload) => handleMessage(payload?.new as MessageRow | null),
         )
         .subscribe()
+
+      const poll = window.setInterval(async () => {
+        const rows = await fetchChatMessages(normalizedEmail)
+        if (rows.length === 0) return
+        const latest = rows.reduce((prev, current) => (prev.created_at > current.created_at ? prev : current))
+        if (lastMessageAtRef.current === '') {
+          lastMessageAtRef.current = latest.created_at
+          return
+        }
+        if (latest.created_at > lastMessageAtRef.current && latest.sender === 'admin') {
+          handleMessage(latest)
+        }
+        lastMessageAtRef.current = latest.created_at
+      }, 5_000)
+
       return () => {
         void sb.removeChannel(channel)
         window.removeEventListener('pointerdown', unlockAudio)
+        window.clearInterval(poll)
       }
     }
   }, [normalizedEmail])

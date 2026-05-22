@@ -40,10 +40,12 @@ import {
 } from '../lib/adminInbox'
 import {
   adminFetchThreadMessages,
+  adminListThreads,
   adminReply,
   adminListAllChatThreads,
   adminSetThreadStatus,
   adminLookupUsers,
+  type AdminThread,
   type ChatMessage,
   type ChatThread,
   type UserLookup,
@@ -248,11 +250,10 @@ type AdminTab = 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquir
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const { products: allProducts, loading: productsLoading, refresh } = useProducts()
   const [activeTab, setActiveTab] = useState<AdminTab>('products')
-  // Counts unique chats that received new customer messages while the admin
-  // was outside the chat tab. Resets when the tab is opened.
-  const [unreadChatThreadIds, setUnreadChatThreadIds] = useState<Set<number | string>>(() => new Set())
+  // Total number of unread customer chat messages received while the admin is
+  // outside the chat tab.
+  const [unreadChatCount, setUnreadChatCount] = useState(0)
   const [chatToast, setChatToast] = useState<{ title: string; body: string } | null>(null)
-  const unreadChat = unreadChatThreadIds.size
 
   useEffect(() => {
     const unlockAudio = () => initializeChatNotificationAudio()
@@ -271,19 +272,14 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         (payload) => {
           const row = payload?.new as { sender?: string; body?: string; thread_email?: string; thread_id?: number | null; id?: number } | null
           if (row?.sender !== 'user') return
-          const threadKey = row.thread_id ?? row.thread_email ?? row.id ?? Date.now()
-          setUnreadChatThreadIds((prev) => {
-            const next = new Set(prev)
-            next.add(threadKey)
-            return next
-          })
+          setUnreadChatCount((prev) => prev + 1)
           const nextToast = {
             title: 'Новое сообщение в чате',
             body: `${row.thread_email ?? 'клиент'}: ${(row.body ?? '').slice(0, 120)}`,
           }
           setChatToast(nextToast)
           playChatNotificationSound()
-          showBrowserChatNotification(nextToast.title, nextToast.body, `admin-chat-${threadKey}`)
+          showBrowserChatNotification(nextToast.title, nextToast.body, `admin-chat-${row.thread_id ?? row.thread_email ?? row.id ?? Date.now()}`)
           window.setTimeout(() => {
             setChatToast((current) => (current?.body === nextToast.body ? null : current))
           }, 4200)
@@ -291,6 +287,27 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       )
       .subscribe()
     return () => { void sb.removeChannel(channel) }
+  }, [activeTab])
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (activeTab === 'chat') {
+        setUnreadChatCount(0)
+        return
+      }
+
+      try {
+        const rows = await adminListThreads()
+        const total = rows.reduce((sum, row) => sum + (row.unread_user_messages ?? 0), 0)
+        setUnreadChatCount(total)
+      } catch {
+        // ignore polling failures
+      }
+    }
+
+    void fetchUnreadCount()
+    const interval = window.setInterval(fetchUnreadCount, 6_000)
+    return () => window.clearInterval(interval)
   }, [activeTab])
 
   useEffect(() => {
@@ -497,7 +514,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         </button>
         <button type="button" className={`admin__tab-btn${activeTab === 'chat' ? ' active' : ''}`} onClick={() => setActiveTab('chat')}>
           Чат
-          {unreadChat > 0 && <span className="admin__tab-badge">{unreadChat}</span>}
+          {unreadChatCount > 0 && <span className="admin__tab-badge">{unreadChatCount}</span>}
         </button>
         <button type="button" className={`admin__tab-btn${activeTab === 'bloggers' ? ' active' : ''}`} onClick={() => setActiveTab('bloggers')}>
           Блогеры
@@ -1789,6 +1806,7 @@ function InquiriesTab() {
 
 function ChatTab() {
   const [threads, setThreads] = useState<ChatThread[]>([])
+  const [threadUnreadCounts, setThreadUnreadCounts] = useState<Record<string, number>>({})
   // Map email → profile snapshot so we can label threads with the customer's
   // real name (and telegram) instead of just the email address.
   const [userLookup, setUserLookup] = useState<Record<string, UserLookup>>({})
@@ -1807,8 +1825,9 @@ function ChatTab() {
     if (!silent) setLoadingThreads(true)
     setError('')
     try {
-      const rows = await adminListAllChatThreads()
+      const [rows, adminRows] = await Promise.all([adminListAllChatThreads(), adminListThreads()])
       setThreads(rows)
+      setThreadUnreadCounts(Object.fromEntries(adminRows.map((row) => [row.email, row.unread_user_messages ?? 0])))
       // Pre-fetch user names for every email in the list so the sidebar
       // renders display names instantly.
       const uniqueEmails = Array.from(new Set(rows.map((r) => r.user_email)))
@@ -2021,13 +2040,23 @@ function ChatTab() {
                   <button
                     type="button"
                     className={`admin__chat-thread ${active === th.id ? 'admin__chat-thread--active' : ''} admin__chat-thread--${th.status}`.trim()}
-                    onClick={() => setActive(th.id)}
+                    onClick={() => {
+                      setActive(th.id)
+                      setThreadUnreadCounts((prev) => {
+                        const next = { ...prev }
+                        delete next[th.user_email]
+                        return next
+                      })
+                    }}
                   >
                     <span className="admin__chat-thread-email">
                       <strong>{displayNameFor(th.user_email)}</strong>
                       <span className="admin__chat-thread-emailsub">{th.user_email}</span>
                     </span>
                     <span className="admin__chat-thread-title">{th.title || 'новый чат'}</span>
+                    {threadUnreadCounts[th.user_email] > 0 && (
+                      <span className="admin__chat-thread-badge">{threadUnreadCounts[th.user_email]}</span>
+                    )}
                     <span className="admin__chat-thread-meta">
                       <span className={`profile-chat-thread__status profile-chat-thread__status--${th.status}`}>
                         {th.status === 'open' ? 'открыт' : 'закрыт'}
