@@ -396,8 +396,9 @@
   font-weight: 600;
 }
 
-.nav-link[href="/modding"]::after {
-  width: 100%;
+.nav-link[href="/modding"] {
+  color: var(--color-main);
+  font-weight: 600;
 }
 
 .nav-link:hover::after,
