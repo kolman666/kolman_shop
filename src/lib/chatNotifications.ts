@@ -10,6 +10,9 @@ export function playChatNotificationSound() {
     const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!AudioContextCtor) return
     const ctx = new AudioContextCtor()
+    if (ctx.state === 'suspended') {
+      void ctx.resume().catch(() => undefined)
+    }
     const gain = ctx.createGain()
     gain.gain.setValueAtTime(0.0001, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.045, ctx.currentTime + 0.015)

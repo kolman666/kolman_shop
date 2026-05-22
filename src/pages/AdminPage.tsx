@@ -265,13 +265,14 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         (payload) => {
           const row = payload?.new as { sender?: string; body?: string; thread_email?: string; thread_id?: number | null; id?: number } | null
           if (row?.sender !== 'user') return
-          if (activeTab === 'chat') return
           const threadKey = row.thread_id ?? row.thread_email ?? row.id ?? Date.now()
-          setUnreadChatThreadIds((prev) => {
-            const next = new Set(prev)
-            next.add(threadKey)
-            return next
-          })
+          if (activeTab !== 'chat') {
+            setUnreadChatThreadIds((prev) => {
+              const next = new Set(prev)
+              next.add(threadKey)
+              return next
+            })
+          }
           const nextToast = {
             title: 'Новое сообщение в чате',
             body: `${row.thread_email ?? 'клиент'}: ${(row.body ?? '').slice(0, 120)}`,
