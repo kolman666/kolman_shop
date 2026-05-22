@@ -395,6 +395,10 @@
   font-weight: 600;
 }
 
+.nav-link[href="/modding"]::after {
+  width: 100%;
+}
+
 .nav-link:hover::after,
 .nav-link.active::after {
   width: 100%;
@@ -432,15 +436,6 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(120deg, #0a0a0a 10%, #0000 60%);
-}
-
-.hero-card__accent {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--color-main);
 }
 
 .hero-card__content {
