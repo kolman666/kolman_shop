@@ -5,6 +5,8 @@ import { AUTH_EVENT, getUser, logout, updateProfile, type User } from '../lib/au
 import { FAVORITES_EVENT, getFavorites, removeFavorite } from '../lib/favorites'
 import { getOrders, USER_DATA_EVENT, type Order as LocalOrder } from '../lib/userData'
 import { fetchMyReviewsRemote, deleteReviewRemote, type RemoteReview } from '../lib/reviews'
+import PhotoLightbox, { type LightboxState } from '../components/PhotoLightbox'
+import { formatChatTime, formatThreadTime } from '../lib/chatFormat'
 import {
   fetchMyOrders,
   fetchMyInquiries,
@@ -400,6 +402,7 @@ function ReviewsTab({ email }: { email: string }) {
   const { t } = useTranslation()
   const [reviews, setReviews] = useState<RemoteReview[]>([])
   const [loading, setLoading] = useState(true)
+  const [lightbox, setLightbox] = useState<LightboxState | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -455,15 +458,27 @@ function ReviewsTab({ email }: { email: string }) {
           {review.photos && review.photos.length > 0 && (
             <div className="product-reviews__photos product-reviews__photos--shown">
               {review.photos.map((src, i) => (
-                <a key={i} href={src} target="_blank" rel="noopener noreferrer" className="product-reviews__photo product-reviews__photo--shown">
+                <button
+                  key={i}
+                  type="button"
+                  className="product-reviews__photo product-reviews__photo--shown"
+                  onClick={() => setLightbox({ images: review.photos ?? [], index: i })}
+                  aria-label="открыть фото"
+                >
                   <img src={src} alt="" loading="lazy" />
-                </a>
+                </button>
               ))}
             </div>
           )}
           <p className="profile-card__meta">{new Date(review.created_at).toLocaleDateString()}</p>
         </article>
       ))}
+
+      <PhotoLightbox
+        state={lightbox}
+        onClose={() => setLightbox(null)}
+        onChange={setLightbox}
+      />
     </div>
   )
 }
@@ -571,7 +586,7 @@ function InquiriesTab({ email }: { email: string }) {
   )
 }
 
-function ChatTab({ email, userName }: { email: string; userName: string }) {
+function ChatTab({ email, userName: _userName }: { email: string; userName: string }) {
   const { t } = useTranslation()
   const [threads, setThreads] = useState<ChatThread[]>([])
   const [activeId, setActiveId] = useState<number | null>(null)
@@ -782,7 +797,7 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
                     {th.status === 'open' ? t('ui.profile.chatStatusOpen') : t('ui.profile.chatStatusClosed')}
                   </span>
                   <span className="profile-chat-thread__time">
-                    {new Date(th.last_message_at).toLocaleString('ru-RU')}
+                    {formatThreadTime(th.last_message_at)}
                   </span>
                 </button>
               </li>
@@ -814,11 +829,13 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
             messages.map((m) => (
               <div key={m.id} className={`profile-chat__msg profile-chat__msg--${m.sender}`}>
                 <div className="profile-chat__bubble">
-                  <span className="profile-chat__sender">
-                    {m.sender === 'user' ? userName : t('ui.profile.chatAdmin')}
-                  </span>
+                  {/* Own (user) bubble: no sender label — alignment alone is
+                    * enough. Only label admin replies as "поддержка". */}
+                  {m.sender === 'admin' && (
+                    <span className="profile-chat__sender">{t('ui.profile.chatAdmin')}</span>
+                  )}
                   <p>{m.body}</p>
-                  <time>{new Date(m.created_at).toLocaleString('ru-RU')}</time>
+                  <time>{formatChatTime(m.created_at)}</time>
                 </div>
               </div>
             ))

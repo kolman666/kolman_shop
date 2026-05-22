@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import ProductCard from '../components/ProductCard'
-import ProductRecommendations from '../components/ProductRecommendations'
 import { useProducts } from '../hooks/useProducts'
 import { addToCart, updateQuantity, getCart } from '../lib/cart'
 import { variantGroupLabel } from '../lib/variantGroups'
@@ -11,6 +10,7 @@ import { AUTH_EVENT, getUser, type User } from '../lib/auth'
 import { getOrders } from '../lib/userData'
 import { fetchMyOrders } from '../lib/customerInbox'
 import { resizeImageToDataUrl } from '../lib/imageResize'
+import PhotoLightbox, { type LightboxState } from '../components/PhotoLightbox'
 import {
   createReviewRemote,
   deleteReviewRemote,
@@ -41,6 +41,7 @@ export default function ProductPage() {
   // we only allow them to leave a review after a real purchase.
   const [hasPurchased, setHasPurchased] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [lightbox, setLightbox] = useState<LightboxState | null>(null)
   const [isAskModalOpen, setIsAskModalOpen] = useState(false)
   const [questionName, setQuestionName] = useState('')
   const [questionContact, setQuestionContact] = useState('')
@@ -135,7 +136,6 @@ export default function ProductPage() {
   }
 
   const relatedProducts = products.filter((item) => item.id !== product.id && item.categoryKey === product.categoryKey).slice(0, 2)
-  const recommendationProducts = products.filter((item) => !item.isUsed)
   const statusLabel = product.availability === 'inStock' ? t('ui.catalog.statusInStock') : t('ui.catalog.statusPreorder')
   const gallery = product.gallery && product.gallery.length > 0 ? product.gallery : [product.image]
   const productTitle = product.titleDirect ?? t(product.titleKey)
@@ -549,15 +549,15 @@ export default function ProductPage() {
                       {r.photos && r.photos.length > 0 && (
                         <div className="product-reviews__photos product-reviews__photos--shown">
                           {r.photos.map((src, i) => (
-                            <a
+                            <button
                               key={i}
-                              href={src}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              type="button"
                               className="product-reviews__photo product-reviews__photo--shown"
+                              onClick={() => setLightbox({ images: r.photos ?? [], index: i })}
+                              aria-label="открыть фото"
                             >
                               <img src={src} alt="" loading="lazy" />
-                            </a>
+                            </button>
                           ))}
                         </div>
                       )}
@@ -585,7 +585,9 @@ export default function ProductPage() {
         </section>
       )}
 
-      <ProductRecommendations products={recommendationProducts} excludeId={product.id} className="recommendations--product" />
+      {/* Homepage-style `ProductRecommendations` removed here — `product-page__related`
+        * above already shows "вам может понравиться". Keeping both produced two
+        * almost-identical sections on every product page. */}
 
       {isAskModalOpen && (
         <div className="ask-modal" role="dialog" aria-modal="true">
@@ -622,6 +624,12 @@ export default function ProductPage() {
           </div>
         </div>
       )}
+
+      <PhotoLightbox
+        state={lightbox}
+        onClose={() => setLightbox(null)}
+        onChange={setLightbox}
+      />
     </main>
   )
 }

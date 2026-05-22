@@ -264,12 +264,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
           </div>
 
           <div className="header-actions">
-            <button type="button" className="header-link">
-              {t('ui.blog')}
-            </button>
-            <button type="button" className="header-link header-link--accent">
-              {t('ui.mediaPicks')}
-            </button>
+            {/* "блог" and "выбор блогеров" removed from header per request. */}
 
             <div className="language-switch" aria-label={t('ui.language')}>
               <button

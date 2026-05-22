@@ -689,7 +689,13 @@
 }
 
 .showcase-section {
-  margin-top: 16px;
+  /* Bumped from 16px → 48px so the categories block isn't squished against
+   * the perks row directly above it. */
+  margin-top: 48px;
+}
+
+@media (max-width: 768px) {
+  .showcase-section { margin-top: 32px; }
 }
 
 .section-heading {
@@ -2770,7 +2776,21 @@
   }
 
   .product-page__tabs-head {
+    /* Keep all tabs on one horizontal line on phones — previously
+     * "отзывы (1)" wrapped onto its own row and stretched the head. */
+    flex-wrap: nowrap;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 6px;
+    padding-bottom: 10px;
+  }
+  .product-page__tabs-head::-webkit-scrollbar { display: none; }
+  .product-page__tab {
+    white-space: nowrap;
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    font-size: 12px;
   }
 }
 
@@ -8621,19 +8641,29 @@
 }
 
 .admin__chat-thread-badge {
+  /* The parent is a flex column with default align-items:stretch — without
+   * `align-self`, this badge would stretch to fill the whole card width
+   * (the wide red bar bug). Pin it small + top-right. */
+  position: absolute;
+  top: 10px;
+  right: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-left: 8px;
-  min-width: 18px;
-  height: 18px;
+  min-width: 20px;
+  height: 20px;
   padding: 0 6px;
   border-radius: 999px;
   background: var(--color-main);
-  color: var(--color-text);
-  font-size: 10.5px;
+  color: #fff;
+  font-size: 11px;
   font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--color-bg-soft);
 }
+
+/* parent needs to be positioned so the absolute badge anchors correctly */
+.admin__chat-thread { position: relative; }
 
 /* ===== Mobile fixes: profile tabs + admin chat ===== */
 @media (max-width: 760px) {
@@ -8911,6 +8941,13 @@
   flex-shrink: 0;
   display: block;
   text-decoration: none;
+  /* Photo cells are <button>s now (so they can open the lightbox); strip the
+   * default browser button styling so they look identical to the old <a>. */
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
 }
 
 .product-reviews__photo img {
@@ -9340,50 +9377,55 @@
   }
 }
 
-/* ===== Used market: red pill in nav (no-misseable accent) ===== */
+/* ===== Used market: red pill in nav (no-misseable accent) =====
+ * Solid red button-like accent. Kept visually consistent across hover/active
+ * so it doesn't pop in/out and doesn't expose the regular `.nav-link::after`
+ * underline (which would otherwise peek out beneath the rounded pill).
+ * ================================================================= */
 .nav-link--pill {
-  padding: 7px 12px;
+  /* match the visual height of the other nav links (which use 12px 0) */
+  padding: 6px 14px;
+  margin: 6px 0;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--color-main) 70%, transparent);
-  background: transparent;
-  color: var(--color-main) !important;
+  border: 1px solid var(--color-main);
+  background: var(--color-main);
+  color: #fff !important;
   font-weight: 700;
   letter-spacing: 0.02em;
-  transition:
-    background 0.22s ease,
-    border-color 0.22s ease,
-    color 0.22s ease,
-    transform 0.22s ease;
-  display: flex;
+  line-height: 1.2;
+  display: inline-flex;
   align-items: center;
-  height: fit-content;
+  justify-content: center;
+  height: auto;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
+/* Hard-kill the underline pseudo-element on the pill in every state. */
 .nav-link--pill::after,
 .nav-link--pill:hover::after,
+.nav-link--pill:focus::after,
 .nav-link--pill.active::after {
-  width: 0;
+  content: none !important;
+  display: none !important;
+  width: 0 !important;
 }
 
 .nav-link--pill:hover {
   transform: translateY(-1px);
-  border-color: var(--color-main);
-  color: var(--color-text) !important;
+  background: color-mix(in srgb, var(--color-main) 88%, #000);
+  border-color: color-mix(in srgb, var(--color-main) 88%, #000);
+  color: #fff !important;
+  box-shadow: 0 6px 18px -10px var(--color-main);
 }
 
 .nav-link--pill.active {
   background: var(--color-main);
   border-color: var(--color-main);
-  color: var(--color-text) !important;
-}
-
-:root[data-theme="light"] .nav-link--pill {
-  color: var(--color-main) !important;
-}
-
-:root[data-theme="light"] .nav-link--pill:hover,
-:root[data-theme="light"] .nav-link--pill.active {
-  color: #ffffff !important;
+  color: #fff !important;
 }
 
 /* ===== Used marketplace page (Барахолка) =================
@@ -9650,4 +9692,72 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-text-dim);
+}
+/* ===== Photo lightbox (PhotoLightbox.tsx) ============================ */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.lightbox__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 8, 10, 0.92);
+  border: 0;
+  padding: 0;
+  cursor: zoom-out;
+}
+.lightbox__image {
+  position: relative;
+  max-width: min(1280px, 92vw);
+  max-height: 88vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.6);
+  user-select: none;
+}
+.lightbox__close,
+.lightbox__nav {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: rgba(20, 20, 24, 0.7);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+.lightbox__close:hover,
+.lightbox__nav:hover { background: rgba(40, 40, 48, 0.92); transform: scale(1.05); }
+.lightbox__close { top: 18px; right: 18px; }
+.lightbox__nav--prev { left: 18px; top: 50%; transform: translateY(-50%); }
+.lightbox__nav--next { right: 18px; top: 50%; transform: translateY(-50%); }
+.lightbox__nav--prev:hover { transform: translateY(-50%) scale(1.05); }
+.lightbox__nav--next:hover { transform: translateY(-50%) scale(1.05); }
+.lightbox__counter {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 20, 24, 0.7);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+@media (max-width: 600px) {
+  .lightbox { padding: 10px; }
+  .lightbox__close { top: 10px; right: 10px; }
+  .lightbox__nav--prev { left: 6px; }
+  .lightbox__nav--next { right: 6px; }
 }

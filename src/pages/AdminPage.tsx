@@ -40,7 +40,6 @@ import {
 } from '../lib/adminInbox'
 import {
   adminFetchThreadMessages,
-  adminListThreads,
   adminReply,
   adminListAllChatThreads,
   adminSetThreadStatus,
@@ -49,6 +48,7 @@ import {
   type ChatThread,
   type UserLookup,
 } from '../lib/customerInbox'
+import { formatChatTime, formatThreadTime } from '../lib/chatFormat'
 import { supabase } from '../lib/supabase'
 import { initializeChatNotificationAudio, playChatNotificationSound, showBrowserChatNotification } from '../lib/chatNotifications'
 
@@ -296,8 +296,19 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       }
 
       try {
-        const rows = await adminListThreads()
-        const total = rows.reduce((sum, row) => sum + (row.unread_user_messages ?? 0), 0)
+        // Per-thread counts come from /api/messages?resource=threads now —
+        // the old email-aggregate `adminListThreads()` over-counted users
+        // with multiple chats.
+        const rows = await adminListAllChatThreads()
+        let readMap: Record<number, string> = {}
+        try { readMap = JSON.parse(localStorage.getItem('admin-chat-thread-read-at') ?? '{}') } catch { /* ignore */ }
+        const total = rows.reduce((sum, row) => {
+          const n = row.unread_user_messages ?? 0
+          if (n === 0) return sum
+          const readAt = readMap[row.id]
+          if (readAt && readAt >= row.last_message_at) return sum
+          return sum + n
+        }, 0)
         setUnreadChatCount(total)
       } catch {
         // ignore polling failures
@@ -1803,9 +1814,27 @@ function InquiriesTab() {
 // pane on the right. Admin replies are stored with sender='admin'; the customer
 // sees them in their /profile → чат tab. Both sides poll the API every 8s.
 
+// localStorage tracks the timestamp at which the admin last opened each
+// thread. We use it to suppress the unread badge for threads whose newest
+// message arrived before that timestamp — otherwise the realtime poll keeps
+// re-marking the same thread "unread" right after the admin reads it.
+const ADMIN_READ_KEY = 'admin-chat-thread-read-at'
+function getAdminReadMap(): Record<number, string> {
+  try {
+    const raw = localStorage.getItem(ADMIN_READ_KEY)
+    return raw ? (JSON.parse(raw) as Record<number, string>) : {}
+  } catch { return {} }
+}
+function markAdminThreadRead(threadId: number) {
+  try {
+    const m = getAdminReadMap()
+    m[threadId] = new Date().toISOString()
+    localStorage.setItem(ADMIN_READ_KEY, JSON.stringify(m))
+  } catch { /* ignore */ }
+}
+
 function ChatTab() {
   const [threads, setThreads] = useState<ChatThread[]>([])
-  const [threadUnreadCounts, setThreadUnreadCounts] = useState<Record<string, number>>({})
   // Map email → profile snapshot so we can label threads with the customer's
   // real name (and telegram) instead of just the email address.
   const [userLookup, setUserLookup] = useState<Record<string, UserLookup>>({})
@@ -1818,15 +1847,17 @@ function ChatTab() {
   const [error, setError] = useState('')
   const [filter, setFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'closed'>('open')
+  // Bumped whenever the read-map changes (open a thread, etc.) so the JSX
+  // re-evaluates `unreadFor(thread)`.
+  const [readTick, setReadTick] = useState(0)
   const listRef = useRef<HTMLDivElement>(null)
 
   async function loadThreads(silent = false) {
     if (!silent) setLoadingThreads(true)
     setError('')
     try {
-      const [rows, adminRows] = await Promise.all([adminListAllChatThreads(), adminListThreads()])
+      const rows = await adminListAllChatThreads()
       setThreads(rows)
-      setThreadUnreadCounts(Object.fromEntries(adminRows.map((row) => [row.email, row.unread_user_messages ?? 0])))
       // Pre-fetch user names for every email in the list so the sidebar
       // renders display names instantly.
       const uniqueEmails = Array.from(new Set(rows.map((r) => r.user_email)))
@@ -1839,6 +1870,23 @@ function ChatTab() {
     } finally {
       if (!silent) setLoadingThreads(false)
     }
+  }
+
+  // Per-thread unread count, with the local "you opened it after the last
+  // message arrived" guard. Suppresses count if the admin already viewed this
+  // thread after its most recent message.
+  function unreadFor(thread: ChatThread): number {
+    const apiCount = thread.unread_user_messages ?? 0
+    if (apiCount === 0) return 0
+    // active thread is implicitly read while open
+    if (active === thread.id) return 0
+    const readMap = getAdminReadMap()
+    const readAt = readMap[thread.id]
+    if (readAt && readAt >= thread.last_message_at) return 0
+    return apiCount
+    // readTick is referenced below to make the dependency obvious to React,
+    // even though this function is plain (not memoised).
+    void readTick
   }
 
   // Pick the best display label for a customer email: full name if available,
@@ -2041,11 +2089,8 @@ function ChatTab() {
                     className={`admin__chat-thread ${active === th.id ? 'admin__chat-thread--active' : ''} admin__chat-thread--${th.status}`.trim()}
                     onClick={() => {
                       setActive(th.id)
-                      setThreadUnreadCounts((prev) => {
-                        const next = { ...prev }
-                        delete next[th.user_email]
-                        return next
-                      })
+                      markAdminThreadRead(th.id)
+                      setReadTick((n) => n + 1)
                     }}
                   >
                     <span className="admin__chat-thread-email">
@@ -2053,14 +2098,14 @@ function ChatTab() {
                       <span className="admin__chat-thread-emailsub">{th.user_email}</span>
                     </span>
                     <span className="admin__chat-thread-title">{th.title || 'новый чат'}</span>
-                    {threadUnreadCounts[th.user_email] > 0 && (
-                      <span className="admin__chat-thread-badge">{threadUnreadCounts[th.user_email]}</span>
+                    {unreadFor(th) > 0 && (
+                      <span className="admin__chat-thread-badge">{unreadFor(th)}</span>
                     )}
                     <span className="admin__chat-thread-meta">
                       <span className={`profile-chat-thread__status profile-chat-thread__status--${th.status}`}>
                         {th.status === 'open' ? 'открыт' : 'закрыт'}
                       </span>
-                      <span className="admin__chat-thread-time">{new Date(th.last_message_at).toLocaleString('ru-RU')}</span>
+                      <span className="admin__chat-thread-time">{formatThreadTime(th.last_message_at)}</span>
                     </span>
                   </button>
                 </li>
@@ -2104,9 +2149,14 @@ function ChatTab() {
                   messages.map((m) => (
                     <div key={m.id} className={`profile-chat__msg profile-chat__msg--${m.sender}`}>
                       <div className="profile-chat__bubble">
-                        <span className="profile-chat__sender">{m.sender === 'admin' ? 'вы (поддержка)' : displayNameFor(activeThread.user_email)}</span>
+                        {/* Sender label hidden for own (admin) messages — bubble
+                          * alignment already conveys who sent it. Only show the
+                          * customer's name on their bubbles for context. */}
+                        {m.sender === 'user' && (
+                          <span className="profile-chat__sender">{displayNameFor(activeThread.user_email)}</span>
+                        )}
                         <p>{m.body}</p>
-                        <time>{new Date(m.created_at).toLocaleString('ru-RU')}</time>
+                        <time>{formatChatTime(m.created_at)}</time>
                       </div>
                     </div>
                   ))

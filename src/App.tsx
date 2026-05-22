@@ -460,12 +460,9 @@ function HomePage() {
           </div>
 
           <div className="header-actions">
-            <button type="button" className="header-link">
-              {t('ui.blog')}
-            </button>
-            <button type="button" className="header-link header-link--accent">
-              {t('ui.mediaPicks')}
-            </button>
+            {/* "блог" and "выбор блогеров" removed from header per request —
+             * the blog is reachable via the news block on the home page and
+             * the /news archive route. */}
 
             <div className="language-switch" aria-label={t('ui.language')}>
               <button

@@ -36,6 +36,10 @@ export type ChatThread = {
   status: 'open' | 'closed'
   created_at: string
   last_message_at: string
+  // Admin-only field: number of customer messages since the last admin reply
+  // in this specific thread. Sent by /api/messages?resource=threads when the
+  // request has the admin secret.
+  unread_user_messages?: number
 }
 
 async function handle<T>(res: Response): Promise<T> {
