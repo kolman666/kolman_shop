@@ -220,9 +220,11 @@ const en = {
       profileSection: {
         title: 'personal info',
         photo: 'profile photo',
-        photoHint: 'pick an image file from your device, up to 2 MB',
+        photoHint: 'pick an image file, up to 8 MB — we shrink it to 512×512 ourselves',
         photoUpload: 'upload photo',
         photoRemove: 'remove photo',
+        photoTooBig: 'file is over 8 MB — pick a smaller one',
+        photoFailed: 'could not process this file. try another image',
         firstName: 'first name',
         lastName: 'last name',
         phone: 'phone',

@@ -16,6 +16,7 @@ import {
   type ChatThread,
   type RemoteInquiry,
 } from '../lib/customerInbox'
+import { resizeImageToDataUrl } from '../lib/imageResize'
 import { supabase } from '../lib/supabase'
 import { useProducts } from '../hooks/useProducts'
 import { productPath } from '../lib/productRoute'
@@ -134,15 +135,25 @@ function ProfileForm({ user }: { user: User }) {
     }
   }
 
-  const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === 'string') setPhoto(reader.result)
+    // Cap the source file at 8 MB (matches `accept="image/*"` realistic
+    // mobile uploads). We then resize down to a 512px JPEG (~50–100 KB) so
+    // big phone photos don't bloat the auth row.
+    if (file.size > 8 * 1024 * 1024) {
+      setError(t('ui.profile.profileSection.photoTooBig'))
+      return
     }
-    reader.readAsDataURL(file)
+    setError('')
+    try {
+      const dataUrl = await resizeImageToDataUrl(file, { maxSize: 512, quality: 0.85, mimeType: 'image/jpeg' })
+      setPhoto(dataUrl)
+    } catch {
+      setError(t('ui.profile.profileSection.photoFailed'))
+    }
+    // Allow re-selecting the same file again (the input dedup'es by value).
+    e.target.value = ''
   }
 
   return (
