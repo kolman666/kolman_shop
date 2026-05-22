@@ -147,11 +147,12 @@ const en = {
       errors: {
         INVALID_EMAIL: 'invalid email',
         PASSWORD_TOO_SHORT: 'password must be at least 8 characters',
-        USER_NOT_FOUND: 'user not found',
+        USER_NOT_FOUND: 'no account for this email on this device',
         WRONG_PASSWORD: 'wrong password',
         USER_EXISTS: 'an account with this email already exists',
         UNKNOWN: 'something went wrong. please try again.',
       },
+      localOnlyHint: 'accounts are currently stored in this browser (localStorage). if you registered on another device, click the button on the right to create a fresh account here.',
     },
     profile: {
       menu: 'account',

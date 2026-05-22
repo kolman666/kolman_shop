@@ -119,6 +119,18 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
           </label>
 
           {errorMessage && <p className="auth-modal__error">{errorMessage}</p>}
+          {mode === 'login' && errorCode === 'USER_NOT_FOUND' && (
+            <p className="auth-modal__hint">
+              {t('ui.auth.localOnlyHint')}{' '}
+              <button
+                type="button"
+                className="auth-modal__inline-link"
+                onClick={() => { setMode('register'); setErrorCode('') }}
+              >
+                {t('ui.auth.switchToRegister')}
+              </button>
+            </p>
+          )}
 
           <div className="auth-modal__actions">
             <button type="button" className="auth-modal__cancel" onClick={onClose}>

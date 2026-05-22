@@ -31,7 +31,15 @@ const CATEGORY_KEY_LABELS: Record<string, string> = {
   'products.categories.accessories': 'аксессуары',
 }
 
-type SectionKey = 'hero_slides' | 'homepage_categories' | 'homepage_perks' | 'homepage_news' | 'search_popular_sections'
+type SiteChrome = {
+  address?: string
+  workHours?: string
+  email?: string
+  alwaysAvailable?: string
+  topLinks?: string[]
+}
+
+type SectionKey = 'hero_slides' | 'homepage_categories' | 'homepage_perks' | 'homepage_news' | 'search_popular_sections' | 'site_chrome'
 
 type State = {
   hero_slides: HeroSlide[]
@@ -39,6 +47,7 @@ type State = {
   homepage_perks: ContentPerk[]
   homepage_news: NewsItemAdmin[]
   search_popular_sections: SearchSectionAdmin[]
+  site_chrome: SiteChrome
 }
 
 const INITIAL: State = {
@@ -47,10 +56,11 @@ const INITIAL: State = {
   homepage_perks: [],
   homepage_news: [],
   search_popular_sections: [],
+  site_chrome: {},
 }
 
 // Keys that are language-suffixed in storage (`{key}_{lang}`).
-const LOCALIZED: SectionKey[] = ['hero_slides', 'homepage_categories', 'homepage_perks', 'homepage_news']
+const LOCALIZED: SectionKey[] = ['hero_slides', 'homepage_categories', 'homepage_perks', 'homepage_news', 'site_chrome']
 
 function storageKey(section: SectionKey, lang: 'ru' | 'en'): string {
   return LOCALIZED.includes(section) ? `${section}_${lang}` : section
@@ -70,7 +80,7 @@ export function ContentTabV2() {
   useEffect(() => {
     setLoading(true)
     setError('')
-    const sections: SectionKey[] = ['hero_slides', 'homepage_categories', 'homepage_perks', 'homepage_news', 'search_popular_sections']
+    const sections: SectionKey[] = ['hero_slides', 'homepage_categories', 'homepage_perks', 'homepage_news', 'search_popular_sections', 'site_chrome']
     Promise.all(
       sections.map(async (s) => {
         const key = storageKey(s, lang)
@@ -85,7 +95,11 @@ export function ContentTabV2() {
     ).then((entries) => {
       const next: State = { ...INITIAL }
       for (const [s, value] of entries) {
-        if (Array.isArray(value)) (next as Record<SectionKey, unknown>)[s] = value
+        if (s === 'site_chrome') {
+          if (value && typeof value === 'object' && !Array.isArray(value)) next.site_chrome = value as SiteChrome
+        } else if (Array.isArray(value)) {
+          (next as Record<SectionKey, unknown>)[s] = value
+        }
       }
       setData(next)
       setDirty(new Set())
@@ -325,6 +339,58 @@ export function ContentTabV2() {
           </AccordionSection>
 
           <AccordionSection
+            title="Шапка и подвал сайта"
+            description="Контакты (адрес, часы работы, email) и подписи кнопок верхней панели. Применяются к шапке и футеру всех страниц."
+            dirty={dirty.has('site_chrome')}
+          >
+            <Field
+              label="Заголовок секции «всегда на связи»"
+              value={data.site_chrome.alwaysAvailable ?? ''}
+              onChange={(v) => updateSection('site_chrome', { ...data.site_chrome, alwaysAvailable: v })}
+            />
+            <div className="admin__field-grid-2">
+              <Field
+                label="Адрес"
+                value={data.site_chrome.address ?? ''}
+                onChange={(v) => updateSection('site_chrome', { ...data.site_chrome, address: v })}
+                placeholder="вологда, somewhere 228"
+              />
+              <Field
+                label="Часы работы"
+                value={data.site_chrome.workHours ?? ''}
+                onChange={(v) => updateSection('site_chrome', { ...data.site_chrome, workHours: v })}
+                placeholder="пн - пт: 09:00 - 20:00"
+              />
+            </div>
+            <Field
+              label="Email для связи"
+              value={data.site_chrome.email ?? ''}
+              onChange={(v) => updateSection('site_chrome', { ...data.site_chrome, email: v })}
+              placeholder="hello@kolman.shop"
+            />
+            <div className="admin__field">
+              <span className="admin__label">
+                Подписи верхней навигации
+                <span className="admin__label-hint"> · 5 ссылок: о нас / партнёрство / поддержка / помочь с выбором / доставка</span>
+              </span>
+              <div className="admin__field-grid-2">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <input
+                    key={i}
+                    className="admin__input"
+                    value={(data.site_chrome.topLinks ?? [])[i] ?? ''}
+                    onChange={(e) => {
+                      const arr = [...(data.site_chrome.topLinks ?? [])]
+                      arr[i] = e.target.value
+                      updateSection('site_chrome', { ...data.site_chrome, topLinks: arr })
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          </AccordionSection>
+
+          <AccordionSection
             title="Поиск — популярные разделы"
             description="Чипы в выпадашке поиска. Не зависят от языка контента."
             count={data.search_popular_sections.length}
@@ -481,43 +547,74 @@ function HeroPreview({ slides }: { slides: HeroSlide[] }) {
 }
 
 function CategoriesPreview({ items }: { items: ContentCategory[] }) {
-  if (items.length === 0) return <p style={{ padding: 40, color: 'var(--color-text-dim)' }}>Категории не добавлены.</p>
+  if (items.length === 0) {
+    return <p style={{ padding: 40, color: 'var(--color-text-dim)' }}>Категории не добавлены.</p>
+  }
+  // Re-use the homepage `.category-card` markup so the preview is pixel-accurate.
   return (
-    <div style={{ padding: 32, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-      {items.map((c, i) => (
-        <div key={i} style={{
-          minHeight: 180,
-          padding: 18,
-          borderRadius: 16,
-          border: '1px solid var(--color-border)',
-          backgroundImage: c.image ? `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url("${c.image}")` : undefined,
-          backgroundColor: c.image ? undefined : 'var(--color-bg-elevated)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          color: 'var(--color-text)',
-          display: 'flex',
-          alignItems: 'flex-end',
-        }}>
-          <h3 style={{ margin: 0, fontSize: 16 }}>{c.title}</h3>
-        </div>
-      ))}
+    <div style={{ padding: 32 }}>
+      <div className="category-grid">
+        {items.map((c, i) => (
+          <div key={i} className="category-card" style={{ cursor: 'default' }}>
+            <div className="category-card__top">
+              <h3 className="category-card__title">{c.title}</h3>
+              <span className="category-card__arrow" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </span>
+            </div>
+            <div
+              className="category-card__image"
+              style={c.image ? { backgroundImage: `url("${c.image}")` } : undefined}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
 
+// Default icons matching the original homepage order (shield / truck / star).
+// We re-use them in the preview so cards have visible icons instead of empty boxes.
+const PERK_ICONS = [
+  (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" key="shield">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  ),
+  (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" key="delivery">
+      <rect x="1" y="3" width="15" height="13" rx="2" />
+      <path d="M16 8h4l3 5v3h-7V8z" />
+      <circle cx="5.5" cy="18.5" r="2.5" />
+      <circle cx="18.5" cy="18.5" r="2.5" />
+    </svg>
+  ),
+  (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" key="star">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  ),
+]
+
 function PerksPreview({ items }: { items: ContentPerk[] }) {
-  if (items.length === 0) return <p style={{ padding: 40, color: 'var(--color-text-dim)' }}>Преимущества не добавлены.</p>
+  if (items.length === 0) {
+    return <p style={{ padding: 40, color: 'var(--color-text-dim)' }}>Преимущества не добавлены.</p>
+  }
   return (
-    <div style={{ padding: 32, display: 'grid', gridTemplateColumns: `repeat(${Math.min(items.length, 3)}, minmax(0, 1fr))`, gap: 12 }}>
-      {items.map((p, i) => (
-        <div key={i} className="perk-card" style={{ flexDirection: 'column', gap: 12 }}>
-          <div className="perk-card__icon" />
-          <div>
-            <h3 className="perk-card__title">{p.title}</h3>
-            <p className="perk-card__text">{p.desc}</p>
-          </div>
-        </div>
-      ))}
+    <div style={{ padding: 32 }}>
+      <div className="perks-grid">
+        {items.map((perk, i) => (
+          <article key={i} className="perk-card">
+            <div className="perk-card__icon">{PERK_ICONS[i % PERK_ICONS.length]}</div>
+            <div>
+              <h3 className="perk-card__title">{perk.title}</h3>
+              <p className="perk-card__text">{perk.desc}</p>
+            </div>
+          </article>
+        ))}
+      </div>
     </div>
   )
 }

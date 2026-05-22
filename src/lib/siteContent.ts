@@ -42,7 +42,9 @@ function delay(ms: number) {
 
 async function tryFetchOnce<T>(key: string): Promise<FetchResult<T> | null> {
   try {
-    const res = await fetch(`/api/site-content?key=${encodeURIComponent(key)}`)
+    // `cache: 'no-store'` works around Safari sometimes serving an old 4xx
+    // response from disk cache after a backend deploy.
+    const res = await fetch(`/api/site-content?key=${encodeURIComponent(key)}`, { cache: 'no-store' })
     if (res.ok) {
       const body = await res.json() as { key: string; value: T | null }
       return { data: body.value, error: null, needsMigration: false }
@@ -68,16 +70,31 @@ export async function fetchSiteContent<T>(key: string): Promise<FetchResult<T>> 
     return { data: mem.value as T, error: null, needsMigration: false }
   }
 
+  // Pull session cache up front. If the network round trip below returns
+  // empty/null or fails, we'd rather show stale-but-real content than a blank
+  // block. This was the reason some sections appeared and disappeared between
+  // reloads in Safari.
+  const cached = readSession<T>(key)
+
   // 2. API with one retry on transient failure.
   let apiResult = await tryFetchOnce<T>(key)
   if (!apiResult) {
     await delay(400)
     apiResult = await tryFetchOnce<T>(key)
   }
+
   if (apiResult) {
     if (apiResult.data !== null) {
       memCache.set(key, { value: apiResult.data, ts: Date.now() })
       writeSession(key, apiResult.data)
+      return apiResult
+    }
+    // API responded but row is empty/null. If we have a previously-cached
+    // value, surface it so the block stays visible across short outages or
+    // back-end deploys that briefly reject newly-introduced keys.
+    if (cached !== null) {
+      memCache.set(key, { value: cached, ts: Date.now() })
+      return { data: cached, error: null, needsMigration: false }
     }
     return apiResult
   }
@@ -94,16 +111,24 @@ export async function fetchSiteContent<T>(key: string): Promise<FetchResult<T>> 
       if (value !== null) {
         memCache.set(key, { value, ts: Date.now() })
         writeSession(key, value)
+        return { data: value, error: null, needsMigration: false }
       }
-      return { data: value, error: null, needsMigration: false }
+      // Empty row from Supabase — same stale-but-visible policy as above.
+      if (cached !== null) {
+        memCache.set(key, { value: cached, ts: Date.now() })
+        return { data: cached, error: null, needsMigration: false }
+      }
+      return { data: null, error: null, needsMigration: false }
     }
-    if (error.code === 'PGRST116') return { data: null, error: null, needsMigration: false }
+    if (error.code === 'PGRST116') {
+      if (cached !== null) return { data: cached, error: null, needsMigration: false }
+      return { data: null, error: null, needsMigration: false }
+    }
     const missing = error.message.includes('does not exist') || error.code === '42P01'
     if (missing) return { data: null, error: null, needsMigration: true }
   }
 
   // 4. Last-resort: previous-session cache so users still see *something*.
-  const cached = readSession<T>(key)
   if (cached !== null) {
     memCache.set(key, { value: cached, ts: Date.now() })
     return { data: cached, error: null, needsMigration: false }

@@ -22,6 +22,8 @@ const LOCALIZABLE_BASE_KEYS = new Set([
   'delivery_data',
   'modding_data',
   'help_choose_data',
+  // Site chrome — addresses, hours, top-bar link labels, footer column labels.
+  'site_chrome',
 ])
 
 // Page text content keys: page_<pageId>_<lang>. Validated as a flat object of short strings.
@@ -151,6 +153,7 @@ const VALIDATORS = {
   // Generic structured page data: a flat object whose values are sanitized
   // strings, numbers, booleans, or nested arrays/objects of the same. Used for
   // about/partnership/delivery/modding/help_choose `*_data` keys.
+  site_chrome(value) { return validateStructuredPage(value) },
   about_data(value) { return validateStructuredPage(value) },
   partnership_data(value) { return validateStructuredPage(value) },
   delivery_data(value) { return validateStructuredPage(value) },

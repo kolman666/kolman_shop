@@ -7,6 +7,14 @@ import CartDrawer from './CartDrawer'
 import SearchDropdown, { type SearchSection } from './SearchDropdown'
 import AuthModal from './AuthModal'
 import { fetchSiteContent } from '../lib/siteContent'
+
+type SiteChromeContent = {
+  address?: string
+  workHours?: string
+  email?: string
+  alwaysAvailable?: string
+  topLinks?: string[]
+}
 import { AUTH_EVENT, getUser, type User } from '../lib/auth'
 
 type SiteChromeProps = {
@@ -60,8 +68,16 @@ export default function SiteChrome({ children }: SiteChromeProps) {
   const [popularSections, setPopularSections] = useState<SearchSection[]>([])
   const [authOpen, setAuthOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState<User | null>(() => getUser())
+  const [chrome, setChrome] = useState<SiteChromeContent>({})
   const searchWrapRef = useRef<HTMLDivElement>(null)
   const { products: allProducts } = useProducts()
+
+  useEffect(() => {
+    const lng = i18n.language.startsWith('en') ? 'en' : 'ru'
+    void fetchSiteContent<SiteChromeContent>(`site_chrome_${lng}`).then((r) => {
+      if (r.data) setChrome(r.data)
+    })
+  }, [i18n.language])
 
   useEffect(() => {
     const syncUser = () => setCurrentUser(getUser())
@@ -96,7 +112,9 @@ export default function SiteChrome({ children }: SiteChromeProps) {
     navigate(q ? `/catalog?q=${encodeURIComponent(q)}` : '/catalog')
   }
 
-  const topLinks = t('topLinks', { returnObjects: true }) as string[]
+  const i18nTopLinks = t('topLinks', { returnObjects: true }) as string[]
+  // Merge admin overrides over the i18n defaults — empty strings fall back.
+  const topLinks = i18nTopLinks.map((def, i) => (chrome.topLinks?.[i]?.trim() ? chrome.topLinks[i] : def))
   const navLinks = t('navLinks', { returnObjects: true }) as string[]
   const footerNavigation = t('footerNavigation', { returnObjects: true }) as string[]
   const footerServices = t('footerServices', { returnObjects: true }) as string[]
@@ -413,11 +431,11 @@ export default function SiteChrome({ children }: SiteChromeProps) {
             <BrandLogo className="brand-logo--footer" />
 
             <div className="footer-contact-block">
-              <h3 className="footer-title">{t('ui.alwaysAvailable')}</h3>
+              <h3 className="footer-title">{chrome.alwaysAvailable?.trim() || t('ui.alwaysAvailable')}</h3>
               <ul className="footer-contact-list">
-                <li>{t('ui.address')}</li>
-                <li>{t('ui.workHours')}</li>
-                <li>hello@kolman.shop</li>
+                <li>{chrome.address?.trim() || t('ui.address')}</li>
+                <li>{chrome.workHours?.trim() || t('ui.workHours')}</li>
+                <li>{chrome.email?.trim() || 'hello@kolman.shop'}</li>
               </ul>
             </div>
 

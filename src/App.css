@@ -8113,3 +8113,28 @@ background: linear-gradient(120deg, #0a0a0a 10%, #0000 60%);
   }
   .news-section { padding-bottom: var(--rhythm-block-mobile); }
 }
+
+/* ===== Auth modal hint ===== */
+.auth-modal__hint {
+  margin: 4px 0 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-soft);
+  color: var(--color-text-dim);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.auth-modal__inline-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--color-main);
+  font: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.auth-modal__inline-link:hover { color: var(--color-main-hover); }
