@@ -7,6 +7,8 @@ import CartDrawer from './CartDrawer'
 import SearchDropdown, { type SearchSection } from './SearchDropdown'
 import AuthModal from './AuthModal'
 import { fetchSiteContent } from '../lib/siteContent'
+import { useCustomerChatNotifications } from '../hooks/useCustomerChatNotifications'
+import { markChatNotificationsRead } from '../lib/chatNotifications'
 
 type SiteChromeContent = {
   address?: string
@@ -71,6 +73,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
   const [chrome, setChrome] = useState<SiteChromeContent>({})
   const searchWrapRef = useRef<HTMLDivElement>(null)
   const { products: allProducts } = useProducts()
+  const chatNotifications = useCustomerChatNotifications(currentUser?.email)
 
   useEffect(() => {
     const lng = i18n.language.startsWith('en') ? 'en' : 'ru'
@@ -92,6 +95,8 @@ export default function SiteChrome({ children }: SiteChromeProps) {
 
   const handleAccountClick = () => {
     if (currentUser) {
+      markChatNotificationsRead()
+      chatNotifications.clear()
       navigate('/profile')
     } else {
       setAuthOpen(true)
@@ -301,6 +306,9 @@ export default function SiteChrome({ children }: SiteChromeProps) {
                   <circle cx="12" cy="7" r="4" />
                 </svg>
               )}
+              {chatNotifications.unreadChats > 0 && (
+                <span className="chat-site-badge">{chatNotifications.unreadChats}</span>
+              )}
             </button>
 
             <button type="button" className="burger-btn" aria-label="menu" onClick={() => setIsBurgerOpen(true)}>
@@ -361,6 +369,11 @@ export default function SiteChrome({ children }: SiteChromeProps) {
 
       <div className={`cart-toast ${showCartToast ? 'cart-toast--visible' : ''}`}>
         Добавлено в корзину
+      </div>
+
+      <div className={`chat-site-toast ${chatNotifications.toast ? 'chat-site-toast--visible' : ''}`}>
+        <strong>{chatNotifications.toast?.title}</strong>
+        <span>{chatNotifications.toast?.body}</span>
       </div>
 
       {isBurgerOpen && (

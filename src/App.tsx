@@ -3,16 +3,19 @@ import { useTranslation } from 'react-i18next'
 import { BrowserRouter, Link, Route, Routes, useNavigate } from 'react-router-dom'
 import './App.css'
 import { useProducts } from './hooks/useProducts'
+import { useCustomerChatNotifications } from './hooks/useCustomerChatNotifications'
 import SiteChrome from './components/SiteChrome'
 import CartDrawer from './components/CartDrawer'
 import BrandSpotlight from './components/BrandSpotlight'
 import BloggersBlock from './components/BloggersBlock'
 import NewsBlock from './components/NewsBlock'
 import AuthModal from './components/AuthModal'
+import ProductRecommendations from './components/ProductRecommendations'
 import { AUTH_EVENT, getUser, refreshUser, type User } from './lib/auth'
 import ProfilePage from './pages/ProfilePage'
 import { fetchSiteContent, fetchSiteContentLocalized } from './lib/siteContent'
 import { safeBackgroundImage } from './lib/safeUrl'
+import { markChatNotificationsRead } from './lib/chatNotifications'
 import AboutPage from './pages/AboutPage'
 // Admin is a big chunk (~250kb) and only relevant for the shop owner. Code-split
 // it so first-paint for shoppers doesn't pull it in.
@@ -255,6 +258,7 @@ function HomePage() {
   const [dbPerks, setDbPerks] = useState<Array<{ title: string; desc: string }> | null>(null)
   const [dbBrandLogos, setDbBrandLogos] = useState<Array<{ name: string; slug?: string; image: string; url?: string }> | null>(null)
   const { products } = useProducts()
+  const chatNotifications = useCustomerChatNotifications(currentUser?.email)
 
   useEffect(() => {
     const lng = i18n.language.startsWith('en') ? 'en' : 'ru'
@@ -381,6 +385,8 @@ function HomePage() {
 
   const handleAccountClick = () => {
     if (currentUser) {
+      markChatNotificationsRead()
+      chatNotifications.clear()
       navigate('/profile')
     } else {
       setAuthOpen(true)
@@ -496,6 +502,9 @@ function HomePage() {
                   <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
                 </svg>
+              )}
+              {chatNotifications.unreadChats > 0 && (
+                <span className="chat-site-badge">{chatNotifications.unreadChats}</span>
               )}
             </button>
 
@@ -776,6 +785,8 @@ function HomePage() {
 
       <NewsBlock />
 
+      <ProductRecommendations products={products.filter((product) => !product.isUsed)} />
+
       {isBurgerOpen && (
         <div className="burger-overlay" onClick={() => setIsBurgerOpen(false)} />
       )}
@@ -845,6 +856,11 @@ function HomePage() {
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+
+      <div className={`chat-site-toast ${chatNotifications.toast ? 'chat-site-toast--visible' : ''}`}>
+        <strong>{chatNotifications.toast?.title}</strong>
+        <span>{chatNotifications.toast?.body}</span>
+      </div>
 
       <footer className="site-footer">
         <div className="container footer-grid">

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import ProductCard from '../components/ProductCard'
+import ProductRecommendations from '../components/ProductRecommendations'
 import { useProducts } from '../hooks/useProducts'
 import { addToCart, updateQuantity, getCart } from '../lib/cart'
 import { variantGroupLabel } from '../lib/variantGroups'
@@ -134,6 +135,7 @@ export default function ProductPage() {
   }
 
   const relatedProducts = products.filter((item) => item.id !== product.id && item.categoryKey === product.categoryKey).slice(0, 2)
+  const recommendationProducts = products.filter((item) => !item.isUsed)
   const statusLabel = product.availability === 'inStock' ? t('ui.catalog.statusInStock') : t('ui.catalog.statusPreorder')
   const gallery = product.gallery && product.gallery.length > 0 ? product.gallery : [product.image]
   const productTitle = product.titleDirect ?? t(product.titleKey)
@@ -582,6 +584,8 @@ export default function ProductPage() {
           </div>
         </section>
       )}
+
+      <ProductRecommendations products={recommendationProducts} excludeId={product.id} className="recommendations--product" />
 
       {isAskModalOpen && (
         <div className="ask-modal" role="dialog" aria-modal="true">

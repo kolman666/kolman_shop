@@ -9,15 +9,24 @@ import { AUTH_EVENT } from '../lib/auth'
 
 type ProductCardProps = {
   product: Product
+  variant?: 'default' | 'used'
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, variant = 'default' }: ProductCardProps) {
   const { t } = useTranslation()
   const [isAdded, setIsAdded] = useState(false)
   const [fav, setFav] = useState(() => isFavorite(product.id))
   const statusLabel =
     product.availability === 'inStock' ? t('ui.catalog.statusInStock') : t('ui.catalog.statusPreorder')
   const title = product.titleDirect ?? t(product.titleKey)
+  const isUsedCard = variant === 'used'
+  const conditionKey = (product.condition || '').toLowerCase()
+  const conditionLabel = conditionKey
+    ? t(`ui.usedMarket.conditions.${conditionKey}`, { defaultValue: product.condition })
+    : ''
+  const discount = typeof product.originalPrice === 'number' && product.originalPrice > product.price
+    ? Math.round((1 - product.price / product.originalPrice) * 100)
+    : 0
 
   useEffect(() => {
     const sync = () => setFav(isFavorite(product.id))
@@ -47,7 +56,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   }
 
   return (
-    <article className="product-card">
+    <article className={`product-card ${isUsedCard ? 'product-card--used' : ''}`.trim()}>
       <Link className="product-card__cover" to={productPath(product)} aria-label={title} />
       <button
         type="button"
@@ -77,6 +86,28 @@ export default function ProductCard({ product }: ProductCardProps) {
                 {spec}
               </span>
             ))}
+          </div>
+        )}
+
+        {isUsedCard && (
+          <div className="product-card__used-meta">
+            {conditionLabel && (
+              <span className={`product-card__condition product-card__condition--${conditionKey}`}>
+                {conditionLabel}
+              </span>
+            )}
+            {product.defects && (
+              <details className="product-card__defects">
+                <summary>{t('ui.usedMarket.defectsSummary')}</summary>
+                <p>{product.defects}</p>
+              </details>
+            )}
+            {discount > 0 && (
+              <div className="product-card__used-price-row">
+                <span className="product-card__old-price">{product.originalPrice?.toLocaleString('ru-RU')} rub</span>
+                <span className="product-card__discount">-{discount}%</span>
+              </div>
+            )}
           </div>
         )}
 

@@ -169,28 +169,7 @@ export default function UsedMarketPage() {
           <div className="used-page__grid">
             {filtered.map((p) => (
               <div key={p.id} className="used-page__card-wrap">
-                <ProductCard product={p} />
-                <div className="used-page__card-meta">
-                  {p.condition && (
-                    <span className={`used-page__chip used-page__chip--${p.condition}`}>
-                      {conditionLabel(p.condition.toLowerCase())}
-                    </span>
-                  )}
-                  {p.defects && (
-                    <details className="used-page__defects">
-                      <summary>{t('ui.usedMarket.defectsSummary')}</summary>
-                      <p>{p.defects}</p>
-                    </details>
-                  )}
-                  {typeof p.originalPrice === 'number' && p.originalPrice > p.price && (
-                    <div className="used-page__price-row">
-                      <span className="used-page__price-old">{p.originalPrice.toLocaleString('ru-RU')} ₽</span>
-                      <span className="used-page__price-save">
-                        −{Math.round((1 - p.price / p.originalPrice) * 100)}%
-                      </span>
-                    </div>
-                  )}
-                </div>
+                <ProductCard product={p} variant="used" />
               </div>
             ))}
           </div>

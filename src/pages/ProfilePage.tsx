@@ -21,6 +21,11 @@ import { resizeImageToDataUrl } from '../lib/imageResize'
 import { supabase } from '../lib/supabase'
 import { useProducts } from '../hooks/useProducts'
 import { productPath } from '../lib/productRoute'
+import {
+  CHAT_NOTIFICATIONS_READ_EVENT,
+  CUSTOMER_CHAT_NOTIFICATION_EVENT,
+  markChatNotificationsRead,
+} from '../lib/chatNotifications'
 
 type Tab = 'profile' | 'orders' | 'inquiries' | 'chat' | 'reviews' | 'favorites'
 
@@ -41,6 +46,7 @@ export default function ProfilePage() {
   const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(() => getUser())
   const [tab, setTab] = useState<Tab>('profile')
+  const [unreadChatThreads, setUnreadChatThreads] = useState<Set<number | string>>(() => new Set())
 
   useEffect(() => {
     const sync = () => setUser(getUser())
@@ -57,6 +63,36 @@ export default function ProfilePage() {
       navigate('/', { replace: true })
     }
   }, [user, navigate])
+
+  useEffect(() => {
+    const onCustomerChat = (event: Event) => {
+      if (tab === 'chat') {
+        markChatNotificationsRead()
+        return
+      }
+      const detail = (event as CustomEvent<{ threadKey?: number | string }>).detail
+      const threadKey = detail?.threadKey ?? Date.now()
+      setUnreadChatThreads((prev) => {
+        const next = new Set(prev)
+        next.add(threadKey)
+        return next
+      })
+    }
+    const clear = () => setUnreadChatThreads(new Set())
+    window.addEventListener(CUSTOMER_CHAT_NOTIFICATION_EVENT, onCustomerChat)
+    window.addEventListener(CHAT_NOTIFICATIONS_READ_EVENT, clear)
+    return () => {
+      window.removeEventListener(CUSTOMER_CHAT_NOTIFICATION_EVENT, onCustomerChat)
+      window.removeEventListener(CHAT_NOTIFICATIONS_READ_EVENT, clear)
+    }
+  }, [tab])
+
+  useEffect(() => {
+    if (tab === 'chat') {
+      markChatNotificationsRead()
+      setUnreadChatThreads(new Set())
+    }
+  }, [tab])
 
   if (!user) return null
 
@@ -98,6 +134,9 @@ export default function ProfilePage() {
               onClick={() => setTab(key)}
             >
               {t(`ui.profile.tabs.${key}`)}
+              {key === 'chat' && unreadChatThreads.size > 0 && (
+                <span className="profile-tab__badge">{unreadChatThreads.size}</span>
+              )}
             </button>
           ))}
         </nav>
@@ -548,6 +587,10 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
   async function loadThreads() {
     const rows = await fetchMyThreads(email)
     setThreads(rows)
+    setActiveId((current) => {
+      if (!current) return current
+      return rows.some((thread) => thread.id === current) ? current : null
+    })
     return rows
   }
 
@@ -568,6 +611,38 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
   }, [email])
 
   useEffect(() => {
+    const refresh = () => { void loadThreads() }
+    const sb = supabase
+    if (sb) {
+      const threadChannel = sb
+        .channel(`profile-chat-threads-${email}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'chat_threads', filter: `user_email=eq.${email}` },
+          refresh,
+        )
+        .subscribe()
+      const messageChannel = sb
+        .channel(`profile-chat-thread-bumps-${email}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_email=eq.${email}` },
+          refresh,
+        )
+        .subscribe()
+      const poll = window.setInterval(refresh, 4_000)
+      return () => {
+        void sb.removeChannel(threadChannel)
+        void sb.removeChannel(messageChannel)
+        window.clearInterval(poll)
+      }
+    }
+    const poll = window.setInterval(refresh, 4_000)
+    return () => window.clearInterval(poll)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email])
+
+  useEffect(() => {
     if (!activeId) { setMessages([]); return }
     void loadMessages(activeId)
     const sb = supabase
@@ -580,9 +655,13 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
           () => { void loadMessages(activeId) },
         )
         .subscribe()
-      return () => { void sb.removeChannel(channel) }
+      const poll = window.setInterval(() => { void loadMessages(activeId) }, 3_000)
+      return () => {
+        void sb.removeChannel(channel)
+        window.clearInterval(poll)
+      }
     }
-    const tm = window.setInterval(() => { void loadMessages(activeId) }, 8_000)
+    const tm = window.setInterval(() => { void loadMessages(activeId) }, 3_000)
     return () => window.clearInterval(tm)
   }, [activeId])
 
@@ -595,7 +674,7 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
 
   async function send(e: React.FormEvent) {
     e.preventDefault()
-    if (!activeId) return
+    if (!activeId || activeThread?.status !== 'open') return
     const text = draft.trim()
     if (!text) return
     setSending(true)
@@ -604,10 +683,16 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
       const sent = await sendChatMessage(email, text, activeId)
       setMessages((prev) => [...prev, sent])
       setDraft('')
+      void loadThreads()
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err)
       if (/table_not_found|schema cache|public\.messages/.test(raw)) {
         setError(t('ui.profile.chatUnavailable'))
+      } else if (/thread_closed/.test(raw)) {
+        setError(t('ui.profile.chatThreadClosedError'))
+        void loadThreads()
+      } else if (/message_rate_limited|too many requests|429/.test(raw)) {
+        setError(t('ui.profile.chatRateLimited'))
       } else {
         setError(raw)
       }
@@ -639,15 +724,6 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
     if (!confirm(t('ui.profile.chatCloseConfirm'))) return
     try {
       const updated = await setThreadStatus(id, email, 'closed')
-      setThreads((prev) => prev.map((th) => (th.id === id ? updated : th)))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'failed')
-    }
-  }
-
-  async function reopenThread(id: number) {
-    try {
-      const updated = await setThreadStatus(id, email, 'open')
       setThreads((prev) => prev.map((th) => (th.id === id ? updated : th)))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'failed')
@@ -711,13 +787,9 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
             <p className="profile-chat__meta">{t('ui.profile.chatMeta')}</p>
           </div>
           {activeThread && (
-            activeThread.status === 'open' ? (
+            activeThread.status === 'open' && (
               <button type="button" className="ghost-btn" onClick={() => void closeThread(activeThread.id)}>
                 {t('ui.profile.chatCloseBtn')}
-              </button>
-            ) : (
-              <button type="button" className="ghost-btn" onClick={() => void reopenThread(activeThread.id)}>
-                {t('ui.profile.chatReopenBtn')}
               </button>
             )
           )}

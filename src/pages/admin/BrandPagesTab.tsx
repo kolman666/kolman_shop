@@ -1,15 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { fetchSiteContent, updateSiteContent } from '../../lib/siteContent'
 import { AccordionSection } from './AccordionSection'
 import { ArrayEditor } from './ArrayEditor'
 import { PreviewModal } from './PreviewModal'
 import BrandPage from '../BrandPage'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
-
-// Per-brand detail page editor (writes to `brand_data_<slug>_<lang>` in
-// site_content). The slug list is pulled from the `brand_logos` content
-// block, so admin only has to manage the logo carousel and the brand
-// pages auto-track that.
 
 type BrandLogo = {
   name: string
@@ -31,47 +26,122 @@ type BrandPageData = {
   highlights?: Highlight[]
 }
 
+const BLANK_BRAND: BrandPageData = {
+  name: '',
+  tagline: '',
+  description: '',
+  banner: '',
+  logo: '',
+  website: '',
+  brandFilter: '',
+  highlights: [],
+}
+
+function slugify(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+}
+
 export function BrandPagesTab() {
   const [logos, setLogos] = useState<BrandLogo[]>([])
   const [lang, setLang] = useState<'ru' | 'en'>('ru')
-  const [activeSlug, setActiveSlug] = useState<string>('')
-  const [data, setData] = useState<BrandPageData>({})
+  const [activeSlug, setActiveSlug] = useState('')
+  const [data, setData] = useState<BrandPageData>(BLANK_BRAND)
   const [dirty, setDirty] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [newBrandName, setNewBrandName] = useState('')
+  const [newBrandSlug, setNewBrandSlug] = useState('')
+  const [addingBrand, setAddingBrand] = useState(false)
 
-  // Load slug list from brand_logos. Falls back to a manual slug input if
-  // admin hasn't filled the carousel yet.
+  const brandOptions = useMemo(
+    () => logos.filter((brand) => (brand.slug ?? '').trim().length > 0),
+    [logos],
+  )
+
   useEffect(() => {
     let cancelled = false
-    void fetchSiteContent<BrandLogo[]>('brand_logos').then((r) => {
+    setLoading(true)
+    void fetchSiteContent<BrandLogo[]>('brand_logos').then((result) => {
       if (cancelled) return
-      const items = (r.data ?? []).filter((b) => (b.slug ?? '').trim().length > 0)
+      const items = (result.data ?? []).map((brand) => ({
+        ...brand,
+        slug: slugify(brand.slug || brand.name),
+      }))
       setLogos(items)
-      if (items.length > 0 && !activeSlug) setActiveSlug(items[0].slug as string)
+      if (items.length > 0) setActiveSlug((current) => current || (items[0].slug ?? ''))
+      setLoading(false)
     })
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Load page content whenever slug or language changes.
   useEffect(() => {
-    if (!activeSlug) { setData({}); setDirty(false); return }
+    if (!activeSlug) {
+      setData(BLANK_BRAND)
+      setDirty(false)
+      return
+    }
+
+    let cancelled = false
     setLoading(true)
     setError('')
-    void fetchSiteContent<BrandPageData>(`brand_data_${activeSlug}_${lang}`).then((r) => {
-      setData(r.data ?? {})
+    void fetchSiteContent<BrandPageData>(`brand_data_${activeSlug}_${lang}`).then((result) => {
+      if (cancelled) return
+      const logo = logos.find((brand) => brand.slug === activeSlug)
+      setData({
+        ...BLANK_BRAND,
+        name: logo?.name ?? '',
+        logo: logo?.image ?? '',
+        ...result.data,
+      })
       setDirty(false)
       setLoading(false)
     })
-  }, [activeSlug, lang])
+    return () => { cancelled = true }
+  }, [activeSlug, lang, logos])
 
-  function patch(p: Partial<BrandPageData>) {
-    setData((prev) => ({ ...prev, ...p }))
+  function patch(partial: Partial<BrandPageData>) {
+    setData((prev) => ({ ...prev, ...partial }))
     setDirty(true)
+  }
+
+  async function addBrand() {
+    const name = newBrandName.trim()
+    const slug = slugify(newBrandSlug || name)
+    if (!name || !slug) {
+      setError('Заполните название и slug бренда.')
+      return
+    }
+    if (brandOptions.some((brand) => brand.slug === slug)) {
+      setError('Бренд с таким slug уже есть.')
+      return
+    }
+
+    setAddingBrand(true)
+    setError('')
+    try {
+      const nextLogos = [...logos, { name, slug, image: '', url: '' }]
+      await updateSiteContent('brand_logos', nextLogos)
+      await updateSiteContent(`brand_data_${slug}_${lang}`, { ...BLANK_BRAND, name, brandFilter: name })
+      setLogos(nextLogos)
+      setActiveSlug(slug)
+      setData({ ...BLANK_BRAND, name, brandFilter: name })
+      setNewBrandName('')
+      setNewBrandSlug('')
+      setDirty(false)
+      setSavedAt(Date.now())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось добавить бренд')
+    } finally {
+      setAddingBrand(false)
+    }
   }
 
   async function save() {
@@ -82,8 +152,8 @@ export function BrandPagesTab() {
       await updateSiteContent(`brand_data_${activeSlug}_${lang}`, data)
       setDirty(false)
       setSavedAt(Date.now())
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'save failed')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось сохранить')
     } finally {
       setSaving(false)
     }
@@ -94,26 +164,47 @@ export function BrandPagesTab() {
       <div className="admin__topbar">
         <div className="admin__topbar-left">
           <h2 className="admin__topbar-title">Бренд-страницы</h2>
-          {logos.length === 0 ? (
-            <p className="admin__label-hint" style={{ margin: 0 }}>
-              Сначала добавьте бренды в «Главная → Бренды» (с заполненным slug).
-            </p>
-          ) : (
-            <div className="admin__page-picker">
-              {logos.map((b) => (
-                <button
-                  key={b.slug}
-                  type="button"
-                  className={`admin__page-pick ${activeSlug === b.slug ? 'admin__page-pick--active' : ''}`.trim()}
-                  onClick={() => setActiveSlug(b.slug as string)}
-                  disabled={dirty}
-                  title={dirty ? 'Сначала сохраните изменения' : ''}
-                >
-                  {b.name || b.slug}
-                </button>
-              ))}
-            </div>
-          )}
+          <p className="admin__label-hint" style={{ margin: 0 }}>
+            Отдельные страницы брендов открываются по адресу /brand/slug. Новый бренд также появится в блоке логотипов на главной.
+          </p>
+
+          <div className="admin__page-picker">
+            {brandOptions.map((brand) => (
+              <button
+                key={brand.slug}
+                type="button"
+                className={`admin__page-pick ${activeSlug === brand.slug ? 'admin__page-pick--active' : ''}`.trim()}
+                onClick={() => setActiveSlug(brand.slug ?? '')}
+                disabled={dirty}
+                title={dirty ? 'Сначала сохраните изменения' : ''}
+              >
+                {brand.name || brand.slug}
+              </button>
+            ))}
+          </div>
+
+          <div className="admin__field-grid-2" style={{ width: '100%' }}>
+            <Field
+              label="Новый бренд"
+              value={newBrandName}
+              onChange={(value) => {
+                setNewBrandName(value)
+                if (!newBrandSlug.trim()) setNewBrandSlug(slugify(value))
+              }}
+              placeholder="WLMOUSE"
+            />
+            <Field
+              label="Slug"
+              hint="латиница, цифры и дефис"
+              value={newBrandSlug}
+              onChange={(value) => setNewBrandSlug(slugify(value))}
+              placeholder="wlmouse"
+            />
+          </div>
+          <button type="button" className="accordion__btn" onClick={() => void addBrand()} disabled={addingBrand || !newBrandName.trim()}>
+            {addingBrand ? 'Добавляем...' : '+ Добавить бренд'}
+          </button>
+
           <div className="admin__lang-row">
             <span className="admin__label" style={{ margin: 0 }}>Язык:</span>
             <div className="admin__lang-tabs">
@@ -124,6 +215,7 @@ export function BrandPagesTab() {
                   className={`admin__lang-tab ${lang === lng ? 'admin__lang-tab--active' : ''}`.trim()}
                   onClick={() => setLang(lng)}
                   disabled={dirty}
+                  title={dirty ? 'Сначала сохраните изменения' : ''}
                 >
                   {lng.toUpperCase()}
                 </button>
@@ -131,9 +223,10 @@ export function BrandPagesTab() {
             </div>
           </div>
         </div>
+
         <div className="admin__topbar-right">
           <span className="admin__topbar-meta">
-            {dirty ? <>несохранённые изменения</> : savedAt ? <>сохранено · {new Date(savedAt).toLocaleTimeString('ru-RU')}</> : <>чисто</>}
+            {dirty ? <>несохранённые изменения</> : savedAt ? <>сохранено · {new Date(savedAt).toLocaleTimeString('ru-RU')}</> : <>все данные сохранены</>}
           </span>
           {error && <span style={{ color: 'var(--color-main)', fontSize: 13 }}>{error}</span>}
           <button
@@ -156,17 +249,17 @@ export function BrandPagesTab() {
       </div>
 
       {!activeSlug ? (
-        <div className="admin__content-empty"><p className="admin__empty-text">Выберите бренд сверху или добавьте его в карусели брендов.</p></div>
+        <div className="admin__content-empty"><p className="admin__empty-text">Добавьте первый бренд сверху, чтобы создать страницу.</p></div>
       ) : loading ? (
         <div className="admin__content-empty"><p className="admin__empty-text">Загрузка...</p></div>
       ) : (
-        <>
-          <AccordionSection title="Hero (шапка страницы)" defaultOpen>
-            <Field label="Название бренда" value={data.name ?? ''} onChange={(v) => patch({ name: v })} placeholder="WLMOUSE" />
-            <Field label="Tagline (одна короткая фраза)" value={data.tagline ?? ''} onChange={(v) => patch({ tagline: v })} placeholder="лёгкие мыши для киберспорта" />
-            <ImageField label="Баннер (фон hero)" value={data.banner ?? ''} onChange={(v) => patch({ banner: v })} />
-            <ImageField label="Логотип" value={data.logo ?? ''} onChange={(v) => patch({ logo: v })} />
-            <Field label="Сайт бренда (опц.)" value={data.website ?? ''} onChange={(v) => patch({ website: v })} placeholder="https://..." />
+        <div className="admin__accordions">
+          <AccordionSection title="Hero страницы" defaultOpen>
+            <Field label="Название бренда" value={data.name ?? ''} onChange={(value) => patch({ name: value })} placeholder="WLMOUSE" />
+            <Field label="Короткая фраза" value={data.tagline ?? ''} onChange={(value) => patch({ tagline: value })} placeholder="лёгкие мыши для киберспорта" />
+            <ImageField label="Баннер" value={data.banner ?? ''} onChange={(value) => patch({ banner: value })} />
+            <ImageField label="Логотип" value={data.logo ?? ''} onChange={(value) => patch({ logo: value })} />
+            <Field label="Сайт бренда" value={data.website ?? ''} onChange={(value) => patch({ website: value })} placeholder="https://..." />
           </AccordionSection>
 
           <AccordionSection title="Описание">
@@ -174,23 +267,23 @@ export function BrandPagesTab() {
               label="Текст"
               rows={6}
               value={data.description ?? ''}
-              onChange={(v) => patch({ description: v })}
+              onChange={(value) => patch({ description: value })}
               hint="абзацы разделяйте пустой строкой"
             />
           </AccordionSection>
 
-          <AccordionSection title="Преимущества (плитки)" count={(data.highlights ?? []).length}>
+          <AccordionSection title="Преимущества" count={(data.highlights ?? []).length}>
             <ArrayEditor<Highlight>
               items={data.highlights ?? []}
-              onChange={(v) => patch({ highlights: v })}
+              onChange={(value) => patch({ highlights: value })}
               blank={() => ({ title: '', text: '' })}
-              itemLabel={(i, item) => `Плитка ${i + 1}${item.title ? ` — ${item.title}` : ''}`}
+              itemLabel={(index, item) => `Плитка ${index + 1}${item.title ? ` - ${item.title}` : ''}`}
               addLabel="+ Добавить плитку"
               max={9}
               renderItem={(item, _, update) => (
                 <>
-                  <Field label="Заголовок" value={item.title} onChange={(v) => update({ title: v })} />
-                  <MultiField label="Текст" rows={2} value={item.text} onChange={(v) => update({ text: v })} />
+                  <Field label="Заголовок" value={item.title} onChange={(value) => update({ title: value })} />
+                  <MultiField label="Текст" rows={2} value={item.text} onChange={(value) => update({ text: value })} />
                 </>
               )}
             />
@@ -201,26 +294,18 @@ export function BrandPagesTab() {
               label="Фильтр по бренду"
               hint="строка для поиска в product.brand. Пустое = используется slug"
               value={data.brandFilter ?? ''}
-              onChange={(v) => patch({ brandFilter: v })}
+              onChange={(value) => patch({ brandFilter: value })}
               placeholder={activeSlug}
             />
           </AccordionSection>
-        </>
+        </div>
       )}
 
       <PreviewModal
         open={previewOpen}
-        title={`${data.name || activeSlug} — превью`}
+        title={`${data.name || activeSlug} - превью`}
         onClose={() => setPreviewOpen(false)}
       >
-        {/*
-          Render the real BrandPage inside a MemoryRouter so its useParams()
-          picks up the slug we're editing. The component itself fetches data
-          from site_content — to preview unsaved edits we'd need a context
-          override; for now the preview reflects the last *saved* version,
-          which is honest and matches what shoppers will see right after the
-          admin clicks Save.
-        */}
         <MemoryRouter initialEntries={[`/brand/${activeSlug}`]}>
           <Routes>
             <Route path="/brand/:slug" element={<BrandPage />} />
@@ -231,12 +316,11 @@ export function BrandPagesTab() {
   )
 }
 
-// ── Tiny field helpers (mirrors the ones inside ContentTabV2) ──
 function Field({ label, value, onChange, placeholder, hint }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; hint?: string }) {
   return (
     <div className="admin__field">
       <span className="admin__label">{label}{hint && <span className="admin__label-hint"> · {hint}</span>}</span>
-      <input className="admin__input" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+      <input className="admin__input" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
     </div>
   )
 }
@@ -249,7 +333,7 @@ function MultiField({ label, value, onChange, rows = 3, hint }: { label: string;
         className="admin__input"
         rows={rows}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(event) => onChange(event.target.value)}
         style={{ resize: 'vertical', fontFamily: 'inherit' }}
       />
     </div>
@@ -261,9 +345,9 @@ function ImageField({ label, value, onChange }: { label: string; value: string; 
     <div className="admin__field">
       <span className="admin__label">{label}</span>
       <div className="admin__image-field">
-        <input className="admin__input" type="url" value={value} onChange={(e) => onChange(e.target.value)} placeholder="https://..." />
+        <input className="admin__input" type="url" value={value} onChange={(event) => onChange(event.target.value)} placeholder="https://..." />
         {value ? (
-          <img className="admin__image-preview" src={value} alt="preview" onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3' }} />
+          <img className="admin__image-preview" src={value} alt="preview" onError={(event) => { (event.target as HTMLImageElement).style.opacity = '0.3' }} />
         ) : (
           <div className="admin__image-preview admin__image-preview--empty" />
         )}

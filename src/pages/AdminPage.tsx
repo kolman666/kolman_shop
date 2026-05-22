@@ -49,6 +49,7 @@ import {
   type UserLookup,
 } from '../lib/customerInbox'
 import { supabase } from '../lib/supabase'
+import { playChatNotificationSound, showBrowserChatNotification } from '../lib/chatNotifications'
 
 const CATEGORIES = [
   { key: 'products.categories.mice', label: 'Мышки' },
@@ -247,10 +248,11 @@ type AdminTab = 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquir
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const { products: allProducts, loading: productsLoading, refresh } = useProducts()
   const [activeTab, setActiveTab] = useState<AdminTab>('products')
-  // Counter for new user-side chat messages that arrived while admin was on a
-  // different tab. Resets when the admin opens the chat tab. Realtime hook
-  // below increments it whenever an INSERT(sender='user') hits messages.
-  const [unreadChat, setUnreadChat] = useState(0)
+  // Counts unique chats that received new customer messages while the admin
+  // was outside the chat tab. Resets when the tab is opened.
+  const [unreadChatThreadIds, setUnreadChatThreadIds] = useState<Set<number | string>>(() => new Set())
+  const [chatToast, setChatToast] = useState<{ title: string; body: string } | null>(null)
+  const unreadChat = unreadChatThreadIds.size
 
   useEffect(() => {
     const sb = supabase
@@ -261,10 +263,25 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
-          const row = payload?.new as { sender?: string } | null
+          const row = payload?.new as { sender?: string; body?: string; thread_email?: string; thread_id?: number | null; id?: number } | null
           if (row?.sender !== 'user') return
           if (activeTab === 'chat') return
-          setUnreadChat((n) => n + 1)
+          const threadKey = row.thread_id ?? row.thread_email ?? row.id ?? Date.now()
+          setUnreadChatThreadIds((prev) => {
+            const next = new Set(prev)
+            next.add(threadKey)
+            return next
+          })
+          const nextToast = {
+            title: 'Новое сообщение в чате',
+            body: `${row.thread_email ?? 'клиент'}: ${(row.body ?? '').slice(0, 120)}`,
+          }
+          setChatToast(nextToast)
+          playChatNotificationSound()
+          showBrowserChatNotification(nextToast.title, nextToast.body, `admin-chat-${threadKey}`)
+          window.setTimeout(() => {
+            setChatToast((current) => (current?.body === nextToast.body ? null : current))
+          }, 4200)
         },
       )
       .subscribe()
@@ -272,7 +289,10 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   }, [activeTab])
 
   useEffect(() => {
-    if (activeTab === 'chat') setUnreadChat(0)
+    if (activeTab === 'chat') {
+      setUnreadChatThreadIds(new Set())
+      setChatToast(null)
+    }
   }, [activeTab])
 
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -478,6 +498,11 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         <button type="button" className={`admin__tab-btn${activeTab === 'bloggers' ? ' active' : ''}`} onClick={() => setActiveTab('bloggers')}>
           Блогеры
         </button>
+      </div>
+
+      <div className={`chat-site-toast chat-site-toast--admin ${chatToast ? 'chat-site-toast--visible' : ''}`}>
+        <strong>{chatToast?.title}</strong>
+        <span>{chatToast?.body}</span>
       </div>
 
       {activeTab === 'content' && <ContentTabV2 />}
@@ -1774,8 +1799,8 @@ function ChatTab() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'closed'>('open')
   const listRef = useRef<HTMLDivElement>(null)
 
-  async function loadThreads() {
-    setLoadingThreads(true)
+  async function loadThreads(silent = false) {
+    if (!silent) setLoadingThreads(true)
     setError('')
     try {
       const rows = await adminListAllChatThreads()
@@ -1790,7 +1815,7 @@ function ChatTab() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'failed')
     } finally {
-      setLoadingThreads(false)
+      if (!silent) setLoadingThreads(false)
     }
   }
 
@@ -1833,9 +1858,10 @@ function ChatTab() {
         (payload) => {
           const row = payload?.new as { sender?: string; thread_email?: string; body?: string; thread_id?: number } | null
           if (!row) return
-          void loadThreads()
+          void loadThreads(true)
           if (row.sender !== 'user') return
           if (active && row.thread_id === active) return
+          playChatNotificationSound()
           try {
             if ('Notification' in window && Notification.permission === 'granted') {
               const n = new Notification('Новое сообщение в чате', {
@@ -1856,12 +1882,14 @@ function ChatTab() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'chat_threads' },
-        () => { void loadThreads() },
+        () => { void loadThreads(true) },
       )
       .subscribe()
+    const poll = window.setInterval(() => { void loadThreads(true) }, 4_000)
     return () => {
       void sb.removeChannel(msgChannel)
       void sb.removeChannel(threadChannel)
+      window.clearInterval(poll)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active])
@@ -1879,9 +1907,13 @@ function ChatTab() {
           () => { void loadMessages(active) },
         )
         .subscribe()
-      return () => { void sb.removeChannel(channel) }
+      const poll = window.setInterval(() => { void loadMessages(active) }, 3_000)
+      return () => {
+        void sb.removeChannel(channel)
+        window.clearInterval(poll)
+      }
     }
-    const t = window.setInterval(() => { void loadMessages(active) }, 8_000)
+    const t = window.setInterval(() => { void loadMessages(active) }, 3_000)
     return () => window.clearInterval(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active])
@@ -1903,10 +1935,14 @@ function ChatTab() {
       const sent = await adminReply(activeThread.user_email, text, activeThread.id)
       setMessages((prev) => [...prev, sent])
       setDraft('')
+      void loadThreads(true)
     } catch (e) {
       const raw = e instanceof Error ? e.message : 'failed'
       if (/table_not_found|schema cache|public\.messages/.test(raw)) {
         setError('Таблица messages не создана. Откройте «Заявки» в админке, скопируйте SQL и запустите в Supabase.')
+      } else if (/thread_closed/.test(raw)) {
+        setError('Чат уже закрыт. Откройте его снова, чтобы ответить.')
+        void loadThreads(true)
       } else {
         setError(raw)
       }
