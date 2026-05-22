@@ -9106,6 +9106,7 @@
   transition: background 0.2s ease, transform 0.2s ease;
   display: flex;
   align-items: center;
+  height: fit-content;
 }
 
 .nav-link--pill:hover {
