@@ -32,7 +32,7 @@ const LOCALIZABLE_BASE_KEYS = new Set([
 ])
 
 // Page text content keys: page_<pageId>_<lang>. Validated as a flat object of short strings.
-const PAGE_IDS = new Set(['about', 'partnership', 'support', 'help_choose', 'delivery', 'modding'])
+const PAGE_IDS = new Set(['about', 'partnership', 'support', 'help_choose', 'delivery', 'modding', 'used_market'])
 const PAGE_KEY_RE = /^page_([a-z_]+)_(ru|en)$/
 
 // Brand-detail pages: arbitrary slug (lowercased letters/digits/hyphen) per

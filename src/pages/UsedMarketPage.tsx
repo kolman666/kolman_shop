@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useProducts } from '../hooks/useProducts'
+import { usePageContent } from '../hooks/usePageContent'
 import ProductCard from '../components/ProductCard'
 
 // Used / second-hand marketplace. Reads admin_products filtered to those
@@ -13,6 +14,7 @@ import ProductCard from '../components/ProductCard'
 //   - per-card condition badge + crossed-out original price when set
 export default function UsedMarketPage() {
   const { t } = useTranslation()
+  const get = usePageContent('used_market', 'usedMarket')
   const { products } = useProducts()
   const [condition, setCondition] = useState<string>('all')
   const [brand, setBrand] = useState<string>('all')
@@ -75,23 +77,23 @@ export default function UsedMarketPage() {
     <main className="used-page">
       <div className="used-page__container">
         <header className="used-page__hero">
-          <span className="used-page__badge">{t('ui.usedMarket.badge')}</span>
-          <h1 className="used-page__title">{t('ui.usedMarket.title')}</h1>
-          <p className="used-page__lead">{t('ui.usedMarket.lead')}</p>
+          <span className="used-page__badge">{get('badge')}</span>
+          <h1 className="used-page__title">{get('title')}</h1>
+          <p className="used-page__lead">{get('lead')}</p>
         </header>
 
         <div className="used-page__seller-block">
-          <h2 className="used-page__seller-title">{t('ui.usedMarket.sellBlockTitle')}</h2>
-          <p className="used-page__seller-text">{t('ui.usedMarket.sellBlockText')}</p>
+          <h2 className="used-page__seller-title">{get('sellBlockTitle')}</h2>
+          <p className="used-page__seller-text">{get('sellBlockText')}</p>
           <Link to="/support" className="used-page__seller-link">
-            {t('ui.usedMarket.sellBlockAction')}
+            {get('sellBlockAction')}
           </Link>
         </div>
 
         {conditions.length > 0 && (
           <div className="used-page__filter-group">
-            <span className="used-page__filter-label">{t('ui.usedMarket.byCondition')}</span>
-            <div className="used-page__filters" role="tablist" aria-label={t('ui.usedMarket.filterAria')}>
+            <span className="used-page__filter-label">{get('byCondition')}</span>
+            <div className="used-page__filters" role="tablist" aria-label={get('filterAria')}>
               <button
                 type="button"
                 role="tab"
@@ -122,14 +124,14 @@ export default function UsedMarketPage() {
 
         {brands.length > 1 && (
           <div className="used-page__filter-group">
-            <span className="used-page__filter-label">{t('ui.usedMarket.byBrand')}</span>
+            <span className="used-page__filter-label">{get('byBrand')}</span>
             <div className="used-page__filters">
               <button
                 type="button"
                 className={`used-page__filter ${brand === 'all' ? 'used-page__filter--active' : ''}`.trim()}
                 onClick={() => setBrand('all')}
               >
-                {t('ui.usedMarket.allBrands')}
+                {get('allBrands')}
               </button>
               {brands.map((b) => (
                 <button
@@ -147,14 +149,14 @@ export default function UsedMarketPage() {
 
         {priceBuckets.length > 0 && (
           <div className="used-page__filter-group">
-            <span className="used-page__filter-label">{t('ui.usedMarket.byPrice')}</span>
+            <span className="used-page__filter-label">{get('byPrice')}</span>
             <div className="used-page__filters">
               <button
                 type="button"
                 className={`used-page__filter ${priceBucket === 'all' ? 'used-page__filter--active' : ''}`.trim()}
                 onClick={() => setPriceBucket('all')}
               >
-                {t('ui.usedMarket.allPrices')}
+                {get('allPrices')}
               </button>
               {priceBuckets.map((b) => (
                 <button
@@ -171,9 +173,9 @@ export default function UsedMarketPage() {
         )}
 
         {usedProducts.length === 0 ? (
-          <p className="used-page__empty">{t('ui.usedMarket.empty')}</p>
+          <p className="used-page__empty">{get('empty')}</p>
         ) : filtered.length === 0 ? (
-          <p className="used-page__empty">{t('ui.usedMarket.filteredEmpty')}</p>
+          <p className="used-page__empty">{get('filteredEmpty')}</p>
         ) : (
           <div className="used-page__grid">
             {filtered.map((p) => (

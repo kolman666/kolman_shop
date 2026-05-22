@@ -2,7 +2,7 @@ import { createContext, createElement, useContext, useEffect, useState, type Rea
 import { useTranslation } from 'react-i18next'
 import { fetchSiteContent } from '../lib/siteContent'
 
-export type PageId = 'about' | 'partnership' | 'support' | 'help_choose' | 'delivery' | 'modding'
+export type PageId = 'about' | 'partnership' | 'support' | 'help_choose' | 'delivery' | 'modding' | 'used_market'
 
 // Map admin pageId → site_content base key used for the new structured data.
 const DATA_KEY: Record<PageId, string> = {
@@ -12,6 +12,7 @@ const DATA_KEY: Record<PageId, string> = {
   modding: 'modding_data',
   help_choose: 'help_choose_data',
   support: 'page_support', // support is still text-only
+  used_market: 'page_used_market',
 }
 
 // ── Preview override ──

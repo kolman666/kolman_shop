@@ -10,8 +10,9 @@ import DeliveryPage from '../DeliveryPage'
 import ModdingPage from '../ModdingPage'
 import HelpChoosePage from '../HelpChoosePage'
 import SupportPage from '../SupportPage'
+import UsedMarketPage from '../UsedMarketPage'
 
-type PageId = 'about' | 'partnership' | 'delivery' | 'modding' | 'help_choose' | 'support'
+type PageId = 'about' | 'partnership' | 'delivery' | 'modding' | 'help_choose' | 'support' | 'used_market'
 
 const PAGE_LABELS: Record<PageId, string> = {
   about: 'О нас',
@@ -20,6 +21,7 @@ const PAGE_LABELS: Record<PageId, string> = {
   modding: 'Моддинг',
   help_choose: 'Помощь с выбором',
   support: 'Поддержка',
+  used_market: 'Барахолка',
 }
 
 const PAGE_KEYS: Record<PageId, string> = {
@@ -29,6 +31,7 @@ const PAGE_KEYS: Record<PageId, string> = {
   modding: 'modding_data',
   help_choose: 'help_choose_data',
   support: 'page_support', // support is text-only for now (no big arrays)
+  used_market: 'page_used_market',
 }
 
 const PAGE_NEEDS_LANG_SUFFIX = true
@@ -136,7 +139,24 @@ type SupportData = {
   statResponseLabel?: string
 }
 
-type PageData = AboutData | PartnershipData | DeliveryData | ModdingData | HelpChooseData | SupportData
+type UsedMarketData = {
+  badge?: string
+  title?: string
+  lead?: string
+  sellBlockTitle?: string
+  sellBlockText?: string
+  sellBlockAction?: string
+  filterAria?: string
+  byCondition?: string
+  byBrand?: string
+  byPrice?: string
+  allBrands?: string
+  allPrices?: string
+  empty?: string
+  filteredEmpty?: string
+}
+
+type PageData = AboutData | PartnershipData | DeliveryData | ModdingData | HelpChooseData | SupportData | UsedMarketData
 
 function storageKey(page: PageId, lang: 'ru' | 'en'): string {
   return PAGE_NEEDS_LANG_SUFFIX ? `${PAGE_KEYS[page]}_${lang}` : PAGE_KEYS[page]
@@ -253,6 +273,7 @@ export function PagesTabV2() {
           {pageId === 'modding' && <ModdingEditor data={data as ModdingData} onPatch={patch} />}
           {pageId === 'help_choose' && <HelpChooseEditor data={data as HelpChooseData} onPatch={patch} />}
           {pageId === 'support' && <SupportEditor data={data as SupportData} onPatch={patch} />}
+          {pageId === 'used_market' && <UsedMarketEditor data={data as UsedMarketData} onPatch={patch} />}
         </>
       )}
 
@@ -280,6 +301,7 @@ const PAGE_COMPONENTS: Record<PageId, ComponentType> = {
   modding: ModdingPage,
   help_choose: HelpChoosePage,
   support: SupportPage,
+  used_market: UsedMarketPage,
 }
 
 function PagePreview({ pageId, data }: { pageId: PageId; data: Record<string, unknown> }) {
@@ -802,6 +824,42 @@ function HelpChooseEditor({ data, onPatch }: { data: HelpChooseData; onPatch: (p
           <Field label="Кнопка форма поддержки" value={d.supportBtn ?? ''} onChange={(v) => onPatch({ supportBtn: v })} />
         </div>
         <Field label="Сбросить ответы (подпись)" value={d.resetBtn ?? ''} onChange={(v) => onPatch({ resetBtn: v })} />
+      </AccordionSection>
+    </div>
+  )
+}
+
+function UsedMarketEditor({ data, onPatch }: { data: UsedMarketData; onPatch: (p: Partial<UsedMarketData>) => void }) {
+  const d = data
+  return (
+    <div>
+      <AccordionSection title="Hero" defaultOpen>
+        <Field label="Бейдж" value={d.badge ?? ''} onChange={(v) => onPatch({ badge: v })} />
+        <Field label="Заголовок" value={d.title ?? ''} onChange={(v) => onPatch({ title: v })} />
+        <MultiField label="Лид" rows={3} value={d.lead ?? ''} onChange={(v) => onPatch({ lead: v })} />
+      </AccordionSection>
+
+      <AccordionSection title="Seller block">
+        <Field label="Заголовок" value={d.sellBlockTitle ?? ''} onChange={(v) => onPatch({ sellBlockTitle: v })} />
+        <MultiField label="Текст" rows={4} value={d.sellBlockText ?? ''} onChange={(v) => onPatch({ sellBlockText: v })} />
+        <Field label="Кнопка" value={d.sellBlockAction ?? ''} onChange={(v) => onPatch({ sellBlockAction: v })} />
+      </AccordionSection>
+
+      <AccordionSection title="Фильтры и пустые состояния">
+        <Field label="Aria label" value={d.filterAria ?? ''} onChange={(v) => onPatch({ filterAria: v })} />
+        <div className="admin__field-grid-2">
+          <Field label="По состоянию" value={d.byCondition ?? ''} onChange={(v) => onPatch({ byCondition: v })} />
+          <Field label="По бренду" value={d.byBrand ?? ''} onChange={(v) => onPatch({ byBrand: v })} />
+        </div>
+        <div className="admin__field-grid-2">
+          <Field label="По цене" value={d.byPrice ?? ''} onChange={(v) => onPatch({ byPrice: v })} />
+          <Field label="Все бренды" value={d.allBrands ?? ''} onChange={(v) => onPatch({ allBrands: v })} />
+        </div>
+        <div className="admin__field-grid-2">
+          <Field label="Любая цена" value={d.allPrices ?? ''} onChange={(v) => onPatch({ allPrices: v })} />
+          <Field label="Пустой список" value={d.empty ?? ''} onChange={(v) => onPatch({ empty: v })} />
+        </div>
+        <Field label="Пустой после фильтра" value={d.filteredEmpty ?? ''} onChange={(v) => onPatch({ filteredEmpty: v })} />
       </AccordionSection>
     </div>
   )
