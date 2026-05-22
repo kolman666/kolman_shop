@@ -8349,10 +8349,24 @@
 
 .profile-chat__bubble {
   max-width: 70%;
+  min-width: 0;
   padding: 10px 14px;
   border-radius: 14px;
   background: var(--color-bg-soft);
   border: 1px solid var(--color-border-strong);
+  /* Long lines / data-URL fragments must wrap, not blow out the bubble. */
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .profile-chat__bubble {
+    /* On phones a 70% cap leaves too little room for inline photos — they
+     * end up squashed or break out of the chat column. Lift to 85%. */
+    max-width: 85%;
+  }
+  .profile-chat { padding: 14px; }
+  .profile-chat__list { padding: 8px; }
 }
 
 .profile-chat__msg--user .profile-chat__bubble {
@@ -9908,14 +9922,24 @@
   margin-top: 14px;
 }
 
-/* ===== Chat: inline photo attachments + attach button ===== */
-.chat-bubble__content { display: grid; gap: 6px; }
+/* ===== Chat: inline photo attachments + attach button =====
+ * Photo bubbles must scale down with the chat bubble — previously the fixed
+ * 220px width forced narrow mobile bubbles to overflow horizontally. The
+ * pattern below grows up to 220px on desktop but shrinks freely below that. */
+.chat-bubble__content {
+  display: grid;
+  gap: 6px;
+  /* Required for the photo's `max-width: 100%` to work inside a flexbox/grid
+   * parent — otherwise images can blow out the container. */
+  min-width: 0;
+}
 .chat-bubble__content p { margin: 0; }
 .chat-bubble__photo {
   display: block;
   margin: 4px 0 0;
-  width: 220px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 220px;
+  min-width: 0;
   border-radius: 10px;
   border: 1px solid var(--color-border);
   background: transparent;
@@ -9929,6 +9953,7 @@
   width: 100%;
   height: auto;
   display: block;
+  max-width: 100%;
 }
 
 .chat-attach-btn {
