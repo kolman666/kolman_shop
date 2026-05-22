@@ -100,7 +100,7 @@ export default function NewsBlock({ items: itemsProp }: NewsBlockProps = {}) {
             {t('ui.newsTitleStart')}<span className="news-section__title-accent">{t('ui.newsTitleAccent')}</span>{t('ui.newsTitleEnd')}
           </h2>
           <p className="news-section__sub">{t('ui.newsSub')}</p>
-          <Link to="/catalog" className="news-section__read-all">
+          <Link to="/news" className="news-section__read-all">
             {t('ui.newsReadAll')}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M5 12h14M13 5l7 7-7 7" />

@@ -9,6 +9,7 @@ import BrandSpotlight from './components/BrandSpotlight'
 import BloggersBlock from './components/BloggersBlock'
 import NewsBlock from './components/NewsBlock'
 import AuthModal from './components/AuthModal'
+import ThemeToggle from './components/ThemeToggle'
 import { AUTH_EVENT, getUser, refreshUser, type User } from './lib/auth'
 import ProfilePage from './pages/ProfilePage'
 import { fetchSiteContent, fetchSiteContentLocalized } from './lib/siteContent'
@@ -25,6 +26,9 @@ import HelpChoosePage from './pages/HelpChoosePage'
 import DeliveryPage from './pages/DeliveryPage'
 import ModdingPage from './pages/ModdingPage'
 import NewsArticlePage from './pages/NewsArticlePage'
+import NewsArchivePage from './pages/NewsArchivePage'
+import BrandPage from './pages/BrandPage'
+import UsedMarketPage from './pages/UsedMarketPage'
 import NotFoundPage from './pages/NotFoundPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import { getCartCount } from './lib/cart'
@@ -250,6 +254,7 @@ function HomePage() {
   const [dbSlides, setDbSlides] = useState<Array<{ tag: string; title: string; subtitle: string; accent: string; img: string; detailsUrl?: string }> | null>(null)
   const [dbCategories, setDbCategories] = useState<Array<{ catalogKey: string; title: string; image: string }> | null>(null)
   const [dbPerks, setDbPerks] = useState<Array<{ title: string; desc: string }> | null>(null)
+  const [dbBrandLogos, setDbBrandLogos] = useState<Array<{ name: string; slug?: string; image: string; url?: string }> | null>(null)
   const { products } = useProducts()
 
   useEffect(() => {
@@ -268,6 +273,9 @@ function HomePage() {
     fetchSiteContent<SearchSection[]>('search_popular_sections').then((result) => {
       if (!result.error && result.data && result.data.length > 0) setPopularSections(result.data)
     })
+    fetchSiteContent<Array<{ name: string; slug?: string; image: string; url?: string }>>('brand_logos').then((result) => {
+      if (!result.error && result.data && result.data.length > 0) setDbBrandLogos(result.data)
+    })
   }, [i18n.language])
 
   const topLinkTargets = ['/about', '/partnership', '/support', '/help-choose', '/delivery']
@@ -285,7 +293,11 @@ function HomePage() {
   ]
   const navHrefOverrides: Record<number, string> = {
     9: '/modding',
+    10: '/used',
   }
+  // Indexes that should render with a red "marketplace" pill instead of the
+  // plain nav-link styling so customers can't miss it.
+  const navHighlightIndexes = new Set<number>([10])
   const homepageCategoryTargets = [
     'products.categories.mice',
     'products.categories.mousepads',
@@ -456,6 +468,8 @@ function HomePage() {
               </button>
             </div>
 
+            <ThemeToggle />
+
             <button type="button" className="icon-button" aria-label="cart" onClick={() => setIsCartOpen(true)}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
@@ -467,7 +481,7 @@ function HomePage() {
 
             <button
               type="button"
-              className="icon-button"
+              className="icon-button icon-button--avatar"
               aria-label="account"
               onClick={handleAccountClick}
               title={currentUser ? (currentUser.firstName || currentUser.name) : t('ui.auth.loginTitle')}
@@ -476,7 +490,7 @@ function HomePage() {
                 <img
                   src={currentUser.photo}
                   alt=""
-                  style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }}
+                  className="icon-button__avatar"
                 />
               ) : (
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -503,11 +517,12 @@ function HomePage() {
               const categoryKey = navCategoryTargets[index] ?? ''
               const href = override
                 ?? (categoryKey ? `/catalog?category=${encodeURIComponent(categoryKey)}` : '/catalog')
+              const highlight = navHighlightIndexes.has(index)
               return (
               <Link
                 key={link}
                 to={href}
-                className="nav-link"
+                className={`nav-link ${highlight ? 'nav-link--pill' : ''}`.trim()}
               >
                 {link}
               </Link>
@@ -720,11 +735,39 @@ function HomePage() {
         <div className="brands-strip brands-strip--fullbleed">
           <div className="marquee-wrap">
             <div className="marquee-track">
-              {marqueeBrandLogos.map((brand) => (
-                <div key={brand.marqueeKey} className="marquee-item">
-                  {brand.svg}
-                </div>
-              ))}
+              {dbBrandLogos && dbBrandLogos.length > 0 ? (
+                // Admin-managed brand logos: photos editable from /admin →
+                // Контент → Бренды. We duplicate the list inline so the CSS
+                // marquee animation loops seamlessly.
+                [...dbBrandLogos, ...dbBrandLogos].map((brand, i) => {
+                  const slug = brand.slug?.trim()
+                  const target = (brand.url?.trim())
+                    || (slug ? `/brand/${slug}` : `/catalog?brand=${encodeURIComponent(brand.name)}`)
+                  const isExternal = /^https?:\/\//i.test(target)
+                  return (
+                    <Link
+                      key={`${brand.name}-${i}`}
+                      to={target}
+                      className="marquee-item marquee-item--photo"
+                      target={isExternal ? '_blank' : undefined}
+                      rel={isExternal ? 'noopener noreferrer' : undefined}
+                      aria-label={brand.name}
+                    >
+                      {brand.image ? (
+                        <img src={brand.image} alt={brand.name} loading="lazy" />
+                      ) : (
+                        <span>{brand.name}</span>
+                      )}
+                    </Link>
+                  )
+                })
+              ) : (
+                marqueeBrandLogos.map((brand) => (
+                  <div key={brand.marqueeKey} className="marquee-item">
+                    {brand.svg}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -934,8 +977,20 @@ export default function App() {
           element={<SiteChrome><ModdingPage /></SiteChrome>}
         />
         <Route
+          path="/news"
+          element={<SiteChrome><NewsArchivePage /></SiteChrome>}
+        />
+        <Route
           path="/news/:id"
           element={<SiteChrome><NewsArticlePage /></SiteChrome>}
+        />
+        <Route
+          path="/brand/:slug"
+          element={<SiteChrome><BrandPage /></SiteChrome>}
+        />
+        <Route
+          path="/used"
+          element={<SiteChrome><UsedMarketPage /></SiteChrome>}
         />
         <Route
           path="/admin"

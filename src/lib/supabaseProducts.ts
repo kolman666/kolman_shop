@@ -98,6 +98,10 @@ export type ProductRow = {
   variant_groups?: VariantGroup[]
   is_featured: boolean
   quantity: number
+  is_used?: boolean
+  condition?: string
+  defects?: string
+  original_price?: number
 }
 
 export function rowToProduct(row: ProductRow): Product {
@@ -121,6 +125,10 @@ export function rowToProduct(row: ProductRow): Product {
     isFeatured: row.is_featured,
     quantity: row.quantity,
     isAdminCreated: true,
+    isUsed: row.is_used ?? false,
+    condition: row.condition ?? undefined,
+    defects: row.defects ?? undefined,
+    originalPrice: row.original_price ?? undefined,
   }
 }
 

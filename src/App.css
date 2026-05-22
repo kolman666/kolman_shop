@@ -8408,3 +8408,663 @@ background: linear-gradient(120deg, #0a0a0a 10%, #0000 60%);
 .admin__chat-thread--closed {
   opacity: 0.65;
 }
+
+/* ===== Review photos ===== */
+.product-reviews__photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 0;
+}
+
+.product-reviews__photo {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-soft);
+  flex-shrink: 0;
+  display: block;
+  text-decoration: none;
+}
+
+.product-reviews__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.product-reviews__photos--shown .product-reviews__photo {
+  cursor: zoom-in;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.product-reviews__photos--shown .product-reviews__photo:hover {
+  border-color: var(--color-main);
+  transform: scale(1.04);
+}
+
+.product-reviews__photo-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--color-text);
+  border: none;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.product-reviews__photo-remove:hover {
+  background: var(--color-main);
+}
+
+.product-reviews__photo-add {
+  width: 88px;
+  height: 88px;
+  border-radius: 10px;
+  border: 1px dashed var(--color-border-strong);
+  background: var(--color-bg-soft);
+  color: var(--color-text-dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 12px;
+  padding: 4px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.product-reviews__photo-add:hover {
+  border-color: var(--color-main);
+  color: var(--color-main);
+}
+
+.product-reviews__photo-add--busy {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* ===== Order item: leave-review CTA ===== */
+.profile-card__item-actions {
+  margin-left: 12px;
+}
+
+.profile-card__leave-review {
+  background: transparent;
+  border: 1px solid var(--color-main);
+  color: var(--color-main);
+  font-family: inherit;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+}
+
+.profile-card__leave-review:hover {
+  background: var(--color-main);
+  color: var(--color-text);
+}
+
+.profile-card__items li {
+  flex-wrap: wrap;
+}
+
+/* ===== Header avatar (bigger) ===== */
+.icon-button--avatar {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.icon-button__avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+}
+
+/* ===== Product page rating badge ===== */
+.product-page__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 16px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-soft);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  width: fit-content;
+}
+
+.product-page__rating:hover {
+  border-color: var(--color-main);
+  background: color-mix(in srgb, var(--color-main) 10%, var(--color-bg-soft));
+}
+
+.product-page__rating-stars {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.product-page__rating-stars .star {
+  font-size: 15px;
+  color: var(--color-text-ghost);
+}
+
+.product-page__rating-stars .star--filled {
+  color: var(--color-main);
+}
+
+.product-page__rating-value {
+  font-weight: 700;
+}
+
+.product-page__rating-count {
+  color: var(--color-text-dim);
+  font-size: 13px;
+}
+
+/* ===== News archive grid ===== */
+.news-archive {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.news-archive__card {
+  flex: none;
+  width: 100%;
+}
+
+/* ===== Admin chat thread label: name above, email below ===== */
+.admin__chat-thread-email {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin__chat-thread-emailsub {
+  font-size: 11px;
+  color: var(--color-text-dim);
+  font-weight: 400;
+}
+
+/* ===== Light theme ============================================
+ * Toggled by `<html data-theme="light">` (see src/lib/theme.ts). The
+ * dark tokens above are the default; the overrides below repaint the
+ * surface, text and border palettes without touching any component
+ * styles — everything that already uses var(--color-*) flips
+ * automatically.
+ *
+ * The brand red stays the same; we only bump --color-main-hover a
+ * touch darker so it reads as a clear hover on the now-white surface.
+ * Rgba-black/white overlays that were authored against the dark
+ * background get their light-theme counterparts here too.
+ * ============================================================ */
+:root[data-theme="light"] {
+  --color-main: #e11d1d;
+  --color-main-hover: #c41616;
+  --color-bg: #f6f6f7;
+  --color-bg-elevated: #ffffff;
+  --color-bg-soft: #f0f0f1;
+  --color-bg-muted: #e6e6e8;
+  --color-surface: #eaeaec;
+  --color-text: #0d0d0d;
+  --color-text-soft: #1f1f22;
+  --color-text-muted: #444448;
+  --color-text-dim: #6a6a70;
+  --color-text-faint: #8a8a90;
+  --color-text-ghost: #a8a8af;
+  --color-border: #e1e1e4;
+  --color-border-strong: #d0d0d3;
+  --color-border-soft: rgba(0, 0, 0, 0.07);
+  --color-overlay: rgba(246, 246, 247, 0.94);
+}
+
+/* Body background gradient was authored with dark-only mixes — repaint
+   it so the home page doesn't sit on a near-black plate in light mode. */
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 0% -20%, color-mix(in srgb, var(--color-main) 8%, transparent), transparent 40%),
+    linear-gradient(180deg, #fbfbfc 0%, var(--color-bg) 100%);
+}
+
+/* Image-darkening overlays on dark cards turn pure-black on light bg —
+   weaken them so backgrounds still photograph through cards. */
+:root[data-theme="light"] .hero-card__overlay,
+:root[data-theme="light"] .category-card::after,
+:root[data-theme="light"] .featured-card__overlay {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.65) 100%);
+}
+
+/* Footer was a near-black plate by design. In light mode flip it to
+   a soft surface so the rest of the page doesn't look amputated. */
+:root[data-theme="light"] .site-footer .footer-card,
+:root[data-theme="light"] .about-cta,
+:root[data-theme="light"] .modding-final-cta,
+:root[data-theme="light"] .support-stat-card {
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--color-main) 8%, transparent), transparent 50%),
+    var(--color-bg-elevated);
+  color: var(--color-text);
+}
+
+:root[data-theme="light"] .about-cta__title,
+:root[data-theme="light"] .modding-final-cta__title,
+:root[data-theme="light"] .support-stat-card__value {
+  color: var(--color-text);
+}
+
+/* The dark theme used translucent white pills inside red gradient cards
+   for tag chips ("экономия 500₽"). They become invisible on the light
+   theme's red gradient — give them an opaque red border instead. */
+:root[data-theme="light"] .modding-bundle__badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Modals, preview-frame, hero accent — these had hand-tuned dark
+   backgrounds. Flip to light surfaces. */
+:root[data-theme="light"] .auth-modal__body,
+:root[data-theme="light"] .ask-modal__body,
+:root[data-theme="light"] .preview-modal__shell {
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--color-main) 10%, transparent), transparent 50%),
+    var(--color-bg-elevated);
+}
+
+/* Theme toggle button itself. */
+.theme-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+  padding: 0;
+}
+
+.theme-toggle:hover {
+  border-color: var(--color-main);
+  color: var(--color-main);
+}
+
+@media (max-width: 760px) {
+  .theme-toggle { width: 32px; height: 32px; }
+}
+
+/* ===== Brand marquee: photo logos (admin-managed) ===== */
+.marquee-item--photo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  padding: 0 18px;
+  text-decoration: none;
+  color: var(--color-text);
+  border-radius: 12px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.marquee-item--photo:hover {
+  background: color-mix(in srgb, var(--color-main) 10%, transparent);
+  transform: scale(1.05);
+}
+
+.marquee-item--photo img {
+  max-height: 40px;
+  max-width: 140px;
+  object-fit: contain;
+  filter: brightness(1.15);
+}
+
+:root[data-theme="light"] .marquee-item--photo img {
+  filter: none;
+}
+
+/* ===== Brand detail page ===== */
+.brand-page {
+  width: min(1280px, calc(100% - 32px));
+  margin: 0 auto;
+  display: grid;
+  gap: 36px;
+  padding: 8px 0 24px;
+}
+
+.brand-page__hero {
+  position: relative;
+  border-radius: var(--radius-hero);
+  background-color: var(--color-bg-elevated);
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--color-border);
+  padding: 48px;
+  min-height: 280px;
+  overflow: hidden;
+}
+
+.brand-page__hero-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+  position: relative;
+  z-index: 1;
+}
+
+.brand-page__back {
+  color: var(--color-text-soft);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.brand-page__back:hover { color: var(--color-main); }
+
+.brand-page__logo {
+  max-height: 60px;
+  max-width: 200px;
+  object-fit: contain;
+}
+
+.brand-page__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(36px, 5vw, 64px);
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="light"] .brand-page__title {
+  color: #ffffff;
+}
+
+.brand-page__tagline {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 17px;
+  line-height: 1.5;
+  max-width: 60ch;
+}
+
+.brand-page__website {
+  margin-top: 8px;
+}
+
+.brand-page__about {
+  display: grid;
+  gap: 14px;
+  color: var(--color-text-soft);
+  font-size: 16px;
+  line-height: 1.7;
+  max-width: 80ch;
+}
+
+.brand-page__about p { margin: 0; }
+
+.brand-page__highlights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.brand-page__catalog .section-heading {
+  margin-bottom: 18px;
+}
+
+@media (max-width: 760px) {
+  .brand-page__hero { padding: 28px; }
+}
+
+/* ===== Used market: red pill in nav (no-misseable accent) ===== */
+.nav-link--pill {
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--color-main);
+  color: var(--color-text) !important;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.nav-link--pill:hover {
+  background: var(--color-main-hover);
+  transform: translateY(-1px);
+}
+
+:root[data-theme="light"] .nav-link--pill {
+  color: #ffffff !important;
+}
+
+/* ===== Used marketplace page (Барахолка) =================
+ * Intentionally diverges visually from the regular catalog so customers
+ * know they're shopping second-hand. The hero has a red double-border
+ * and the title sits in a red-bordered chip.
+ * ============================================================ */
+.used-page {
+  width: 100%;
+  padding: 32px 0 80px;
+  background:
+    radial-gradient(circle at 0% -10%, color-mix(in srgb, var(--color-main) 14%, transparent), transparent 40%),
+    var(--color-bg);
+}
+
+.used-page__container {
+  width: min(1280px, calc(100% - 32px));
+  margin: 0 auto;
+  display: grid;
+  gap: 28px;
+}
+
+.used-page__hero {
+  position: relative;
+  padding: 36px 32px;
+  border: 2px solid var(--color-main);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-main) 14%, transparent), transparent 55%),
+    var(--color-bg-elevated);
+  overflow: hidden;
+  display: grid;
+  gap: 12px;
+  text-align: center;
+  justify-items: center;
+}
+
+.used-page__hero::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: calc(var(--radius-xl) - 6px);
+  border: 1px dashed color-mix(in srgb, var(--color-main) 60%, transparent);
+  pointer-events: none;
+}
+
+.used-page__badge {
+  display: inline-block;
+  position: relative;
+  z-index: 1;
+  padding: 6px 18px;
+  border-radius: 999px;
+  background: var(--color-main);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+:root[data-theme="light"] .used-page__badge { color: #ffffff; }
+
+.used-page__title {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(32px, 4.5vw, 48px);
+  letter-spacing: -0.03em;
+  color: var(--color-text);
+}
+
+.used-page__lead {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  max-width: 60ch;
+  color: var(--color-text-dim);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.used-page__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.used-page__filter {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-soft);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.used-page__filter:hover {
+  border-color: var(--color-main);
+  color: var(--color-text);
+}
+
+.used-page__filter--active {
+  background: var(--color-main);
+  border-color: var(--color-main);
+  color: var(--color-text);
+}
+
+:root[data-theme="light"] .used-page__filter--active { color: #ffffff; }
+
+.used-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.used-page__card-wrap {
+  display: grid;
+  gap: 8px;
+}
+
+.used-page__card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.used-page__chip {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-soft);
+  color: var(--color-text-soft);
+}
+
+.used-page__chip--like_new { background: rgba(46, 213, 115, 0.15); color: #4ade80; border-color: rgba(46, 213, 115, 0.4); }
+.used-page__chip--good     { background: rgba(0, 150, 255, 0.15); color: #4cb0ff; border-color: rgba(0, 150, 255, 0.35); }
+.used-page__chip--used     { background: rgba(255, 200, 0, 0.15); color: #ffc800; border-color: rgba(255, 200, 0, 0.35); }
+.used-page__chip--poor     { background: rgba(225, 29, 29, 0.15); color: var(--color-main-hover); border-color: rgba(225, 29, 29, 0.4); }
+
+.used-page__defects {
+  font-size: 12px;
+  color: var(--color-text-dim);
+}
+
+.used-page__defects summary {
+  cursor: pointer;
+  color: var(--color-main);
+  font-weight: 600;
+}
+
+.used-page__defects p {
+  margin: 6px 0 0;
+  line-height: 1.5;
+  color: var(--color-text-soft);
+}
+
+.used-page__price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.used-page__price-old {
+  color: var(--color-text-ghost);
+  text-decoration: line-through;
+}
+
+.used-page__price-save {
+  color: var(--color-main);
+  font-weight: 700;
+}
+
+.used-page__empty {
+  padding: 36px;
+  text-align: center;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-dim);
+  font-size: 14px;
+}
+
+/* ===== Used market: filter groups ===== */
+.used-page__filter-group {
+  display: grid;
+  gap: 8px;
+}
+
+.used-page__filter-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}

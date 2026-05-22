@@ -178,6 +178,29 @@ export async function adminListAllChatThreads(): Promise<ChatThread[]> {
   )
 }
 
+export type UserLookup = {
+  name: string
+  firstName: string
+  lastName: string
+  telegram: string
+  photo: string
+}
+
+// Batch lookup of public user info for a set of emails. Used by admin chat
+// to label threads with the customer's real name + telegram instead of an
+// opaque email string.
+export async function adminLookupUsers(emails: string[]): Promise<Record<string, UserLookup>> {
+  if (emails.length === 0) return {}
+  const query = encodeURIComponent(emails.join(','))
+  try {
+    return await handle<Record<string, UserLookup>>(
+      await fetch(`/api/users-lookup?emails=${query}`, { headers: adminHeaders() }),
+    )
+  } catch {
+    return {}
+  }
+}
+
 export async function adminReply(threadEmail: string, body: string, threadId?: number): Promise<ChatMessage> {
   return handle<ChatMessage>(
     await fetch('/api/messages', {

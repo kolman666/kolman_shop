@@ -6,6 +6,7 @@ import { getCartCount } from '../lib/cart'
 import CartDrawer from './CartDrawer'
 import SearchDropdown, { type SearchSection } from './SearchDropdown'
 import AuthModal from './AuthModal'
+import ThemeToggle from './ThemeToggle'
 import { fetchSiteContent } from '../lib/siteContent'
 
 type SiteChromeContent = {
@@ -178,7 +179,9 @@ export default function SiteChrome({ children }: SiteChromeProps) {
   ]
   const navHrefOverrides: Record<number, string> = {
     9: '/modding',
+    10: '/used',
   }
+  const navHighlightIndexes = new Set<number>([10])
 
   const pathParts = pathname.split('/').filter(Boolean)
   const breadcrumbs: Array<{ to?: string; label: string }> = [{ to: '/', label: t('ui.breadcrumbs.home') }]
@@ -269,6 +272,8 @@ export default function SiteChrome({ children }: SiteChromeProps) {
               </button>
             </div>
 
+            <ThemeToggle />
+
             <button type="button" className="icon-button" aria-label="cart" onClick={() => setIsCartOpen(true)}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
@@ -280,7 +285,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
 
             <button
               type="button"
-              className="icon-button"
+              className="icon-button icon-button--avatar"
               aria-label="account"
               onClick={handleAccountClick}
               title={currentUser ? (currentUser.firstName || currentUser.name) : t('ui.auth.loginTitle')}
@@ -289,7 +294,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
                 <img
                   src={currentUser.photo}
                   alt=""
-                  style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }}
+                  className="icon-button__avatar"
                 />
               ) : (
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -322,11 +327,13 @@ export default function SiteChrome({ children }: SiteChromeProps) {
                   ? pathname === '/catalog' && new URLSearchParams(search).get('category') === categoryKey
                   : false)
 
+              const highlight = navHighlightIndexes.has(index)
+
               return (
                 <Link
                 key={link}
                 to={href}
-                className={`nav-link ${isActive ? 'active' : ''}`}
+                className={`nav-link ${isActive ? 'active' : ''} ${highlight ? 'nav-link--pill' : ''}`.trim()}
               >
                 {link}
               </Link>

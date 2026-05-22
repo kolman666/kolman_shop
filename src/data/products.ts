@@ -19,6 +19,12 @@ export type Product = {
   descriptionDirect?: string
   quantity?: number
   isAdminCreated?: boolean
+  // Used-marketplace fields (Барахолка). Present on admin products that
+  // were flipped to the second-hand catalog.
+  isUsed?: boolean
+  condition?: string
+  defects?: string
+  originalPrice?: number
 }
 
 export type VariantGroup = {

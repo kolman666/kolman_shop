@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { fetchSiteContent, updateSiteContent } from '../../lib/siteContent'
 import NewsBlock, { type NewsItem } from '../../components/NewsBlock'
+import BloggersBlock from '../../components/BloggersBlock'
+import { useProducts } from '../../hooks/useProducts'
 import { AccordionSection } from './AccordionSection'
 import { PreviewModal } from './PreviewModal'
 import { ArrayEditor } from './ArrayEditor'
@@ -40,7 +42,21 @@ type SiteChrome = {
   topLinks?: string[]
 }
 
-type SectionKey = 'hero_slides' | 'homepage_categories' | 'homepage_perks' | 'homepage_news' | 'search_popular_sections' | 'site_chrome'
+type BrandLogo = {
+  name: string
+  slug?: string
+  image: string
+  url?: string
+}
+
+type SectionKey =
+  | 'hero_slides'
+  | 'homepage_categories'
+  | 'homepage_perks'
+  | 'homepage_news'
+  | 'search_popular_sections'
+  | 'site_chrome'
+  | 'brand_logos'
 
 type State = {
   hero_slides: HeroSlide[]
@@ -49,6 +65,7 @@ type State = {
   homepage_news: NewsItemAdmin[]
   search_popular_sections: SearchSectionAdmin[]
   site_chrome: SiteChrome
+  brand_logos: BrandLogo[]
 }
 
 const INITIAL: State = {
@@ -58,6 +75,7 @@ const INITIAL: State = {
   homepage_news: [],
   search_popular_sections: [],
   site_chrome: {},
+  brand_logos: [],
 }
 
 // Keys that are language-suffixed in storage (`{key}_{lang}`).
@@ -81,7 +99,7 @@ export function ContentTabV2() {
   useEffect(() => {
     setLoading(true)
     setError('')
-    const sections: SectionKey[] = ['hero_slides', 'homepage_categories', 'homepage_perks', 'homepage_news', 'search_popular_sections', 'site_chrome']
+    const sections: SectionKey[] = ['hero_slides', 'homepage_categories', 'homepage_perks', 'homepage_news', 'search_popular_sections', 'site_chrome', 'brand_logos']
     Promise.all(
       sections.map(async (s) => {
         const key = storageKey(s, lang)
@@ -340,6 +358,24 @@ export function ContentTabV2() {
           </AccordionSection>
 
           <AccordionSection
+            title="Блогеры (превью)"
+            description="Состав блока «выбор блогеров» — карточки с фото, бренды-партнёры и сетапы. Редактируется в отдельной вкладке «Блогеры» сверху, здесь только превью."
+            actions={
+              <button
+                type="button"
+                className="accordion__btn"
+                onClick={() => setPreview({ title: 'Блогеры — превью', node: <BloggersLivePreview /> })}
+              >
+                Превью
+              </button>
+            }
+          >
+            <p className="admin__label-hint" style={{ margin: 0 }}>
+              Чтобы добавить или поменять блогеров — откройте вкладку «Блогеры» в верхней панели админки. Этот аккордеон только показывает текущее состояние и даёт быстрый предпросмотр.
+            </p>
+          </AccordionSection>
+
+          <AccordionSection
             title="Шапка и подвал сайта"
             description="Контакты (адрес, часы работы, email) и подписи кнопок верхней панели. Применяются к шапке и футеру всех страниц."
             dirty={dirty.has('site_chrome')}
@@ -389,6 +425,37 @@ export function ContentTabV2() {
                 ))}
               </div>
             </div>
+          </AccordionSection>
+
+          <AccordionSection
+            title="Бренды (логотипы в карусели)"
+            description="Логотипы в бегущей строке внизу главной. Slug = идентификатор страницы бренда (/brand/<slug>). Если пустой — клик ведёт на каталог по этому бренду."
+            count={data.brand_logos.length}
+            dirty={dirty.has('brand_logos')}
+          >
+            <ArrayEditor<BrandLogo>
+              items={data.brand_logos}
+              onChange={(v) => updateSection('brand_logos', v)}
+              blank={() => ({ name: '', slug: '', image: '', url: '' })}
+              itemLabel={(i, item) => `Бренд ${i + 1}${item.name ? ` — ${item.name}` : ''}`}
+              addLabel="+ Добавить бренд"
+              max={30}
+              renderItem={(item, _, update) => (
+                <>
+                  <div className="admin__field-grid-2">
+                    <Field label="Название" value={item.name} onChange={(v) => update({ name: v })} placeholder="WLMOUSE" />
+                    <Field label="Slug (для /brand/<slug>)" value={item.slug ?? ''} onChange={(v) => update({ slug: v })} placeholder="wlmouse" />
+                  </div>
+                  <ImageField label="Лого (URL)" value={item.image} onChange={(v) => update({ image: v })} />
+                  <Field
+                    label="Ссылка по клику (опц.)"
+                    hint="оставьте пустым чтобы вёл на /brand/<slug>"
+                    value={item.url ?? ''}
+                    onChange={(v) => update({ url: v })}
+                  />
+                </>
+              )}
+            />
           </AccordionSection>
 
           <AccordionSection
@@ -665,6 +732,17 @@ function PerksPreview({ items }: { items: ContentPerk[] }) {
           </article>
         ))}
       </div>
+    </div>
+  )
+}
+
+// Live preview of the homepage Bloggers block — uses the real component
+// and the real products list, so admin sees exactly what shoppers will see.
+function BloggersLivePreview() {
+  const { products } = useProducts()
+  return (
+    <div style={previewFrame}>
+      <BloggersBlock products={products} />
     </div>
   )
 }

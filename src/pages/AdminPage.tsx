@@ -13,6 +13,7 @@ import {
   type ProductInput,
 } from '../lib/adminProducts'
 import { ContentTabV2 } from './admin/ContentTabV2'
+import { BrandPagesTab } from './admin/BrandPagesTab'
 import { PagesTabV2 } from './admin/PagesTabV2'
 import {
   fetchBloggersAdmin,
@@ -42,8 +43,10 @@ import {
   adminReply,
   adminListAllChatThreads,
   adminSetThreadStatus,
+  adminLookupUsers,
   type ChatMessage,
   type ChatThread,
+  type UserLookup,
 } from '../lib/customerInbox'
 import { supabase } from '../lib/supabase'
 
@@ -73,6 +76,12 @@ type FormValues = {
   variantGroups: VariantGroup[]
   price: string
   isFeatured: boolean
+  // Used marketplace (Барахолка) fields. `isUsed` flips the product into the
+  // /used catalog; the other three describe the second-hand condition.
+  isUsed: boolean
+  condition: string
+  defects: string
+  originalPrice: string
 }
 
 const BLANK: FormValues = {
@@ -88,6 +97,10 @@ const BLANK: FormValues = {
   variantGroups: [],
   price: '',
   isFeatured: false,
+  isUsed: false,
+  condition: '',
+  defects: '',
+  originalPrice: '',
 }
 
 function productToValues(p: Product): FormValues {
@@ -104,6 +117,10 @@ function productToValues(p: Product): FormValues {
     variantGroups: p.variantGroups ?? [],
     price: String(p.price),
     isFeatured: p.isFeatured ?? false,
+    isUsed: p.isUsed ?? false,
+    condition: p.condition ?? '',
+    defects: p.defects ?? '',
+    originalPrice: p.originalPrice != null ? String(p.originalPrice) : '',
   }
 }
 
@@ -124,6 +141,10 @@ function formToInput(form: FormValues): ProductInput {
     variant_groups: form.variantGroups,
     is_featured: form.isFeatured,
     quantity: parseInt(form.quantity, 10) || 0,
+    is_used: form.isUsed,
+    condition: form.condition,
+    defects: form.defects,
+    original_price: form.originalPrice.trim() ? (parseFloat(form.originalPrice) || 0) : undefined,
   }
 }
 
@@ -220,7 +241,7 @@ export default function AdminPage() {
   return <AdminPanel onLogout={() => { clearAdminSecret(); setAuthStatus('guest') }} />
 }
 
-type AdminTab = 'products' | 'content' | 'pages' | 'orders' | 'inquiries' | 'chat' | 'bloggers'
+type AdminTab = 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers'
 
 // ── Admin panel inner ─────────────────────────────────────────────────────────
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
@@ -441,6 +462,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         <button type="button" className={`admin__tab-btn${activeTab === 'pages' ? ' active' : ''}`} onClick={() => setActiveTab('pages')}>
           Страницы
         </button>
+        <button type="button" className={`admin__tab-btn${activeTab === 'brands' ? ' active' : ''}`} onClick={() => setActiveTab('brands')}>
+          Бренды
+        </button>
         <button type="button" className={`admin__tab-btn${activeTab === 'orders' ? ' active' : ''}`} onClick={() => setActiveTab('orders')}>
           Заказы
         </button>
@@ -458,6 +482,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
       {activeTab === 'content' && <ContentTabV2 />}
       {activeTab === 'pages' && <PagesTabV2 />}
+      {activeTab === 'brands' && <BrandPagesTab />}
       {activeTab === 'orders' && <OrdersTab />}
       {activeTab === 'inquiries' && <InquiriesTab />}
       {activeTab === 'chat' && <ChatTab />}
@@ -853,6 +878,78 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                 </div>
               </div>
 
+              {/* ── Used marketplace (Барахолка) ─────────────────────
+                  Flip the product into the second-hand catalog. When
+                  enabled, the new fields below become the source of
+                  truth for the /used page.
+              */}
+              <div className="admin__form-section">
+                <h3 className="admin__section-title">Барахолка</h3>
+                <div className="admin__field">
+                  <label className="admin__checkbox-field">
+                    <input
+                      type="checkbox"
+                      className="admin__checkbox-input"
+                      checked={form.isUsed}
+                      onChange={(e) => setField('isUsed', e.target.checked)}
+                    />
+                    <span className="admin__checkbox-label">
+                      Это б/у девайс (показывать на /used вместо /catalog)
+                    </span>
+                  </label>
+                </div>
+
+                {form.isUsed && (
+                  <>
+                    <div className="admin__two-col">
+                      <div className="admin__field">
+                        <span className="admin__label">Состояние</span>
+                        <select
+                          className="admin__input"
+                          value={form.condition}
+                          onChange={(e) => setField('condition', e.target.value)}
+                        >
+                          <option value="">— не указано —</option>
+                          <option value="like_new">как новый</option>
+                          <option value="good">хорошее</option>
+                          <option value="used">б/у</option>
+                          <option value="poor">есть нюансы</option>
+                        </select>
+                      </div>
+                      <div className="admin__field">
+                        <span className="admin__label">
+                          Первоначальная цена{' '}
+                          <span className="admin__label-hint">для расчёта скидки</span>
+                        </span>
+                        <input
+                          className="admin__input"
+                          type="number"
+                          min="0"
+                          step="100"
+                          placeholder="9990"
+                          value={form.originalPrice}
+                          onChange={(e) => setField('originalPrice', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="admin__field">
+                      <span className="admin__label">
+                        Недостатки / нюансы{' '}
+                        <span className="admin__label-hint">видно покупателю в карточке</span>
+                      </span>
+                      <textarea
+                        className="admin__input"
+                        rows={3}
+                        value={form.defects}
+                        onChange={(e) => setField('defects', e.target.value)}
+                        placeholder="небольшой скол на корпусе, протёртые накладки..."
+                        style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
               {saveError && (
                 <div className="admin__save-error">{saveError}</div>
               )}
@@ -1024,7 +1121,29 @@ CREATE TABLE IF NOT EXISTS auth_users (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE UNIQUE INDEX IF NOT EXISTS auth_users_email_idx ON auth_users (LOWER(email));`
+CREATE UNIQUE INDEX IF NOT EXISTS auth_users_email_idx ON auth_users (LOWER(email));
+
+-- Product reviews. Stored server-side so the same review shows up on every
+-- device the customer is logged into, and so other shoppers see it.
+CREATE TABLE IF NOT EXISTS reviews (
+  id BIGSERIAL PRIMARY KEY,
+  product_id BIGINT NOT NULL,
+  author_email TEXT NOT NULL,
+  author_name TEXT NOT NULL DEFAULT '',
+  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  text TEXT NOT NULL DEFAULT '',
+  photos JSONB NOT NULL DEFAULT '[]',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS reviews_product_idx ON reviews (product_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS reviews_author_idx ON reviews (author_email, created_at DESC);
+
+-- Used marketplace (Барахолка) — extend admin_products with second-hand fields.
+ALTER TABLE admin_products ADD COLUMN IF NOT EXISTS is_used BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE admin_products ADD COLUMN IF NOT EXISTS condition TEXT NOT NULL DEFAULT '';
+ALTER TABLE admin_products ADD COLUMN IF NOT EXISTS defects TEXT NOT NULL DEFAULT '';
+ALTER TABLE admin_products ADD COLUMN IF NOT EXISTS original_price NUMERIC;
+CREATE INDEX IF NOT EXISTS admin_products_used_idx ON admin_products (is_used) WHERE is_used = TRUE;`
 
 function MigrationNotice() {
   const [copied, setCopied] = useState(false)
@@ -1641,6 +1760,9 @@ function InquiriesTab() {
 
 function ChatTab() {
   const [threads, setThreads] = useState<ChatThread[]>([])
+  // Map email → profile snapshot so we can label threads with the customer's
+  // real name (and telegram) instead of just the email address.
+  const [userLookup, setUserLookup] = useState<Record<string, UserLookup>>({})
   const [active, setActive] = useState<number | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [draft, setDraft] = useState('')
@@ -1658,11 +1780,27 @@ function ChatTab() {
     try {
       const rows = await adminListAllChatThreads()
       setThreads(rows)
+      // Pre-fetch user names for every email in the list so the sidebar
+      // renders display names instantly.
+      const uniqueEmails = Array.from(new Set(rows.map((r) => r.user_email)))
+      if (uniqueEmails.length > 0) {
+        const lookup = await adminLookupUsers(uniqueEmails)
+        setUserLookup((prev) => ({ ...prev, ...lookup }))
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'failed')
     } finally {
       setLoadingThreads(false)
     }
+  }
+
+  // Pick the best display label for a customer email: full name if available,
+  // otherwise first part of the email. Telegram is shown alongside when set.
+  function displayNameFor(email: string): string {
+    const u = userLookup[email]
+    if (!u) return email.split('@')[0]
+    const full = [u.firstName, u.lastName].filter(Boolean).join(' ').trim()
+    return full || u.name || email.split('@')[0]
   }
 
   async function loadMessages(threadId: number) {
@@ -1834,7 +1972,10 @@ function ChatTab() {
                     className={`admin__chat-thread ${active === th.id ? 'admin__chat-thread--active' : ''} admin__chat-thread--${th.status}`.trim()}
                     onClick={() => setActive(th.id)}
                   >
-                    <span className="admin__chat-thread-email">{th.user_email}</span>
+                    <span className="admin__chat-thread-email">
+                      <strong>{displayNameFor(th.user_email)}</strong>
+                      <span className="admin__chat-thread-emailsub">{th.user_email}</span>
+                    </span>
                     <span className="admin__chat-thread-title">{th.title || 'новый чат'}</span>
                     <span className="admin__chat-thread-meta">
                       <span className={`profile-chat-thread__status profile-chat-thread__status--${th.status}`}>
@@ -1859,7 +2000,13 @@ function ChatTab() {
               <header className="admin__chat-head">
                 <div>
                   <h3 style={{ margin: 0, fontSize: 15, color: 'var(--color-text)' }}>
-                    {activeThread.title || 'новый чат'} · {activeThread.user_email}
+                    {activeThread.title || 'новый чат'} · {displayNameFor(activeThread.user_email)}
+                    <span style={{ display: 'block', color: 'var(--color-text-dim)', fontSize: 12, fontWeight: 400, marginTop: 2 }}>
+                      {activeThread.user_email}
+                      {userLookup[activeThread.user_email]?.telegram && (
+                        <> · {userLookup[activeThread.user_email].telegram}</>
+                      )}
+                    </span>
                   </h3>
                   <p className="admin__label-hint" style={{ margin: '4px 0 0' }}>
                     клиент видит этот чат в Личном кабинете → «Чат с поддержкой»
@@ -1878,7 +2025,7 @@ function ChatTab() {
                   messages.map((m) => (
                     <div key={m.id} className={`profile-chat__msg profile-chat__msg--${m.sender}`}>
                       <div className="profile-chat__bubble">
-                        <span className="profile-chat__sender">{m.sender === 'admin' ? 'вы (поддержка)' : activeThread.user_email}</span>
+                        <span className="profile-chat__sender">{m.sender === 'admin' ? 'вы (поддержка)' : displayNameFor(activeThread.user_email)}</span>
                         <p>{m.body}</p>
                         <time>{new Date(m.created_at).toLocaleString('ru-RU')}</time>
                       </div>

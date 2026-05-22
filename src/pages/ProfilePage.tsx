@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { AUTH_EVENT, getUser, logout, updateProfile, type User } from '../lib/auth'
 import { FAVORITES_EVENT, getFavorites, removeFavorite } from '../lib/favorites'
-import { getOrders, getReviews, removeReview, USER_DATA_EVENT, type Order as LocalOrder } from '../lib/userData'
+import { getOrders, USER_DATA_EVENT, type Order as LocalOrder } from '../lib/userData'
+import { fetchMyReviewsRemote, deleteReviewRemote, type RemoteReview } from '../lib/reviews'
 import {
   fetchMyOrders,
   fetchMyInquiries,
@@ -22,6 +23,18 @@ import { useProducts } from '../hooks/useProducts'
 import { productPath } from '../lib/productRoute'
 
 type Tab = 'profile' | 'orders' | 'inquiries' | 'chat' | 'reviews' | 'favorites'
+
+// Order IDs are stored prefixed: `remote-<dbId>` for orders that came back
+// from /api/orders?my=, and `local-<timestamp>` for the optimistic local
+// mirror. Display only the meaningful part: the DB id or the short
+// timestamp tail. (Previously `.slice(-6)` chopped through the prefix and
+// produced things like "ote-14".)
+function formatOrderId(id: string): string {
+  const m = /^(?:remote|local)-(.+)$/.exec(id)
+  const rest = m ? m[1] : id
+  // For long timestamps, keep the last 6 chars; for short DB ids leave them whole.
+  return rest.length > 6 ? rest.slice(-6) : rest
+}
 
 export default function ProfilePage() {
   const { t } = useTranslation()
@@ -307,7 +320,7 @@ function OrdersTab({ email }: { email: string }) {
         <article key={order.id} className="profile-card">
           <div className="profile-card__head">
             <span className="profile-card__title">
-              {t('ui.profile.orderId')}{order.id.slice(-6)}
+              {t('ui.profile.orderId')}{formatOrderId(order.id)}
             </span>
             <span className={`profile-status profile-status--${order.status}`}>
               {t(`ui.profile.orderStatus.${order.status}`)}
@@ -320,7 +333,17 @@ function OrdersTab({ email }: { email: string }) {
             {order.items.map((item) => (
               <li key={`${order.id}-${item.productId}`}>
                 <span>{item.title}</span>
-                <span>{item.qty} × {item.price.toLocaleString('ru-RU')} ₽</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+                  <span>{item.qty} × {item.price.toLocaleString('ru-RU')} ₽</span>
+                  {order.status === 'delivered' && item.productId > 0 && (
+                    <Link
+                      to={`/product/${item.productId}?review=1`}
+                      className="profile-card__leave-review"
+                    >
+                      {t('ui.productPage.reviewLeaveFromOrder')}
+                    </Link>
+                  )}
+                </span>
               </li>
             ))}
           </ul>
@@ -336,13 +359,21 @@ function OrdersTab({ email }: { email: string }) {
 
 function ReviewsTab({ email }: { email: string }) {
   const { t } = useTranslation()
-  const [reviews, setReviews] = useState(() => getReviews(email))
+  const [reviews, setReviews] = useState<RemoteReview[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const sync = () => setReviews(getReviews(email))
-    window.addEventListener(USER_DATA_EVENT, sync)
-    return () => window.removeEventListener(USER_DATA_EVENT, sync)
+    let cancelled = false
+    setLoading(true)
+    void fetchMyReviewsRemote(email).then((rows) => {
+      if (cancelled) return
+      setReviews(rows)
+      setLoading(false)
+    })
+    return () => { cancelled = true }
   }, [email])
+
+  if (loading) return <div className="profile-empty"><p>{t('ui.profile.reviewsLoading')}</p></div>
 
   if (reviews.length === 0) {
     return (
@@ -360,11 +391,18 @@ function ReviewsTab({ email }: { email: string }) {
       {reviews.map((review) => (
         <article key={review.id} className="profile-card">
           <div className="profile-card__head">
-            <span className="profile-card__title">{review.productTitle}</span>
+            <Link to={`/product/${review.product_id}`} className="profile-card__title">
+              {t('ui.profile.reviewForProduct')} #{review.product_id}
+            </Link>
             <button
               type="button"
               className="profile-card__action"
-              onClick={() => removeReview(email, review.id)}
+              onClick={async () => {
+                try {
+                  await deleteReviewRemote(review.id, email)
+                  setReviews((prev) => prev.filter((r) => r.id !== review.id))
+                } catch { /* keep entry until next refresh if delete failed */ }
+              }}
             >
               {t('ui.profile.reviewDelete')}
             </button>
@@ -375,7 +413,16 @@ function ReviewsTab({ email }: { email: string }) {
             ))}
           </div>
           <p className="profile-card__text">{review.text}</p>
-          <p className="profile-card__meta">{new Date(review.createdAt).toLocaleDateString()}</p>
+          {review.photos && review.photos.length > 0 && (
+            <div className="product-reviews__photos product-reviews__photos--shown">
+              {review.photos.map((src, i) => (
+                <a key={i} href={src} target="_blank" rel="noopener noreferrer" className="product-reviews__photo product-reviews__photo--shown">
+                  <img src={src} alt="" loading="lazy" />
+                </a>
+              ))}
+            </div>
+          )}
+          <p className="profile-card__meta">{new Date(review.created_at).toLocaleDateString()}</p>
         </article>
       ))}
     </div>

@@ -24,11 +24,22 @@ const LOCALIZABLE_BASE_KEYS = new Set([
   'help_choose_data',
   // Site chrome — addresses, hours, top-bar link labels, footer column labels.
   'site_chrome',
+  // Brand logos shown in the marquee on the homepage. Each entry has
+  // { name, image, url? } — no language variants needed (brand names are
+  // global), so this lives outside the localizable-with-suffix set, but we
+  // still accept the optional suffix for parity with other ContentTabV2 keys.
+  'brand_logos',
 ])
 
 // Page text content keys: page_<pageId>_<lang>. Validated as a flat object of short strings.
 const PAGE_IDS = new Set(['about', 'partnership', 'support', 'help_choose', 'delivery', 'modding'])
 const PAGE_KEY_RE = /^page_([a-z_]+)_(ru|en)$/
+
+// Brand-detail pages: arbitrary slug (lowercased letters/digits/hyphen) per
+// language. Anything matching this pattern is treated as structured page
+// data — same shape as `<page>_data_<lang>` (object of strings + small
+// arrays/objects).
+const BRAND_KEY_RE = /^brand_data_([a-z0-9-]{1,40})_(ru|en)$/
 
 // Exact-match keys with no language variants.
 const EXACT_KEYS = new Set(['search_popular_sections'])
@@ -160,6 +171,30 @@ const VALIDATORS = {
   modding_data(value) { return validateStructuredPage(value) },
   help_choose_data(value) { return validateStructuredPage(value) },
 
+  brand_logos(value) {
+    if (!Array.isArray(value)) return { ok: false, error: 'brand_logos must be an array' }
+    if (value.length > 40) return { ok: false, error: 'too many brand logos' }
+    const cleaned = []
+    for (const item of value) {
+      if (!item || typeof item !== 'object') return { ok: false, error: 'each brand must be an object' }
+      const image = typeof item.image === 'string' ? item.image.trim() : ''
+      if (image && !isSafeHttpUrl(image, { allowEmpty: true })) {
+        return { ok: false, error: 'brand image must be http(s)' }
+      }
+      const url = typeof item.url === 'string' ? item.url.trim() : ''
+      if (url && !isSafeLinkOrPath(url, { allowEmpty: true })) {
+        return { ok: false, error: 'brand url must be /path or http(s)' }
+      }
+      cleaned.push({
+        name: clean(item.name, 80),
+        slug: clean(item.slug, 80),
+        image,
+        url,
+      })
+    }
+    return { ok: true, value: cleaned }
+  },
+
   search_popular_sections(value) {
     if (!Array.isArray(value)) return { ok: false, error: 'search_popular_sections must be an array' }
     if (value.length > 50) return { ok: false, error: 'too many sections' }
@@ -249,6 +284,9 @@ function getValidator(key) {
   if (LOCALIZABLE_BASE_KEYS.has(base)) return VALIDATORS[base]
   const pageMatch = PAGE_KEY_RE.exec(key)
   if (pageMatch && PAGE_IDS.has(pageMatch[1])) return VALIDATORS.__page
+  // Brand detail pages — any slug. Validated with the same generic page
+  // sanitiser so admins can add brands without code changes.
+  if (BRAND_KEY_RE.test(key)) return VALIDATORS.__page
   return null
 }
 

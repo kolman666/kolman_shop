@@ -34,6 +34,11 @@ export type ProductInput = {
   variant_groups: VariantGroup[]
   is_featured: boolean
   quantity: number
+  // Used-marketplace fields (Барахолка). Optional so old call sites still compile.
+  is_used?: boolean
+  condition?: string
+  defects?: string
+  original_price?: number
 }
 
 export async function createProduct(input: ProductInput): Promise<Product> {

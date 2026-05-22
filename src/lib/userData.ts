@@ -23,6 +23,10 @@ export type Review = {
   text: string
   authorEmail?: string
   authorName?: string
+  // Optional set of customer-uploaded photos, each as a 1024px-max JPEG
+  // data URL produced via lib/imageResize.ts. Capped to 6 photos at the UI
+  // layer to keep localStorage manageable.
+  photos?: string[]
 }
 
 type Bucket<T> = Record<string, T[]>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import ProductCard from '../components/ProductCard'
 import { useProducts } from '../hooks/useProducts'
@@ -7,21 +7,35 @@ import { addToCart, updateQuantity, getCart } from '../lib/cart'
 import { variantGroupLabel } from '../lib/variantGroups'
 import { FAVORITES_EVENT, isFavorite, toggleFavorite } from '../lib/favorites'
 import { AUTH_EVENT, getUser, type User } from '../lib/auth'
-import { addReview, getOrders, getProductReviews, removeReview, USER_DATA_EVENT, type Review } from '../lib/userData'
+import { getOrders } from '../lib/userData'
 import { fetchMyOrders } from '../lib/customerInbox'
+import { resizeImageToDataUrl } from '../lib/imageResize'
+import {
+  createReviewRemote,
+  deleteReviewRemote,
+  fetchProductReviewsRemote,
+  type RemoteReview,
+} from '../lib/reviews'
 
 export default function ProductPage() {
   const { t } = useTranslation()
   const { slug } = useParams()
+  const [search] = useSearchParams()
   const { products, loading } = useProducts()
   const product = products.find((item) => item.slug === slug) ?? products.find((item) => String(item.id) === slug)
-  const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'faq' | 'reviews'>('description')
+  // Initial tab honours `?review=1` so the "leave a review" link from the
+  // profile's delivered-orders list lands the user straight on the reviews
+  // tab instead of the default description.
+  const wantsReview = search.get('review') === '1'
+  const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'faq' | 'reviews'>(wantsReview ? 'reviews' : 'description')
   const [user, setUser] = useState<User | null>(() => getUser())
   const [fav, setFav] = useState(false)
-  const [reviews, setReviews] = useState<Review[]>([])
+  const [reviews, setReviews] = useState<RemoteReview[]>([])
   const [reviewText, setReviewText] = useState('')
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewError, setReviewError] = useState('')
+  const [reviewPhotos, setReviewPhotos] = useState<string[]>([])
+  const [reviewUploading, setReviewUploading] = useState(false)
   // Tracks whether the logged-in user has ever purchased this product —
   // we only allow them to leave a review after a real purchase.
   const [hasPurchased, setHasPurchased] = useState(false)
@@ -54,10 +68,11 @@ export default function ProductPage() {
 
   useEffect(() => {
     if (!product) return
-    const sync = () => setReviews(getProductReviews(product.id))
-    sync()
-    window.addEventListener(USER_DATA_EVENT, sync)
-    return () => window.removeEventListener(USER_DATA_EVENT, sync)
+    let cancelled = false
+    void fetchProductReviewsRemote(product.id).then((rows) => {
+      if (!cancelled) setReviews(rows)
+    })
+    return () => { cancelled = true }
   }, [product?.id])
 
   useEffect(() => {
@@ -188,6 +203,31 @@ export default function ProductPage() {
 
           <p className="product-page__eyebrow">{t('ui.productPage.overview')}</p>
           <h1 className="product-page__title">{productTitle}</h1>
+
+          {reviews.length > 0 && (() => {
+            // Compact aggregate rating badge — gives shoppers an at-a-glance
+            // signal before they scroll to read individual reviews.
+            const avg = reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length
+            return (
+              <button
+                type="button"
+                className="product-page__rating"
+                onClick={() => setActiveTab('reviews')}
+                title={t('ui.productPage.ratingTooltip')}
+              >
+                <span className="product-page__rating-stars" aria-hidden="true">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <span key={n} className={n <= Math.round(avg) ? 'star star--filled' : 'star'}>★</span>
+                  ))}
+                </span>
+                <span className="product-page__rating-value">{avg.toFixed(1)}</span>
+                <span className="product-page__rating-count">
+                  · {reviews.length}&nbsp;{t('ui.productPage.reviewsCount', { count: reviews.length })}
+                </span>
+              </button>
+            )
+          })()}
+
           <p className="product-page__lead">{productDescription}</p>
 
           <div className="product-page__meta-grid">
@@ -359,23 +399,33 @@ export default function ProductPage() {
               {user && hasPurchased ? (
                 <form
                   className="product-reviews__form"
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault()
                     setReviewError('')
                     const text = reviewText.trim()
                     if (text.length < 3) { setReviewError(t('ui.productPage.reviewTooShort')); return }
-                    addReview(user.email, {
-                      id: `r-${Date.now()}`,
-                      createdAt: Date.now(),
-                      productId: product.id,
-                      productTitle: productTitle,
-                      rating: reviewRating,
-                      text,
-                      authorName: user.firstName || user.name,
-                      authorEmail: user.email,
-                    })
-                    setReviewText('')
-                    setReviewRating(5)
+                    try {
+                      const created = await createReviewRemote({
+                        productId: product.id,
+                        email: user.email,
+                        rating: reviewRating,
+                        text,
+                        authorName: user.firstName || user.name,
+                        photos: reviewPhotos,
+                      })
+                      // Optimistic insert at the top of the list.
+                      setReviews((prev) => [created, ...prev])
+                      setReviewText('')
+                      setReviewRating(5)
+                      setReviewPhotos([])
+                    } catch (err) {
+                      const raw = err instanceof Error ? err.message : 'failed'
+                      if (/table_not_found/.test(raw)) {
+                        setReviewError(t('ui.productPage.reviewBackendMissing'))
+                      } else {
+                        setReviewError(raw)
+                      }
+                    }
                   }}
                 >
                   <div className="product-reviews__form-row">
@@ -402,8 +452,59 @@ export default function ProductPage() {
                     value={reviewText}
                     onChange={(e) => setReviewText(e.target.value)}
                   />
+
+                  {/* Photos uploader. Resizes each to ~1024px JPEG before
+                      stashing as a data URL so localStorage stays bounded.
+                      Capped at 6 photos per review. */}
+                  <div className="product-reviews__photos">
+                    {reviewPhotos.map((src, i) => (
+                      <div key={i} className="product-reviews__photo">
+                        <img src={src} alt="" />
+                        <button
+                          type="button"
+                          className="product-reviews__photo-remove"
+                          onClick={() => setReviewPhotos((prev) => prev.filter((_, idx) => idx !== i))}
+                          aria-label="remove photo"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    {reviewPhotos.length < 6 && (
+                      <label className={`product-reviews__photo-add ${reviewUploading ? 'product-reviews__photo-add--busy' : ''}`.trim()}>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          style={{ display: 'none' }}
+                          onChange={async (e) => {
+                            const files = Array.from(e.target.files ?? [])
+                            if (files.length === 0) return
+                            setReviewUploading(true)
+                            try {
+                              const slots = 6 - reviewPhotos.length
+                              const accepted = files.slice(0, slots)
+                              const out: string[] = []
+                              for (const f of accepted) {
+                                if (f.size > 12 * 1024 * 1024) continue
+                                try {
+                                  out.push(await resizeImageToDataUrl(f, { maxSize: 1024, quality: 0.82, mimeType: 'image/jpeg' }))
+                                } catch { /* skip unreadable */ }
+                              }
+                              if (out.length > 0) setReviewPhotos((prev) => [...prev, ...out])
+                            } finally {
+                              setReviewUploading(false)
+                            }
+                            e.target.value = ''
+                          }}
+                        />
+                        {reviewUploading ? '...' : `+ ${t('ui.productPage.reviewAddPhoto')}`}
+                      </label>
+                    )}
+                  </div>
+
                   {reviewError && <p className="product-reviews__error">{reviewError}</p>}
-                  <button type="submit" className="cta-btn">{t('ui.productPage.reviewSubmit')}</button>
+                  <button type="submit" className="cta-btn" disabled={reviewUploading}>{t('ui.productPage.reviewSubmit')}</button>
                 </form>
               ) : !user ? (
                 <p className="product-reviews__login-hint">{t('ui.productPage.reviewLoginHint')}</p>
@@ -423,15 +524,41 @@ export default function ProductPage() {
                             <span key={n} className={`product-reviews__star ${n <= r.rating ? 'product-reviews__star--filled' : ''}`}>★</span>
                           ))}
                         </div>
-                        <span className="product-reviews__author">— {r.authorName || (r.authorEmail ? r.authorEmail.split('@')[0] : '')}</span>
-                        <span className="product-reviews__date">{new Date(r.createdAt).toLocaleDateString()}</span>
-                        {user && r.authorEmail === user.email && (
-                          <button type="button" className="product-reviews__remove" onClick={() => removeReview(user.email, r.id)}>
+                        <span className="product-reviews__author">— {r.author_name || (r.author_email ? r.author_email.split('@')[0] : '')}</span>
+                        <span className="product-reviews__date">{new Date(r.created_at).toLocaleDateString()}</span>
+                        {user && r.author_email === user.email && (
+                          <button
+                            type="button"
+                            className="product-reviews__remove"
+                            onClick={async () => {
+                              try {
+                                await deleteReviewRemote(r.id, user.email)
+                                setReviews((prev) => prev.filter((x) => x.id !== r.id))
+                              } catch (err) {
+                                setReviewError(err instanceof Error ? err.message : 'failed')
+                              }
+                            }}
+                          >
                             {t('ui.productPage.reviewDelete')}
                           </button>
                         )}
                       </div>
                       <p className="product-reviews__text">{r.text}</p>
+                      {r.photos && r.photos.length > 0 && (
+                        <div className="product-reviews__photos product-reviews__photos--shown">
+                          {r.photos.map((src, i) => (
+                            <a
+                              key={i}
+                              href={src}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="product-reviews__photo product-reviews__photo--shown"
+                            >
+                              <img src={src} alt="" loading="lazy" />
+                            </a>
+                          ))}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>

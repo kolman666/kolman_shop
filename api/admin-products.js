@@ -139,7 +139,12 @@ export default async function handler(req, res) {
 
   // CREATE
   if (req.method === 'POST') {
-    const { brand, title, description, price, image, gallery, availability, category_key, specs, variant_groups, is_featured, quantity } = req.body ?? {}
+    const {
+      brand, title, description, price, image, gallery, availability, category_key, specs, variant_groups, is_featured, quantity,
+      // Used-marketplace fields. is_used flips the product into the
+      // /used catalog; the rest describe the second-hand condition.
+      is_used, condition, defects, original_price,
+    } = req.body ?? {}
 
     if (!brand || !title || price === undefined) {
       return res.status(400).json({ error: 'brand, title, and price are required' })
@@ -151,11 +156,47 @@ export default async function handler(req, res) {
 
     const slug = slugify(brand ?? '', title ?? '') + '-' + Date.now()
 
-    const { data, error } = await supabase
+    const insertRow = {
+      slug,
+      brand,
+      title,
+      description,
+      price,
+      image,
+      gallery: gallery ?? [],
+      availability,
+      category_key,
+      specs: specs ?? [],
+      variant_groups: normalizedVariantGroups,
+      is_featured: is_featured ?? false,
+      quantity: quantity ?? 0,
+      // Optional used-marketplace fields — only set when admin opted in.
+      ...(is_used !== undefined ? { is_used: !!is_used } : {}),
+      ...(typeof condition === 'string' ? { condition: condition.slice(0, 80) } : {}),
+      ...(typeof defects === 'string' ? { defects: defects.slice(0, 600) } : {}),
+      ...(typeof original_price === 'number' && Number.isFinite(original_price)
+        ? { original_price }
+        : {}),
+    }
+
+    let { data, error } = await supabase
       .from('admin_products')
-      .insert([{ slug, brand, title, description, price, image, gallery: gallery ?? [], availability, category_key, specs: specs ?? [], variant_groups: normalizedVariantGroups, is_featured: is_featured ?? false, quantity: quantity ?? 0 }])
+      .insert([insertRow])
       .select()
       .single()
+
+    // Pre-migration deployments may not have the new columns yet — retry
+    // without them so existing shops keep accepting products.
+    if (error && /is_used|condition|defects|original_price/i.test(error.message)) {
+      const fallback = { ...insertRow }
+      delete fallback.is_used
+      delete fallback.condition
+      delete fallback.defects
+      delete fallback.original_price
+      const retry = await supabase.from('admin_products').insert([fallback]).select().single()
+      data = retry.data
+      error = retry.error
+    }
 
     if (error) return res.status(500).json({ error: error.message })
     return res.status(201).json(data)
@@ -166,7 +207,7 @@ export default async function handler(req, res) {
     const { id, ...updates } = req.body ?? {}
     if (!id || typeof id !== 'number') return res.status(400).json({ error: 'missing or invalid id' })
 
-    const allowedFields = ['brand', 'title', 'description', 'price', 'image', 'gallery', 'availability', 'category_key', 'specs', 'variant_groups', 'is_featured', 'quantity']
+    const allowedFields = ['brand', 'title', 'description', 'price', 'image', 'gallery', 'availability', 'category_key', 'specs', 'variant_groups', 'is_featured', 'quantity', 'is_used', 'condition', 'defects', 'original_price']
     const safeUpdates = Object.fromEntries(
       Object.entries(updates).filter(([k]) => allowedFields.includes(k))
     )

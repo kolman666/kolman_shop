@@ -94,7 +94,10 @@ export default function CatalogPage() {
   const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const [filters, dispatchFilters] = useReducer(catalogFilterReducer, DEFAULT_FILTER_STATE)
-  const { products } = useProducts()
+  const { products: allProducts } = useProducts()
+  // The main /catalog only shows brand-new items. Used products are listed
+  // separately in /used so condition expectations don't get mixed up.
+  const products = useMemo(() => allProducts.filter((p) => !p.isUsed), [allProducts])
   const { activeCategory, selectedBrand, selectedPrice, sortBy, featuredOnly, inStockOnly, query, page } = filters
   const deferredQuery = useDeferredValue(query)
   const pageSize = 6
