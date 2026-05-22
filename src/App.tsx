@@ -9,7 +9,6 @@ import BrandSpotlight from './components/BrandSpotlight'
 import BloggersBlock from './components/BloggersBlock'
 import NewsBlock from './components/NewsBlock'
 import AuthModal from './components/AuthModal'
-import ThemeToggle from './components/ThemeToggle'
 import { AUTH_EVENT, getUser, refreshUser, type User } from './lib/auth'
 import ProfilePage from './pages/ProfilePage'
 import { fetchSiteContent, fetchSiteContentLocalized } from './lib/siteContent'
@@ -468,7 +467,7 @@ function HomePage() {
               </button>
             </div>
 
-            <ThemeToggle />
+            {/* ThemeToggle temporarily removed — light theme is being redone */}
 
             <button type="button" className="icon-button" aria-label="cart" onClick={() => setIsCartOpen(true)}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">

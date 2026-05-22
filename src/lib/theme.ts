@@ -1,52 +1,36 @@
-// Theme switching lives in the DOM (data-theme attribute on <html>) so a
-// single CSS variable block in App.css covers every component. Preference is
-// persisted in localStorage and falls back to the OS preference on first
-// visit.
+// TEMP: light theme is disabled while it gets redone from scratch. Everything
+// here is forced to `dark`. The module is kept (rather than ripped out) so the
+// upcoming redesign pass can re-enable switching without re-plumbing imports
+// across the app — ThemeToggle still consumes THEME_EVENT, getTheme, etc.
 
 export type Theme = 'dark' | 'light'
 const STORAGE_KEY = 'kolman-theme'
 export const THEME_EVENT = 'theme:update'
 
-function readStored(): Theme | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const v = localStorage.getItem(STORAGE_KEY)
-    if (v === 'light' || v === 'dark') return v
-  } catch { /* ignore */ }
-  return null
-}
-
-function osPreference(): Theme {
-  if (typeof window === 'undefined') return 'dark'
-  try {
-    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
-  } catch {
-    return 'dark'
-  }
-}
-
 export function getTheme(): Theme {
-  return readStored() ?? osPreference()
+  return 'dark'
 }
 
-export function applyTheme(theme: Theme) {
+export function applyTheme(_theme: Theme) {
   if (typeof document === 'undefined') return
-  document.documentElement.dataset.theme = theme
+  document.documentElement.dataset.theme = 'dark'
 }
 
-export function setTheme(theme: Theme) {
+export function setTheme(_theme: Theme) {
   if (typeof window === 'undefined') return
-  try { localStorage.setItem(STORAGE_KEY, theme) } catch { /* ignore */ }
-  applyTheme(theme)
+  try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
+  applyTheme('dark')
   window.dispatchEvent(new Event(THEME_EVENT))
 }
 
 export function toggleTheme() {
-  setTheme(getTheme() === 'light' ? 'dark' : 'light')
+  // no-op while light theme is disabled
+  setTheme('dark')
 }
 
-// Eager init: as early as possible to avoid a flash of wrong theme on
-// first paint. Called from main.tsx.
+// Eager init: wipes any previously stored `light` preference (so returning
+// users don't see the broken light skin) and forces dark before React mounts.
 export function initTheme() {
-  applyTheme(getTheme())
+  try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
+  applyTheme('dark')
 }

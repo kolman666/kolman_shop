@@ -6,7 +6,6 @@ import { getCartCount } from '../lib/cart'
 import CartDrawer from './CartDrawer'
 import SearchDropdown, { type SearchSection } from './SearchDropdown'
 import AuthModal from './AuthModal'
-import ThemeToggle from './ThemeToggle'
 import { fetchSiteContent } from '../lib/siteContent'
 
 type SiteChromeContent = {
@@ -272,7 +271,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
               </button>
             </div>
 
-            <ThemeToggle />
+            {/* ThemeToggle temporarily removed — light theme is being redone */}
 
             <button type="button" className="icon-button" aria-label="cart" onClick={() => setIsCartOpen(true)}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
