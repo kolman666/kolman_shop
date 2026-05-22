@@ -163,6 +163,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       // Try the new orders endpoint first (stores in DB + sends to Telegram).
       // Fall back to plain telegram if the orders endpoint isn't deployed yet.
       try {
+        const submitterAtSend = getUser()
         const res = await fetch('/api/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -173,6 +174,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             contact,
             delivery,
             comment,
+            // Include the logged-in user's email so the order appears in their
+            // profile (server filters by `customer_email`).
+            user_email: submitterAtSend?.email,
             telegram_text: msg,
           }),
         })

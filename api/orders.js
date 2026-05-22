@@ -104,20 +104,38 @@ export default async function handler(req, res) {
     if (!contact) return res.status(400).json({ error: 'contact is required' })
     const delivery = s(body.delivery, 200)
     const comment = s(body.comment, 1000)
+    // Optional: when the buyer is logged in, the client sends their account
+    // email so we can later show orders in their profile (`/api/orders?my=<email>`).
+    // Validated as a normal email, stored in the dedicated `customer_email` column.
+    const userEmail = s(body.user_email, 200).toLowerCase()
+    const emailLooksValid = userEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)
 
-    const { data, error } = await supabase
+    const insertRow = {
+      status: 'new',
+      customer_name: name,
+      customer_contact: contact,
+      delivery,
+      comment,
+      total,
+      items: safeItems,
+      ...(emailLooksValid ? { customer_email: userEmail } : {}),
+    }
+
+    let { data, error } = await supabase
       .from('orders')
-      .insert([{
-        status: 'new',
-        customer_name: name,
-        customer_contact: contact,
-        delivery,
-        comment,
-        total,
-        items: safeItems,
-      }])
+      .insert([insertRow])
       .select()
       .single()
+
+    // If the customer_email column doesn't exist yet (pre-migration), retry
+    // without it so existing deployments keep working.
+    if (error && emailLooksValid && /customer_email/i.test(error.message)) {
+      const fallback = { ...insertRow }
+      delete fallback.customer_email
+      const retry = await supabase.from('orders').insert([fallback]).select().single()
+      data = retry.data
+      error = retry.error
+    }
 
     if (error) {
       const isTableMissing = error.message.includes('does not exist') || error.code === '42P01'
@@ -140,6 +158,37 @@ export default async function handler(req, res) {
     ]
     const tg = await notifyTelegram(lines.join('\n'))
     return res.status(201).json({ id: data.id, telegram: tg })
+  }
+
+  // ── "My orders" — public endpoint guarded by rate limit ────────────────
+  //
+  // Returns only orders where the stored `customer_email` matches the email
+  // passed by the client. This is NOT strongly authenticated: anyone who
+  // knows another customer's email can enumerate their orders. Acceptable
+  // for an MVP storefront with localStorage-only client auth; before going
+  // to production behind a real domain you should:
+  //   1. Replace this with a server session (e.g. Supabase Auth) and verify
+  //      that the requesting user owns the email.
+  //   2. Remove this branch.
+  if (req.method === 'GET' && typeof req.query.my === 'string' && req.query.my.length > 0) {
+    const ip = getIp(req)
+    if (rateLimited(ip)) return res.status(429).json({ error: 'too many requests' })
+    const email = String(req.query.my).trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
+      return res.status(400).json({ error: 'invalid email' })
+    }
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, status, total, items, delivery, comment, created_at')
+      .eq('customer_email', email)
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (error) {
+      const missing = error.message.includes('does not exist') || error.code === '42P01' || /customer_email/i.test(error.message)
+      if (missing) return res.status(200).json([]) // pre-migration deployment — silently empty
+      return res.status(500).json({ error: error.message })
+    }
+    return res.status(200).json(data ?? [])
   }
 
   // From here on — admin only

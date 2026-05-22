@@ -76,6 +76,7 @@ async function submitInquiry(fields: {
   name: string
   contact: string
   message: string
+  userEmail?: string
 }) {
   const typeLabel = TELEGRAM_LABELS[fields.requestType]
   const safeName = escapeHtml(fields.name.slice(0, 200))
@@ -102,6 +103,7 @@ async function submitInquiry(fields: {
         name: fields.name,
         contact: fields.contact,
         message: fields.message,
+        user_email: fields.userEmail,
         telegram_text: text,
       }),
     })
@@ -154,7 +156,7 @@ export default function SupportPage() {
     if (!message.trim()) return
     dispatch({ type: 'submitStart' })
     try {
-      await submitInquiry({ requestType, name, contact, message })
+      await submitInquiry({ requestType, name, contact, message, userEmail: getUser()?.email })
       dispatch({ type: 'submitSuccess' })
     } catch (err) {
       dispatch({ type: 'submitError', detail: err instanceof TelegramSendError ? err.detail || err.message || '' : '' })

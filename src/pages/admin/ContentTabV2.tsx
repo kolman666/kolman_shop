@@ -412,30 +412,70 @@ function SelectField({ label, value, options, onChange }: { label: string; value
   )
 }
 
-// ── Inline previews (approximate, no full layout chrome) ──
+// ── Real hero preview (uses actual .hero-card CSS so admin sees what the
+//    homepage will render). Renders the current slide with prev/next arrows
+//    so the admin can step through all of them. ──
 function HeroPreview({ slides }: { slides: HeroSlide[] }) {
-  if (slides.length === 0) return <p style={{ padding: 40, color: 'var(--color-text-dim)' }}>Слайды не добавлены.</p>
+  const [current, setCurrent] = useState(0)
+  if (slides.length === 0) {
+    return <p style={{ padding: 40, color: 'var(--color-text-dim)' }}>Слайды не добавлены.</p>
+  }
+  const idx = current % slides.length
+  const slide = slides[idx]
   return (
-    <div style={{ padding: 32 }}>
-      {slides.map((s, i) => (
-        <div key={i} style={{
-          position: 'relative',
-          minHeight: 240,
-          marginBottom: 16,
-          padding: 32,
-          borderRadius: 30,
-          border: '1px solid var(--color-border)',
-          backgroundImage: s.image ? `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url("${s.image}")` : undefined,
-          backgroundColor: s.image ? undefined : 'var(--color-bg-elevated)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}>
-          {s.tag && <span style={{ display: 'inline-block', padding: '4px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.16)', fontSize: 11, fontWeight: 700, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{s.tag}</span>}
-          <h2 style={{ margin: '12px 0 8px', fontFamily: 'var(--font-display)', fontSize: 36, letterSpacing: '-0.03em', color: 'var(--color-text)' }}>{s.title}</h2>
-          <p style={{ margin: '0 0 6px', color: 'var(--color-text-soft)', fontSize: 15 }}>{s.subtitle}</p>
-          <p style={{ margin: 0, color: 'var(--color-main)', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>{s.accent}</p>
+    <div style={{ padding: 24 }}>
+      <div className="hero-card" style={{ minHeight: 420 }}>
+        {slide.image && (
+          <div className="hero-card__image" style={{ backgroundImage: `url("${slide.image}")` }} />
+        )}
+        <div className="hero-card__overlay" />
+        <div className="hero-card__accent" />
+        <div className="hero-card__content">
+          <div key={idx} className="hero-card__copy">
+            {slide.tag && <span className="hero-tag">{slide.tag}</span>}
+            <h1 className="hero-title">{slide.title}</h1>
+            <p className="hero-subtitle">{slide.subtitle}</p>
+            <p className="hero-accent-text">{slide.accent}</p>
+          </div>
+          {slides.length > 1 && (
+            <div className="hero-dots" aria-label="slides navigation">
+              {slides.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={`dot ${i === idx ? 'active' : ''}`}
+                  onClick={() => setCurrent(i)}
+                  aria-label={`open slide ${i + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
-      ))}
+        {slides.length > 1 && (
+          <div className="hero-arrows">
+            <button
+              type="button"
+              className="slide-btn"
+              onClick={() => setCurrent((p) => (p - 1 + slides.length) % slides.length)}
+              aria-label="previous slide"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="slide-btn slide-btn--accent"
+              onClick={() => setCurrent((p) => (p + 1) % slides.length)}
+              aria-label="next slide"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

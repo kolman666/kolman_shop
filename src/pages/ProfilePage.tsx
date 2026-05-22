@@ -1,13 +1,14 @@
-import { useEffect, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { AUTH_EVENT, getUser, logout, updateProfile, type User } from '../lib/auth'
 import { FAVORITES_EVENT, getFavorites, removeFavorite } from '../lib/favorites'
-import { getOrders, getReviews, removeReview, USER_DATA_EVENT } from '../lib/userData'
+import { getOrders, getReviews, removeReview, USER_DATA_EVENT, type Order as LocalOrder } from '../lib/userData'
+import { fetchMyOrders, fetchMyInquiries, fetchChatMessages, sendChatMessage, type ChatMessage, type RemoteInquiry } from '../lib/customerInbox'
 import { useProducts } from '../hooks/useProducts'
 import { productPath } from '../lib/productRoute'
 
-type Tab = 'profile' | 'orders' | 'reviews' | 'favorites'
+type Tab = 'profile' | 'orders' | 'inquiries' | 'chat' | 'reviews' | 'favorites'
 
 export default function ProfilePage() {
   const { t } = useTranslation()
@@ -61,7 +62,7 @@ export default function ProfilePage() {
         </header>
 
         <nav className="profile-tabs" role="tablist">
-          {(['profile', 'orders', 'reviews', 'favorites'] as const).map((key) => (
+          {(['profile', 'orders', 'inquiries', 'chat', 'reviews', 'favorites'] as const).map((key) => (
             <button
               key={key}
               type="button"
@@ -77,6 +78,8 @@ export default function ProfilePage() {
 
         {tab === 'profile' && <ProfileForm user={user} />}
         {tab === 'orders' && <OrdersTab email={user.email} />}
+        {tab === 'inquiries' && <InquiriesTab email={user.email} />}
+        {tab === 'chat' && <ChatTab email={user.email} userName={user.firstName || user.name} />}
         {tab === 'reviews' && <ReviewsTab email={user.email} />}
         {tab === 'favorites' && <FavoritesTab />}
       </div>
@@ -192,10 +195,12 @@ function ProfileForm({ user }: { user: User }) {
 
 function OrdersTab({ email }: { email: string }) {
   const { t } = useTranslation()
-  const [orders, setOrders] = useState(() => getOrders(email))
+  const [localOrders, setLocalOrders] = useState<LocalOrder[]>(() => getOrders(email))
+  const [remoteOrders, setRemoteOrders] = useState<LocalOrder[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const sync = () => setOrders(getOrders(email))
+    const sync = () => setLocalOrders(getOrders(email))
     window.addEventListener(USER_DATA_EVENT, sync)
     window.addEventListener('storage', sync)
     return () => {
@@ -204,7 +209,32 @@ function OrdersTab({ email }: { email: string }) {
     }
   }, [email])
 
-  if (orders.length === 0) {
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    void fetchMyOrders(email).then((rows) => {
+      if (cancelled) return
+      // Adapt remote shape to the local Order type so the existing UI renders.
+      setRemoteOrders(rows.map<LocalOrder>((r) => ({
+        id: `remote-${r.id}`,
+        createdAt: new Date(r.created_at).getTime(),
+        total: r.total,
+        // Server orders use 'new' | 'in_progress' | 'done' | 'cancelled';
+        // map them onto the four UI buckets the profile already knows about.
+        status: r.status === 'new' ? 'pending' : r.status === 'in_progress' ? 'shipped' : r.status === 'done' ? 'delivered' : 'cancelled',
+        items: (r.items ?? []).map((it) => ({ productId: it.id ?? 0, title: it.title, qty: it.quantity, price: it.price })),
+      })))
+      setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [email])
+
+  // Prefer remote when both have the same time window — keeps statuses fresh.
+  const merged = [...remoteOrders, ...localOrders.filter((lo) => !remoteOrders.some((ro) => Math.abs(ro.createdAt - lo.createdAt) < 60_000 && ro.total === lo.total))]
+  merged.sort((a, b) => b.createdAt - a.createdAt)
+  const orders = merged
+
+  if (orders.length === 0 && !loading) {
     return (
       <div className="profile-empty">
         <p>{t('ui.profile.ordersEmpty')}</p>
@@ -346,6 +376,144 @@ function FavoritesTab() {
           </div>
         </article>
       ))}
+    </div>
+  )
+}
+
+function InquiriesTab({ email }: { email: string }) {
+  const { t } = useTranslation()
+  const [items, setItems] = useState<RemoteInquiry[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    void fetchMyInquiries(email).then((rows) => {
+      if (cancelled) return
+      setItems(rows)
+      setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [email])
+
+  if (loading && items.length === 0) {
+    return <div className="profile-empty"><p>{t('ui.profile.inquiriesLoading')}</p></div>
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="profile-empty">
+        <p>{t('ui.profile.inquiriesEmpty')}</p>
+        <Link to="/support" className="cta-btn" style={{ textDecoration: 'none' }}>
+          {t('ui.profile.openSupport')}
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <div className="profile-list">
+      {items.map((q) => (
+        <article key={q.id} className="profile-card">
+          <div className="profile-card__head">
+            <span className="profile-card__title">#{q.id} · {t(`ui.profile.inquiryCategory.${q.category}`)}</span>
+            <span className={`profile-status profile-status--${q.status === 'new' ? 'pending' : q.status === 'in_progress' ? 'shipped' : 'delivered'}`}>
+              {t(`ui.profile.inquiryStatus.${q.status}`)}
+            </span>
+          </div>
+          <p className="profile-card__meta">{new Date(q.created_at).toLocaleString('ru-RU')}</p>
+          <p className="profile-card__text">{q.message}</p>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function ChatTab({ email, userName }: { email: string; userName: string }) {
+  const { t } = useTranslation()
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [draft, setDraft] = useState('')
+  const [sending, setSending] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const listRef = useRef<HTMLDivElement>(null)
+
+  async function load() {
+    setLoading(true)
+    const rows = await fetchChatMessages(email)
+    setMessages(rows)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    void load()
+    // Poll every 8s while the tab is open — cheap, simple.
+    const t = window.setInterval(load, 8_000)
+    return () => window.clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email])
+
+  useEffect(() => {
+    if (!listRef.current) return
+    listRef.current.scrollTop = listRef.current.scrollHeight
+  }, [messages.length])
+
+  async function send(e: React.FormEvent) {
+    e.preventDefault()
+    const text = draft.trim()
+    if (!text) return
+    setSending(true)
+    setError('')
+    try {
+      const sent = await sendChatMessage(email, text)
+      setMessages((prev) => [...prev, sent])
+      setDraft('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'send failed')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="profile-chat">
+      <header className="profile-chat__head">
+        <h3>{t('ui.profile.chatTitle')}</h3>
+        <p className="profile-chat__meta">{t('ui.profile.chatMeta')}</p>
+      </header>
+      <div ref={listRef} className="profile-chat__list">
+        {loading && messages.length === 0 ? (
+          <p className="profile-chat__empty">{t('ui.profile.chatLoading')}</p>
+        ) : messages.length === 0 ? (
+          <p className="profile-chat__empty">{t('ui.profile.chatEmpty')}</p>
+        ) : (
+          messages.map((m) => (
+            <div key={m.id} className={`profile-chat__msg profile-chat__msg--${m.sender}`}>
+              <div className="profile-chat__bubble">
+                <span className="profile-chat__sender">
+                  {m.sender === 'user' ? userName : t('ui.profile.chatAdmin')}
+                </span>
+                <p>{m.body}</p>
+                <time>{new Date(m.created_at).toLocaleString('ru-RU')}</time>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+      <form className="profile-chat__form" onSubmit={(e) => { void send(e) }}>
+        <textarea
+          className="profile-chat__input"
+          rows={2}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={t('ui.profile.chatPlaceholder')}
+          disabled={sending}
+        />
+        <button type="submit" className="cta-btn" disabled={sending || !draft.trim()}>
+          {sending ? t('ui.profile.chatSending') : t('ui.profile.chatSend')}
+        </button>
+      </form>
+      {error && <p className="profile-chat__error">{error}</p>}
     </div>
   )
 }

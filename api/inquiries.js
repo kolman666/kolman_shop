@@ -96,20 +96,34 @@ export default async function handler(req, res) {
     const name = s(body.name, 200)
     const contact = s(body.contact, 200)
     const message = s(body.message, 4000)
+    const userEmail = s(body.user_email, 200).toLowerCase()
+    const emailLooksValid = userEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)
 
     if (!message) return res.status(400).json({ error: 'message is required' })
 
-    const { data, error } = await supabase
+    const insertRow = {
+      category,
+      status: 'new',
+      customer_name: name,
+      customer_contact: contact,
+      message,
+      ...(emailLooksValid ? { customer_email: userEmail } : {}),
+    }
+
+    let { data, error } = await supabase
       .from('inquiries')
-      .insert([{
-        category,
-        status: 'new',
-        customer_name: name,
-        customer_contact: contact,
-        message,
-      }])
+      .insert([insertRow])
       .select()
       .single()
+
+    // Retry without customer_email when the column is missing (pre-migration).
+    if (error && emailLooksValid && /customer_email/i.test(error.message)) {
+      const fallback = { ...insertRow }
+      delete fallback.customer_email
+      const retry = await supabase.from('inquiries').insert([fallback]).select().single()
+      data = retry.data
+      error = retry.error
+    }
 
     if (error) {
       const isTableMissing = error.message.includes('does not exist') || error.code === '42P01'
@@ -129,6 +143,31 @@ export default async function handler(req, res) {
     ].join('\n')
     const tg = await notifyTelegram(tgText)
     return res.status(201).json({ id: data.id, telegram: tg })
+  }
+
+  // ── "My inquiries" — public endpoint guarded by rate limit ─────────────
+  // Same caveat as /api/orders?my=…: returns rows where customer_email
+  // matches. Rate-limited per IP. Replace with real session auth before
+  // production.
+  if (req.method === 'GET' && typeof req.query.my === 'string' && req.query.my.length > 0) {
+    const ip = getIp(req)
+    if (rateLimited(ip)) return res.status(429).json({ error: 'too many requests' })
+    const email = String(req.query.my).trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
+      return res.status(400).json({ error: 'invalid email' })
+    }
+    const { data, error } = await supabase
+      .from('inquiries')
+      .select('id, status, category, message, created_at')
+      .eq('customer_email', email)
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (error) {
+      const missing = error.message.includes('does not exist') || error.code === '42P01' || /customer_email/i.test(error.message)
+      if (missing) return res.status(200).json([])
+      return res.status(500).json({ error: error.message })
+    }
+    return res.status(200).json(data ?? [])
   }
 
   if (!isAuthorized(req)) return res.status(401).json({ error: 'unauthorized' })

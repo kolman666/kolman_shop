@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import type { Product, VariantGroup } from '../data/products'
 import { useProducts } from '../hooks/useProducts'
@@ -37,6 +37,7 @@ import {
   type InquiryStatus,
   type InquiryCategory,
 } from '../lib/adminInbox'
+import { adminFetchMessages, adminReply, type ChatMessage } from '../lib/customerInbox'
 
 const CATEGORIES = [
   { key: 'products.categories.mice', label: 'Мышки' },
@@ -211,7 +212,7 @@ export default function AdminPage() {
   return <AdminPanel onLogout={() => { clearAdminSecret(); setAuthStatus('guest') }} />
 }
 
-type AdminTab = 'products' | 'content' | 'pages' | 'orders' | 'inquiries' | 'bloggers'
+type AdminTab = 'products' | 'content' | 'pages' | 'orders' | 'inquiries' | 'chat' | 'bloggers'
 
 // ── Admin panel inner ─────────────────────────────────────────────────────────
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
@@ -411,6 +412,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         <button type="button" className={`admin__tab-btn${activeTab === 'inquiries' ? ' active' : ''}`} onClick={() => setActiveTab('inquiries')}>
           Заявки
         </button>
+        <button type="button" className={`admin__tab-btn${activeTab === 'chat' ? ' active' : ''}`} onClick={() => setActiveTab('chat')}>
+          Чат
+        </button>
         <button type="button" className={`admin__tab-btn${activeTab === 'bloggers' ? ' active' : ''}`} onClick={() => setActiveTab('bloggers')}>
           Блогеры
         </button>
@@ -420,6 +424,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       {activeTab === 'pages' && <PagesTabV2 />}
       {activeTab === 'orders' && <OrdersTab />}
       {activeTab === 'inquiries' && <InquiriesTab />}
+      {activeTab === 'chat' && <ChatTab />}
       {activeTab === 'bloggers' && <BloggersTab allProducts={allProducts} />}
 
       {activeTab === 'products' && (
@@ -892,23 +897,37 @@ CREATE TABLE IF NOT EXISTS orders (
   status TEXT NOT NULL DEFAULT 'new',
   customer_name TEXT NOT NULL DEFAULT '',
   customer_contact TEXT NOT NULL DEFAULT '',
+  customer_email TEXT NOT NULL DEFAULT '',
   delivery TEXT NOT NULL DEFAULT '',
   comment TEXT NOT NULL DEFAULT '',
   total INTEGER NOT NULL DEFAULT 0,
   items JSONB NOT NULL DEFAULT '[]',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS orders_status_idx ON orders(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS orders_email_idx ON orders(customer_email, created_at DESC);
 CREATE TABLE IF NOT EXISTS inquiries (
   id BIGSERIAL PRIMARY KEY,
   category TEXT NOT NULL DEFAULT 'other',
   status TEXT NOT NULL DEFAULT 'new',
   customer_name TEXT NOT NULL DEFAULT '',
   customer_contact TEXT NOT NULL DEFAULT '',
+  customer_email TEXT NOT NULL DEFAULT '',
   message TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS inquiries_category_idx ON inquiries(category, created_at DESC);`
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS customer_email TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS inquiries_category_idx ON inquiries(category, created_at DESC);
+CREATE INDEX IF NOT EXISTS inquiries_email_idx ON inquiries(customer_email, created_at DESC);
+CREATE TABLE IF NOT EXISTS messages (
+  id BIGSERIAL PRIMARY KEY,
+  thread_email TEXT NOT NULL,
+  sender TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS messages_thread_idx ON messages(thread_email, created_at);`
 
 function MigrationNotice() {
   const [copied, setCopied] = useState(false)
@@ -1517,3 +1536,196 @@ function InquiriesTab() {
   )
 }
 
+
+// ── Chat tab ──────────────────────────────────────────────────────────────────
+// Lists customer chat threads (one per email) on the left, opens a conversation
+// pane on the right. Admin replies are stored with sender='admin'; the customer
+// sees them in their /profile → чат tab. Both sides poll the API every 8s.
+type ThreadRow = { email: string; lastBody: string; lastAt: string; unread: number }
+
+function ChatTab() {
+  const [threads, setThreads] = useState<ThreadRow[]>([])
+  const [active, setActive] = useState<string | null>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [draft, setDraft] = useState('')
+  const [loadingThreads, setLoadingThreads] = useState(true)
+  const [loadingMessages, setLoadingMessages] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+  const [filter, setFilter] = useState('')
+  const listRef = useRef<HTMLDivElement>(null)
+
+  // Derive threads from the list of inquiries and orders — both have
+  // `customer_email`. The admin chat endpoint stores messages keyed by email,
+  // so seeing every email that ever wrote in gives us the thread list.
+  async function loadThreads() {
+    setLoadingThreads(true)
+    setError('')
+    try {
+      const secret = sessionStorage.getItem('admin_secret') ?? ''
+      const headers = { 'X-Admin-Secret': secret }
+      const [inqRes, ordRes] = await Promise.all([
+        fetch('/api/inquiries?limit=200', { headers }),
+        fetch('/api/orders?limit=200', { headers }),
+      ])
+      const inqJson = inqRes.ok ? await inqRes.json() : []
+      const ordJson = ordRes.ok ? await ordRes.json() : []
+      const map = new Map<string, ThreadRow>()
+      for (const row of [...inqJson, ...ordJson]) {
+        const email = (row.customer_email ?? '').trim().toLowerCase()
+        if (!email) continue
+        const lastAt = row.created_at ?? ''
+        const lastBody = row.message ?? (row.comment ?? '')
+        const existing = map.get(email)
+        if (!existing || new Date(lastAt) > new Date(existing.lastAt)) {
+          map.set(email, { email, lastBody, lastAt, unread: 0 })
+        }
+      }
+      const list = Array.from(map.values()).sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime())
+      setThreads(list)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'failed')
+    } finally {
+      setLoadingThreads(false)
+    }
+  }
+
+  async function loadMessages(email: string) {
+    setLoadingMessages(true)
+    try {
+      const rows = await adminFetchMessages(email)
+      setMessages(rows)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'failed')
+    } finally {
+      setLoadingMessages(false)
+    }
+  }
+
+  useEffect(() => { void loadThreads() }, [])
+
+  useEffect(() => {
+    if (!active) return
+    void loadMessages(active)
+    const t = window.setInterval(() => { void loadMessages(active) }, 8_000)
+    return () => window.clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active])
+
+  useEffect(() => {
+    if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
+  }, [messages.length])
+
+  async function send(e: React.FormEvent) {
+    e.preventDefault()
+    if (!active) return
+    const text = draft.trim()
+    if (!text) return
+    setSending(true)
+    setError('')
+    try {
+      const sent = await adminReply(active, text)
+      setMessages((prev) => [...prev, sent])
+      setDraft('')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'failed')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const filteredThreads = filter.trim()
+    ? threads.filter((th) => th.email.includes(filter.toLowerCase()))
+    : threads
+
+  return (
+    <div className="admin__content-tab">
+      <div className="admin__chat">
+        <aside className="admin__chat-list">
+          <div className="admin__chat-list-head">
+            <h2 className="admin__content-title" style={{ margin: 0 }}>Чаты</h2>
+            <button type="button" className="accordion__btn" onClick={() => void loadThreads()} disabled={loadingThreads}>
+              {loadingThreads ? '...' : 'Обновить'}
+            </button>
+          </div>
+          <input
+            className="admin__input"
+            placeholder="поиск по email"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+          {filteredThreads.length === 0 ? (
+            <p className="admin__empty-text" style={{ padding: 12 }}>{loadingThreads ? 'Загрузка...' : 'Чатов пока нет'}</p>
+          ) : (
+            <ul className="admin__chat-threads">
+              {filteredThreads.map((th) => (
+                <li key={th.email}>
+                  <button
+                    type="button"
+                    className={`admin__chat-thread ${active === th.email ? 'admin__chat-thread--active' : ''}`.trim()}
+                    onClick={() => setActive(th.email)}
+                  >
+                    <span className="admin__chat-thread-email">{th.email}</span>
+                    <span className="admin__chat-thread-time">{new Date(th.lastAt).toLocaleString('ru-RU')}</span>
+                    {th.lastBody && <span className="admin__chat-thread-snip">{th.lastBody.slice(0, 80)}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+
+        <section className="admin__chat-conversation">
+          {!active ? (
+            <div className="admin__content-empty" style={{ padding: 60 }}>
+              <p className="admin__empty-text">Выберите клиента слева, чтобы открыть переписку</p>
+            </div>
+          ) : (
+            <>
+              <header className="admin__chat-head">
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 15, color: 'var(--color-text)' }}>{active}</h3>
+                  <p className="admin__label-hint" style={{ margin: '4px 0 0' }}>
+                    клиент видит этот чат у себя в Личном кабинете → «Чат с поддержкой»
+                  </p>
+                </div>
+              </header>
+              <div ref={listRef} className="admin__chat-messages">
+                {loadingMessages && messages.length === 0 ? (
+                  <p className="profile-chat__empty">Загрузка...</p>
+                ) : messages.length === 0 ? (
+                  <p className="profile-chat__empty">Это новая переписка — напишите клиенту первым.</p>
+                ) : (
+                  messages.map((m) => (
+                    <div key={m.id} className={`profile-chat__msg profile-chat__msg--${m.sender}`}>
+                      <div className="profile-chat__bubble">
+                        <span className="profile-chat__sender">{m.sender === 'admin' ? 'вы (поддержка)' : active}</span>
+                        <p>{m.body}</p>
+                        <time>{new Date(m.created_at).toLocaleString('ru-RU')}</time>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <form className="admin__chat-form" onSubmit={(e) => { void send(e) }}>
+                <textarea
+                  className="admin__input"
+                  rows={2}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder="ваш ответ клиенту..."
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                  disabled={sending}
+                />
+                <button type="submit" className="admin__save-btn" disabled={sending || !draft.trim()}>
+                  {sending ? 'Отправляем...' : 'Отправить'}
+                </button>
+              </form>
+              {error && <p style={{ color: 'var(--color-main)', fontSize: 13 }}>{error}</p>}
+            </>
+          )}
+        </section>
+      </div>
+    </div>
+  )
+}
