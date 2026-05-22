@@ -53,6 +53,13 @@ type Perk = PerkText & {
   icon: ReactNode
 }
 
+type HomepageBrandSpotlight = {
+  brandSlug: string
+  brandLabel: string
+  bannerImage: string
+  bannerUrl?: string
+  buttonText?: string
+}
 
 type FeaturedProduct = {
   id: number
@@ -257,6 +264,7 @@ function HomePage() {
   const [dbCategories, setDbCategories] = useState<Array<{ catalogKey: string; title: string; image: string }> | null>(null)
   const [dbPerks, setDbPerks] = useState<Array<{ title: string; desc: string }> | null>(null)
   const [dbBrandLogos, setDbBrandLogos] = useState<Array<{ name: string; slug?: string; image: string; url?: string }> | null>(null)
+  const [dbBrandSpotlight, setDbBrandSpotlight] = useState<HomepageBrandSpotlight | null>(null)
   const { products } = useProducts()
   const chatNotifications = useCustomerChatNotifications(currentUser?.email)
 
@@ -278,6 +286,9 @@ function HomePage() {
     })
     fetchSiteContent<Array<{ name: string; slug?: string; image: string; url?: string }>>('brand_logos').then((result) => {
       if (!result.error && result.data && result.data.length > 0) setDbBrandLogos(result.data)
+    })
+    fetchSiteContent<HomepageBrandSpotlight>('homepage_brand_spotlight').then((result) => {
+      if (!result.error && result.data && result.data.brandSlug) setDbBrandSpotlight(result.data)
     })
   }, [i18n.language])
 
@@ -727,9 +738,11 @@ function HomePage() {
 
       <BrandSpotlight
         products={products}
-        brandSlug="wlmouse"
-        brandLabel="wlmouse"
-        bannerImage="https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1400&q=80"
+        brandSlug={dbBrandSpotlight?.brandSlug ?? 'wlmouse'}
+        brandLabel={dbBrandSpotlight?.brandLabel ?? 'wlmouse'}
+        bannerImage={dbBrandSpotlight?.bannerImage ?? 'https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1400&q=80'}
+        bannerUrl={dbBrandSpotlight?.bannerUrl ?? '/brand/wlmouse'}
+        bannerLabel={dbBrandSpotlight?.buttonText ?? 'перейти к бренду →'}
       />
 
       <section className="brands-section brands-section--standalone" aria-labelledby="brands-title">

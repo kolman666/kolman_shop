@@ -49,6 +49,14 @@ type BrandLogo = {
   url?: string
 }
 
+type HomepageBrandSpotlight = {
+  brandSlug: string
+  brandLabel: string
+  bannerImage: string
+  bannerUrl?: string
+  buttonText?: string
+}
+
 type SectionKey =
   | 'hero_slides'
   | 'homepage_categories'
@@ -57,6 +65,7 @@ type SectionKey =
   | 'search_popular_sections'
   | 'site_chrome'
   | 'brand_logos'
+  | 'homepage_brand_spotlight'
 
 type State = {
   hero_slides: HeroSlide[]
@@ -66,6 +75,7 @@ type State = {
   search_popular_sections: SearchSectionAdmin[]
   site_chrome: SiteChrome
   brand_logos: BrandLogo[]
+  homepage_brand_spotlight: HomepageBrandSpotlight
 }
 
 const INITIAL: State = {
@@ -76,6 +86,7 @@ const INITIAL: State = {
   search_popular_sections: [],
   site_chrome: {},
   brand_logos: [],
+  homepage_brand_spotlight: { brandSlug: 'wlmouse', brandLabel: 'wlmouse', bannerImage: '', bannerUrl: '/brand/wlmouse', buttonText: 'перейти к бренду →' },
 }
 
 // Keys that are language-suffixed in storage (`{key}_{lang}`).
@@ -99,7 +110,7 @@ export function ContentTabV2() {
   useEffect(() => {
     setLoading(true)
     setError('')
-    const sections: SectionKey[] = ['hero_slides', 'homepage_categories', 'homepage_perks', 'homepage_news', 'search_popular_sections', 'site_chrome', 'brand_logos']
+    const sections: SectionKey[] = ['hero_slides', 'homepage_categories', 'homepage_perks', 'homepage_news', 'search_popular_sections', 'site_chrome', 'brand_logos', 'homepage_brand_spotlight']
     Promise.all(
       sections.map(async (s) => {
         const key = storageKey(s, lang)
@@ -455,6 +466,43 @@ export function ContentTabV2() {
                   />
                 </>
               )}
+            />
+          </AccordionSection>
+
+          <AccordionSection
+            title="Рекламный блок бренда на главной"
+            description="Управляет блоком брендовой промо-зоны на главной странице. Здесь можно поменять бренд, ссылку и фон."
+            dirty={dirty.has('homepage_brand_spotlight')}
+          >
+            <Field
+              label="Slug бренда"
+              value={data.homepage_brand_spotlight.brandSlug}
+              onChange={(v) => updateSection('homepage_brand_spotlight', { ...data.homepage_brand_spotlight, brandSlug: v })}
+              placeholder="wlmouse"
+            />
+            <Field
+              label="Название бренда"
+              value={data.homepage_brand_spotlight.brandLabel}
+              onChange={(v) => updateSection('homepage_brand_spotlight', { ...data.homepage_brand_spotlight, brandLabel: v })}
+              placeholder="WLMOUSE"
+            />
+            <ImageField
+              label="Фон баннера (URL)"
+              value={data.homepage_brand_spotlight.bannerImage}
+              onChange={(v) => updateSection('homepage_brand_spotlight', { ...data.homepage_brand_spotlight, bannerImage: v })}
+            />
+            <Field
+              label="Ссылка по клику"
+              hint="/brand/<slug>, /catalog?brand=..., https://..."
+              value={data.homepage_brand_spotlight.bannerUrl ?? ''}
+              onChange={(v) => updateSection('homepage_brand_spotlight', { ...data.homepage_brand_spotlight, bannerUrl: v })}
+              placeholder="/brand/wlmouse"
+            />
+            <Field
+              label="Текст кнопки"
+              value={data.homepage_brand_spotlight.buttonText ?? ''}
+              onChange={(v) => updateSection('homepage_brand_spotlight', { ...data.homepage_brand_spotlight, buttonText: v })}
+              placeholder="перейти к бренду →"
             />
           </AccordionSection>
 

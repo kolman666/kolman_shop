@@ -9,6 +9,8 @@ type Props = {
   brandSlug: string
   brandLabel: string
   bannerImage?: string
+  bannerUrl?: string
+  bannerLabel?: string
 }
 
 function getVisibleCount() {
@@ -36,6 +38,9 @@ export default function BrandSpotlight({ products, brandSlug, brandLabel, banner
   const prev = () => setOffset((o) => Math.max(0, o - 1))
   const next = () => setOffset((o) => Math.min(maxOffset, o + 1))
 
+  const bannerTarget = (bannerUrl?.trim() || `/brand/${brandSlug}`).trim()
+  const isExternal = /^https?:\/\//i.test(bannerTarget)
+
   return (
     <section className="bsp">
       <div className="bsp__inner">
@@ -49,12 +54,23 @@ export default function BrandSpotlight({ products, brandSlug, brandLabel, banner
           style={(() => { const u = safeBackgroundImage(bannerImage); return u ? { backgroundImage: `url("${u}")` } : undefined })()}
         >
           <div className="bsp__banner-overlay" />
-          <Link
-            to={`/catalog?q=${encodeURIComponent(brandSlug)}`}
-            className="bsp__banner-cta"
-          >
-            перейти к бренду →
-          </Link>
+          {isExternal ? (
+            <a
+              href={bannerTarget}
+              className="bsp__banner-cta"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {bannerLabel ?? 'перейти к бренду →'}
+            </a>
+          ) : (
+            <Link
+              to={bannerTarget}
+              className="bsp__banner-cta"
+            >
+              {bannerLabel ?? 'перейти к бренду →'}
+            </Link>
+          )}
         </div>
 
         {/* ── Product strip overlapping banner ── */}

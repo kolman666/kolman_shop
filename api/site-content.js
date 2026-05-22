@@ -42,7 +42,7 @@ const PAGE_KEY_RE = /^page_([a-z_]+)_(ru|en)$/
 const BRAND_KEY_RE = /^brand_data_([a-z0-9-]{1,40})_(ru|en)$/
 
 // Exact-match keys with no language variants.
-const EXACT_KEYS = new Set(['search_popular_sections'])
+const EXACT_KEYS = new Set(['search_popular_sections', 'homepage_brand_spotlight'])
 
 // Strip ASCII control characters and clamp length.
 const CONTROL_CHARS_RE = new RegExp('[\\u0000-\\u001F\\u007F]', 'g')
@@ -193,6 +193,25 @@ const VALIDATORS = {
       })
     }
     return { ok: true, value: cleaned }
+  },
+
+  homepage_brand_spotlight(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return { ok: false, error: 'homepage_brand_spotlight must be an object' }
+    const bannerImage = typeof value.bannerImage === 'string' ? value.bannerImage.trim() : ''
+    if (bannerImage && !isSafeHttpUrl(bannerImage, { allowEmpty: true })) {
+      return { ok: false, error: 'bannerImage must be http(s)' }
+    }
+    const bannerUrl = typeof value.bannerUrl === 'string' ? value.bannerUrl.trim() : ''
+    if (bannerUrl && !isSafeLinkOrPath(bannerUrl, { allowEmpty: true })) {
+      return { ok: false, error: 'bannerUrl must be /path or http(s) URL' }
+    }
+    return { ok: true, value: {
+      brandSlug: clean(value.brandSlug, 100),
+      brandLabel: clean(value.brandLabel, 100),
+      bannerImage,
+      bannerUrl,
+      buttonText: clean(value.buttonText, 100),
+    } }
   },
 
   search_popular_sections(value) {
