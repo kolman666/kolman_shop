@@ -20,6 +20,18 @@ async function handle<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>
 }
 
+// Ownership-protected branches (?my=, POST, DELETE) require the bearer token
+// on the server. Public branches (?product=) ignore it.
+const AUTH_TOKEN_KEY = 'kolman-auth-token'
+function userHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...(extra ?? {}) }
+  try {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY)
+    if (token) headers.Authorization = `Bearer ${token}`
+  } catch { /* ignore */ }
+  return headers
+}
+
 export async function fetchProductReviewsRemote(productId: number): Promise<RemoteReview[]> {
   try {
     return await handle<RemoteReview[]>(
@@ -33,7 +45,10 @@ export async function fetchProductReviewsRemote(productId: number): Promise<Remo
 export async function fetchMyReviewsRemote(email: string): Promise<RemoteReview[]> {
   try {
     return await handle<RemoteReview[]>(
-      await fetch(`/api/reviews?my=${encodeURIComponent(email)}`, { cache: 'no-store' }),
+      await fetch(`/api/reviews?my=${encodeURIComponent(email)}`, {
+        cache: 'no-store',
+        headers: userHeaders(),
+      }),
     )
   } catch {
     return []
@@ -51,7 +66,7 @@ export async function createReviewRemote(input: {
   return handle<RemoteReview>(
     await fetch('/api/reviews', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: userHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         product_id: input.productId,
         email: input.email,
@@ -68,7 +83,7 @@ export async function deleteReviewRemote(id: number, email: string): Promise<voi
   await handle<{ ok: true }>(
     await fetch('/api/reviews', {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
+      headers: userHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ id, email }),
     }),
   )

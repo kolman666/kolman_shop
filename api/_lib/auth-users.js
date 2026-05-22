@@ -100,6 +100,39 @@ export function tokenFromRequest(req) {
   return m ? m[1] : null
 }
 
+// Fetch the authenticated user (or null). Shared by every endpoint that
+// needs to verify "the request was made by the user it claims".
+//
+// Usage:
+//   const me = await requireUser(req, supabase)
+//   if (!me) return res.status(401).json({ error: 'unauthorized' })
+export async function requireUser(req, supabase) {
+  const token = tokenFromRequest(req)
+  if (!token) return null
+  const userId = verifyToken(token)
+  if (!userId) return null
+  const { data, error } = await supabase
+    .from('auth_users')
+    .select('id, email, name')
+    .eq('id', userId)
+    .single()
+  if (error || !data) return null
+  return data
+}
+
+// Returns true when the request is signed for the given email address.
+// Used by customer endpoints that take `?my=<email>` / `body.email` so a
+// shopper can't fetch another user's orders / messages / etc. by simply
+// guessing their email.
+//
+// We compare emails case-insensitively; both sides are normalised.
+export async function requestOwnsEmail(req, supabase, claimedEmail) {
+  if (typeof claimedEmail !== 'string' || !claimedEmail) return false
+  const me = await requireUser(req, supabase)
+  if (!me) return false
+  return normalizeEmail(me.email) === normalizeEmail(claimedEmail)
+}
+
 // Public-shape user record returned to the client. Strips password material
 // and any internal flags.
 export function publicUser(row) {

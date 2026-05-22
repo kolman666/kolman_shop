@@ -83,14 +83,27 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
     } else if (m[4]) {
       const href = (m[3] ?? m[4]).trim()
       const label = m[4]
-      const safe = /^https?:\/\//i.test(href) ? href : undefined
+      // Defence in depth against javascript:, vbscript:, data:,
+      // protocol-relative `//evil.com`, and other smuggling tricks. Only
+      // accept absolute http(s) URLs that URL() can parse cleanly.
+      let safe: string | undefined
+      try {
+        const u = new URL(href)
+        if ((u.protocol === 'http:' || u.protocol === 'https:') && href.length <= 2048) {
+          safe = u.toString()
+        }
+      } catch {
+        safe = undefined
+      }
       if (safe) {
         nodes.push(
-          <a key={`${keyPrefix}-a${i++}`} href={safe} target="_blank" rel="noopener noreferrer">
+          <a key={`${keyPrefix}-a${i++}`} href={safe} target="_blank" rel="noopener noreferrer nofollow">
             {label}
           </a>,
         )
       } else {
+        // Unsafe URL — render the link text as plain text so the [url] tag
+        // isn't a route around the safelist.
         nodes.push(<Fragment key={`${keyPrefix}-a${i++}`}>{label}</Fragment>)
       }
     }
@@ -111,8 +124,15 @@ export function renderBBCode(input: string): ReactNode {
         const key = `bb-${idx}`
         if (block.kind === 'p') return <p key={key}>{renderInline(block.text, key)}</p>
         if (block.kind === 'img') {
-          // Only allow http(s) URLs to keep things safe.
-          const safe = /^https?:\/\//i.test(block.src) ? block.src : ''
+          // Strict: only http(s) URLs parseable by URL() — guards against
+          // protocol-relative `//evil.com`, javascript:, data:, etc.
+          let safe = ''
+          try {
+            const u = new URL(block.src)
+            if ((u.protocol === 'http:' || u.protocol === 'https:') && block.src.length <= 2048) {
+              safe = u.toString()
+            }
+          } catch { /* ignore */ }
           if (!safe) return null
           return (
             <figure key={key} className="bb-img">

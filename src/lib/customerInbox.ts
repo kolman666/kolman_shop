@@ -1,7 +1,7 @@
 // Customer-facing client for /api/orders?my= , /api/inquiries?my= , /api/messages.
-// Same MVP-auth caveats as the backend: anyone passing a known email can
-// fetch that account's data. Acceptable on staging; real production needs
-// server-side session auth.
+// All customer ?my= / body.email endpoints are now bearer-token authenticated
+// server-side — every fetch from this file therefore sends Authorization:
+// Bearer <token>. Without it the server returns 401.
 
 export type RemoteOrder = {
   id: number
@@ -50,9 +50,26 @@ async function handle<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>
 }
 
+const AUTH_TOKEN_KEY = 'kolman-auth-token'
+
+// Headers used by every customer-side fetch. Adds `Authorization: Bearer …`
+// when the user is logged in so the server can verify ownership of the
+// claimed email. Without the token, ownership-protected branches return 401.
+function userHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...(extra ?? {}) }
+  try {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY)
+    if (token) headers.Authorization = `Bearer ${token}`
+  } catch { /* SSR / private mode */ }
+  return headers
+}
+
 export async function fetchMyOrders(email: string): Promise<RemoteOrder[]> {
   try {
-    return await handle<RemoteOrder[]>(await fetch(`/api/orders?my=${encodeURIComponent(email)}`))
+    return await handle<RemoteOrder[]>(await fetch(
+      `/api/orders?my=${encodeURIComponent(email)}`,
+      { headers: userHeaders() },
+    ))
   } catch {
     return []
   }
@@ -60,7 +77,10 @@ export async function fetchMyOrders(email: string): Promise<RemoteOrder[]> {
 
 export async function fetchMyInquiries(email: string): Promise<RemoteInquiry[]> {
   try {
-    return await handle<RemoteInquiry[]>(await fetch(`/api/inquiries?my=${encodeURIComponent(email)}`))
+    return await handle<RemoteInquiry[]>(await fetch(
+      `/api/inquiries?my=${encodeURIComponent(email)}`,
+      { headers: userHeaders() },
+    ))
   } catch {
     return []
   }
@@ -68,7 +88,10 @@ export async function fetchMyInquiries(email: string): Promise<RemoteInquiry[]> 
 
 export async function fetchChatMessages(email: string): Promise<ChatMessage[]> {
   try {
-    return await handle<ChatMessage[]>(await fetch(`/api/messages?my=${encodeURIComponent(email)}`))
+    return await handle<ChatMessage[]>(await fetch(
+      `/api/messages?my=${encodeURIComponent(email)}`,
+      { headers: userHeaders() },
+    ))
   } catch {
     return []
   }
@@ -77,7 +100,10 @@ export async function fetchChatMessages(email: string): Promise<ChatMessage[]> {
 // Per-thread variants — preferred once the multi-thread schema is live.
 export async function fetchThreadMessages(threadId: number): Promise<ChatMessage[]> {
   try {
-    return await handle<ChatMessage[]>(await fetch(`/api/messages?thread=${threadId}`))
+    return await handle<ChatMessage[]>(await fetch(
+      `/api/messages?thread=${threadId}`,
+      { headers: userHeaders() },
+    ))
   } catch {
     return []
   }
@@ -87,7 +113,7 @@ export async function sendChatMessage(email: string, body: string, threadId?: nu
   return handle<ChatMessage>(
     await fetch('/api/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: userHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ email, body, thread_id: threadId }),
     }),
   )
@@ -96,7 +122,10 @@ export async function sendChatMessage(email: string, body: string, threadId?: nu
 // Customer-facing thread management.
 export async function fetchMyThreads(email: string): Promise<ChatThread[]> {
   try {
-    return await handle<ChatThread[]>(await fetch(`/api/messages?resource=threads&my=${encodeURIComponent(email)}`))
+    return await handle<ChatThread[]>(await fetch(
+      `/api/messages?resource=threads&my=${encodeURIComponent(email)}`,
+      { headers: userHeaders() },
+    ))
   } catch {
     return []
   }
@@ -106,7 +135,7 @@ export async function createThread(email: string, title: string): Promise<ChatTh
   return handle<ChatThread>(
     await fetch('/api/messages?resource=threads', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: userHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ email, title }),
     }),
   )
@@ -116,7 +145,7 @@ export async function setThreadStatus(id: number, email: string, status: 'open' 
   return handle<ChatThread>(
     await fetch('/api/messages?resource=threads', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: userHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ id, email, status }),
     }),
   )

@@ -48,25 +48,34 @@ export default async function handler(req, res) {
   }
   const safeText = text.slice(0, 4000)
 
-  // Optional parse_mode — default to HTML (simpler escaping than Markdown)
+  // Optional parse_mode — default to HTML (simpler escaping than Markdown).
+  // Callers that need formatting must explicitly opt-in and pre-escape any
+  // user-controlled portion (see SupportPage.escapeHtml). Callers that don't
+  // care should pass parse_mode: 'plain' to disable Telegram rendering
+  // entirely — safer when shipping raw user input.
   let parseMode = 'HTML'
   if (typeof body.parse_mode === 'string') {
-    if (!ALLOWED_PARSE_MODES.has(body.parse_mode)) {
-      return res.status(400).json({ error: 'invalid parse_mode' })
+    if (body.parse_mode === 'plain') {
+      parseMode = ''
+    } else {
+      if (!ALLOWED_PARSE_MODES.has(body.parse_mode)) {
+        return res.status(400).json({ error: 'invalid parse_mode' })
+      }
+      parseMode = body.parse_mode
     }
-    parseMode = body.parse_mode
   }
 
   try {
+    const payload = {
+      chat_id: chatId,
+      text: safeText,
+      disable_web_page_preview: true,
+    }
+    if (parseMode) payload.parse_mode = parseMode
     const tgRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: safeText,
-        parse_mode: parseMode,
-        disable_web_page_preview: true,
-      }),
+      body: JSON.stringify(payload),
     })
 
     if (!tgRes.ok) {

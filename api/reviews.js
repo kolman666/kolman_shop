@@ -14,6 +14,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { isTableMissing } from './_lib/db.js'
+import { requestOwnsEmail } from './_lib/auth-users.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -97,6 +98,9 @@ export default async function handler(req, res) {
     if (rateLimited(ip)) return res.status(429).json({ error: 'too many requests' })
     const email = String(req.query.my).trim().toLowerCase()
     if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'invalid email' })
+    if (!(await requestOwnsEmail(req, supabase, email))) {
+      return res.status(401).json({ error: 'unauthorized' })
+    }
     const { data, error } = await supabase
       .from('reviews')
       .select('id, product_id, author_email, author_name, rating, text, photos, created_at')
@@ -121,6 +125,11 @@ export default async function handler(req, res) {
     const authorName = s(body.author_name, 120)
     if (!Number.isFinite(productId)) return res.status(400).json({ error: 'invalid product' })
     if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'invalid email' })
+    // Anyone who knew a victim's email could previously post fake reviews
+    // *under their name*. Bearer token must match.
+    if (!(await requestOwnsEmail(req, supabase, email))) {
+      return res.status(401).json({ error: 'unauthorized' })
+    }
     if (!Number.isInteger(rating) || rating < 1 || rating > 5) return res.status(400).json({ error: 'invalid rating' })
     if (text.length < 3) return res.status(400).json({ error: 'text too short' })
     const photos = sanitizePhotos(body.photos)
@@ -152,6 +161,9 @@ export default async function handler(req, res) {
     const email = String(body.email ?? '').trim().toLowerCase()
     if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' })
     if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'invalid email' })
+    if (!(await requestOwnsEmail(req, supabase, email))) {
+      return res.status(401).json({ error: 'unauthorized' })
+    }
     const { error } = await supabase
       .from('reviews')
       .delete()

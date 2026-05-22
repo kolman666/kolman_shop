@@ -11,6 +11,7 @@
 //   TG_ADMIN_USER_IDS     — comma-separated Telegram numeric user ids that are allowed to use the bot
 //   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY — for DB access
 import { createClient } from '@supabase/supabase-js'
+import { safeEqual } from './_lib/auth.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -303,11 +304,14 @@ const HELP_TEXT = [
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' })
 
-  // Verify webhook secret (Telegram sends it in this header when set via setWebhook)
+  // Verify webhook secret (Telegram sends it in this header when set via setWebhook).
+  // Constant-time compare — was a plain `!==`, vulnerable to timing brute-force.
   const expected = process.env.TG_WEBHOOK_SECRET
   if (expected) {
     const got = req.headers['x-telegram-bot-api-secret-token']
-    if (got !== expected) return res.status(401).json({ error: 'invalid webhook secret' })
+    if (typeof got !== 'string' || !safeEqual(got, expected)) {
+      return res.status(401).json({ error: 'invalid webhook secret' })
+    }
   }
 
   const update = req.body

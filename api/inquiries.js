@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { isAdminAuthorized } from './_lib/auth.js'
+import { requestOwnsEmail } from './_lib/auth-users.js'
 import { isTableMissing } from './_lib/db.js'
 
 function getSupabase() {
@@ -155,6 +156,11 @@ export default async function handler(req, res) {
     const email = String(req.query.my).trim().toLowerCase()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
       return res.status(400).json({ error: 'invalid email' })
+    }
+    // Require bearer-token ownership — otherwise anyone with the email could
+    // read another user's inquiry history.
+    if (!(await requestOwnsEmail(req, supabase, email))) {
+      return res.status(401).json({ error: 'unauthorized' })
     }
     const { data, error } = await supabase
       .from('inquiries')

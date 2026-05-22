@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { isAdminAuthorized } from './_lib/auth.js'
 import { isTableMissing } from './_lib/db.js'
+import { requestOwnsEmail } from './_lib/auth-users.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -96,9 +97,11 @@ export default async function handler(req, res) {
         quantity: typeof it.quantity === 'number' && Number.isInteger(it.quantity) && it.quantity > 0 ? it.quantity : 1,
       })
     }
-    const total = typeof body.total === 'number' && Number.isFinite(body.total)
-      ? Math.max(0, Math.min(body.total, 1_000_000_000))
-      : safeItems.reduce((acc, it) => acc + it.price * it.quantity, 0)
+    // Always derive total server-side from the validated items. The client's
+    // `body.total` is intentionally ignored — otherwise an attacker could
+    // submit a $100 cart with `total: 1` and the DB would store the cheap
+    // value. Telegram already rebuilds the message from server state below.
+    const total = safeItems.reduce((acc, it) => acc + it.price * it.quantity, 0)
 
     const name = s(body.name, 200)
     const contact = s(body.contact, 200)
@@ -176,6 +179,11 @@ export default async function handler(req, res) {
     const email = String(req.query.my).trim().toLowerCase()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
       return res.status(400).json({ error: 'invalid email' })
+    }
+    // Bearer token must match the email — was previously an open enumeration:
+    // anyone passing a known email could list that user's full order history.
+    if (!(await requestOwnsEmail(req, supabase, email))) {
+      return res.status(401).json({ error: 'unauthorized' })
     }
     const { data, error } = await supabase
       .from('orders')

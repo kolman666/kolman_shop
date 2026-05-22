@@ -16,7 +16,9 @@ export type ChatBubblePart =
   | { kind: 'text'; text: string }
   | { kind: 'photo'; url: string }
 
-const PHOTO_RE = /\[\[photo:(data:image\/[^\]]+|https?:\/\/[^\]]+)\]\]/g
+// Strict regex: only safe image MIMEs (no SVG — XSS via <script> inside SVG),
+// no plain `data:text/html,...` smuggled in. URL forms are http/https only.
+const PHOTO_RE = /\[\[photo:(data:image\/(?:jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+|https?:\/\/[^\]\s]+)\]\]/g
 
 export function parseChatBody(body: string): ChatBubblePart[] {
   if (!body) return []
