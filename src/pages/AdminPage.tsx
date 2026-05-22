@@ -38,6 +38,7 @@ import {
   type InquiryCategory,
 } from '../lib/adminInbox'
 import { adminFetchMessages, adminReply, type ChatMessage } from '../lib/customerInbox'
+import { supabase } from '../lib/supabase'
 
 const CATEGORIES = [
   { key: 'products.categories.mice', label: 'Мышки' },
@@ -927,7 +928,31 @@ CREATE TABLE IF NOT EXISTS messages (
   body TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS messages_thread_idx ON messages(thread_email, created_at);`
+CREATE INDEX IF NOT EXISTS messages_thread_idx ON messages(thread_email, created_at);
+-- Enable Realtime for chat. After running this, also flip the toggle for the
+-- "messages" table in Supabase Studio → Database → Replication if it doesn't
+-- show up automatically.
+ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+
+-- Customer accounts (replaces the old localStorage-only auth). PBKDF2-SHA256
+-- password hashes are computed server-side; the client only ever holds a
+-- short-lived bearer token.
+CREATE TABLE IF NOT EXISTS auth_users (
+  id BIGSERIAL PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  password_salt TEXT NOT NULL,
+  password_iterations INTEGER NOT NULL DEFAULT 150000,
+  name TEXT NOT NULL DEFAULT '',
+  first_name TEXT NOT NULL DEFAULT '',
+  last_name TEXT NOT NULL DEFAULT '',
+  phone TEXT NOT NULL DEFAULT '',
+  photo TEXT NOT NULL DEFAULT '',
+  telegram TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS auth_users_email_idx ON auth_users (LOWER(email));`
 
 function MigrationNotice() {
   const [copied, setCopied] = useState(false)
@@ -1607,6 +1632,19 @@ function ChatTab() {
   useEffect(() => {
     if (!active) return
     void loadMessages(active)
+    // Prefer realtime over polling — see ProfilePage chat for the same pattern.
+    const sb = supabase
+    if (sb) {
+      const channel = sb
+        .channel(`admin-chat-${active}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_email=eq.${active}` },
+          () => { void loadMessages(active) },
+        )
+        .subscribe()
+      return () => { void sb.removeChannel(channel) }
+    }
     const t = window.setInterval(() => { void loadMessages(active) }, 8_000)
     return () => window.clearInterval(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1628,7 +1666,12 @@ function ChatTab() {
       setMessages((prev) => [...prev, sent])
       setDraft('')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'failed')
+      const raw = e instanceof Error ? e.message : 'failed'
+      if (/table_not_found|schema cache|public\.messages/.test(raw)) {
+        setError('Таблица messages не создана в Supabase. Перейдите в «Заявки» → скопируйте SQL миграции и запустите в Supabase SQL Editor.')
+      } else {
+        setError(raw)
+      }
     } finally {
       setSending(false)
     }

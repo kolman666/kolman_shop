@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { isAdminAuthorized } from './_lib/auth.js'
+import { isTableMissing } from './_lib/db.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -126,8 +127,7 @@ export default async function handler(req, res) {
     }
 
     if (error) {
-      const isTableMissing = error.message.includes('does not exist') || error.code === '42P01'
-      if (isTableMissing) return res.status(503).json({ error: 'table_not_found', detail: error.message })
+      if (isTableMissing(error)) return res.status(503).json({ error: 'table_not_found', detail: error.message })
       return res.status(500).json({ error: 'failed to save inquiry', detail: error.message })
     }
 
@@ -163,8 +163,7 @@ export default async function handler(req, res) {
       .order('created_at', { ascending: false })
       .limit(50)
     if (error) {
-      const missing = error.message.includes('does not exist') || error.code === '42P01' || /customer_email/i.test(error.message)
-      if (missing) return res.status(200).json([])
+      if (isTableMissing(error) || /customer_email/i.test(error.message)) return res.status(200).json([])
       return res.status(500).json({ error: error.message })
     }
     return res.status(200).json(data ?? [])
@@ -181,8 +180,7 @@ export default async function handler(req, res) {
     if (status && ALLOWED_STATUSES.includes(status)) q = q.eq('status', status)
     const { data, error } = await q
     if (error) {
-      const missing = error.message.includes('does not exist') || error.code === '42P01'
-      if (missing) return res.status(503).json({ error: 'table_not_found' })
+      if (isTableMissing(error)) return res.status(503).json({ error: 'table_not_found' })
       return res.status(500).json({ error: error.message })
     }
     return res.status(200).json(data ?? [])

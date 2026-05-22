@@ -143,7 +143,7 @@ export default function SupportPage() {
     if (!user) return
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.name
     if (fullName && !state.name) dispatch({ type: 'setName', value: fullName })
-    const preferContact = user.phone?.trim() || user.email
+    const preferContact = user.telegram?.trim() || user.phone?.trim() || user.email
     if (preferContact && !state.contact) dispatch({ type: 'setContact', value: preferContact })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

@@ -15,7 +15,7 @@ type SiteChromeContent = {
   alwaysAvailable?: string
   topLinks?: string[]
 }
-import { AUTH_EVENT, getUser, type User } from '../lib/auth'
+import { AUTH_EVENT, getUser, refreshUser, type User } from '../lib/auth'
 
 type SiteChromeProps = {
   children: ReactNode
@@ -83,6 +83,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
     const syncUser = () => setCurrentUser(getUser())
     window.addEventListener(AUTH_EVENT, syncUser)
     window.addEventListener('storage', syncUser)
+    void refreshUser()
     return () => {
       window.removeEventListener(AUTH_EVENT, syncUser)
       window.removeEventListener('storage', syncUser)

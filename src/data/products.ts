@@ -27,6 +27,3 @@ export type VariantGroup = {
   name?: string
   options: string[]
 }
-
-export const products: Product[] = [
-]

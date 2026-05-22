@@ -84,7 +84,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const [contact, setContact] = useState(() => {
     const u = getUser()
     if (!u) return ''
-    return u.phone?.trim() || u.email || ''
+    // Prefer telegram → phone → email so the admin gets the channel the
+    // customer actually uses.
+    return u.telegram?.trim() || u.phone?.trim() || u.email || ''
   })
   const [delivery, setDelivery] = useState(DELIVERY_OPTIONS[0] ?? '')
   const [comment, setComment] = useState('')

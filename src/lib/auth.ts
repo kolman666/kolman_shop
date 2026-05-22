@@ -1,49 +1,42 @@
-// Local-only auth: data lives entirely in the browser's localStorage and is
-// never sent to a server. Hashing passwords here doesn't authenticate the
-// user against anything — it only prevents a casual reader of localStorage
-// from harvesting the user's plain-text password (which they likely reuse).
+// Server-side auth client.
 //
-// PBKDF2-SHA-256, 150 000 iterations, 16-byte random salt.
-const STORAGE_KEY = 'kolman-auth'
+// Accounts now live in Supabase (auth_users). The client only keeps a
+// short-lived bearer token in localStorage and the public user record cached
+// in memory. The token is renewed by re-logging in; it expires after 30 days
+// server-side.
+//
+// The old localStorage-only auth from previous iterations is intentionally
+// dropped: accounts didn't survive private mode, ITP, or device switches.
+// Users will need to register again once the new auth_users table is live.
+
+const TOKEN_KEY = 'kolman-auth-token'
+const USER_KEY = 'kolman-auth-user'
 export const AUTH_EVENT = 'auth:update'
 
 export type User = {
-  name: string
+  id: number
   email: string
-  firstName?: string
-  lastName?: string
-  phone?: string
-  photo?: string
-}
-
-type StoredAccount = {
   name: string
   firstName?: string
   lastName?: string
   phone?: string
   photo?: string
-  // Either { kind: 'pbkdf2', salt, hash, iter } (new) or string (legacy plain password).
-  password: string | PasswordRecord
-}
-
-type PasswordRecord = {
-  kind: 'pbkdf2'
-  salt: string // hex
-  hash: string // hex
-  iter: number
-}
-
-type AuthState = {
-  users: Record<string, StoredAccount>
-  currentUser: User | null
+  telegram?: string
 }
 
 export type AuthErrorCode =
   | 'INVALID_EMAIL'
   | 'PASSWORD_TOO_SHORT'
+  | 'PASSWORD_TOO_LONG'
   | 'USER_NOT_FOUND'
   | 'WRONG_PASSWORD'
   | 'USER_EXISTS'
+  | 'INVALID_TELEGRAM'
+  | 'INVALID_PHOTO'
+  | 'PHOTO_TOO_LARGE'
+  | 'TABLE_NOT_FOUND'
+  | 'NETWORK'
+  | 'UNAUTHORIZED'
 
 export class AuthError extends Error {
   code: AuthErrorCode
@@ -53,235 +46,160 @@ export class AuthError extends Error {
   }
 }
 
-const EMAIL_REGEXP = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const PBKDF2_ITER = 150_000
-const PBKDF2_KEYLEN = 32 // bytes
-const SALT_LEN = 16
+// ── Local cache of the public user record ──
+let memoryUser: User | null = null
 
-function bytesToHex(buf: ArrayBuffer | Uint8Array): string {
-  const arr = buf instanceof Uint8Array ? buf : new Uint8Array(buf)
-  let s = ''
-  for (let i = 0; i < arr.length; i++) {
-    const h = arr[i].toString(16)
-    s += h.length === 1 ? '0' + h : h
-  }
-  return s
-}
-
-function hexToBytes(hex: string): Uint8Array {
-  const arr = new Uint8Array(hex.length / 2)
-  for (let i = 0; i < arr.length; i++) {
-    arr[i] = parseInt(hex.substr(i * 2, 2), 16)
-  }
-  return arr
-}
-
-async function pbkdf2(password: string, salt: Uint8Array, iter: number, keylen: number): Promise<Uint8Array> {
-  const subtle = (globalThis.crypto && globalThis.crypto.subtle) || null
-  if (!subtle) {
-    // Hard-fail rather than silently storing plain text.
-    throw new Error('crypto.subtle not available — cannot hash password')
-  }
-  const enc = new TextEncoder()
-  const passwordBytes = enc.encode(password)
-  // Cast to BufferSource — modern lib.dom typings narrow buffer to ArrayBuffer; runtime is fine.
-  const key = await subtle.importKey('raw', passwordBytes as unknown as BufferSource, { name: 'PBKDF2' }, false, ['deriveBits'])
-  const bits = await subtle.deriveBits(
-    { name: 'PBKDF2', salt: salt as unknown as BufferSource, iterations: iter, hash: 'SHA-256' },
-    key,
-    keylen * 8,
-  )
-  return new Uint8Array(bits)
-}
-
-async function makePasswordRecord(password: string): Promise<PasswordRecord> {
-  const salt = new Uint8Array(SALT_LEN)
-  globalThis.crypto.getRandomValues(salt)
-  const hash = await pbkdf2(password, salt, PBKDF2_ITER, PBKDF2_KEYLEN)
-  return { kind: 'pbkdf2', salt: bytesToHex(salt), hash: bytesToHex(hash), iter: PBKDF2_ITER }
-}
-
-async function verifyPassword(password: string, stored: string | PasswordRecord): Promise<boolean> {
-  if (typeof stored === 'string') {
-    // Legacy plain-text fallback for accounts created before hashing was added.
-    return stored === password
-  }
-  if (!stored || stored.kind !== 'pbkdf2') return false
-  const salt = hexToBytes(stored.salt)
-  const computed = await pbkdf2(password, salt, stored.iter, stored.hash.length / 2)
-  const expected = hexToBytes(stored.hash)
-  if (computed.length !== expected.length) return false
-  let diff = 0
-  for (let i = 0; i < computed.length; i++) diff |= computed[i] ^ expected[i]
-  return diff === 0
-}
-
-function readState(): AuthState {
-  if (typeof window === 'undefined') {
-    return { users: {}, currentUser: null }
-  }
-
+function readUserCache(): User | null {
+  if (memoryUser) return memoryUser
+  if (typeof window === 'undefined') return null
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) {
-      return { users: {}, currentUser: null }
+    const raw = localStorage.getItem(USER_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as User
+    if (parsed && typeof parsed === 'object' && typeof parsed.email === 'string') {
+      memoryUser = parsed
+      return parsed
     }
+  } catch { /* ignore */ }
+  return null
+}
 
-    const parsed = JSON.parse(raw) as unknown
-    if (!parsed || typeof parsed !== 'object') {
-      return { users: {}, currentUser: null }
-    }
+function writeUserCache(user: User | null) {
+  memoryUser = user
+  if (typeof window === 'undefined') return
+  try {
+    if (user) localStorage.setItem(USER_KEY, JSON.stringify(user))
+    else localStorage.removeItem(USER_KEY)
+  } catch { /* quota etc. — ignore */ }
+}
 
-    const candidate = parsed as Partial<AuthState>
-    const users =
-      candidate.users && typeof candidate.users === 'object'
-        ? (candidate.users as Record<string, StoredAccount>)
-        : {}
-    let currentUser =
-      candidate.currentUser &&
-      typeof candidate.currentUser === 'object' &&
-      typeof (candidate.currentUser as User).email === 'string'
-        ? (candidate.currentUser as User)
-        : null
+function readToken(): string | null {
+  if (typeof window === 'undefined') return null
+  try { return localStorage.getItem(TOKEN_KEY) } catch { return null }
+}
 
-    // Refresh profile fields from stored account in case admin or another tab updated them.
-    if (currentUser && users[currentUser.email]) {
-      const account = users[currentUser.email]
-      currentUser = {
-        email: currentUser.email,
-        name: account.name,
-        firstName: account.firstName,
-        lastName: account.lastName,
-        phone: account.phone,
-        photo: account.photo,
-      }
-    }
+function writeToken(token: string | null) {
+  if (typeof window === 'undefined') return
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token)
+    else localStorage.removeItem(TOKEN_KEY)
+  } catch { /* ignore */ }
+}
 
-    return { users, currentUser }
+function emitAuthEvent() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(AUTH_EVENT))
+}
+
+async function callApi<T>(path: string, init: RequestInit = {}): Promise<T> {
+  let res: Response
+  try {
+    res = await fetch(path, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init.headers ?? {}),
+      },
+    })
   } catch {
-    return { users: {}, currentUser: null }
+    throw new AuthError('NETWORK')
   }
+  let body: { error?: string; user?: User; token?: string; ok?: boolean } = {}
+  try { body = await res.json() } catch { /* ignore */ }
+  if (!res.ok) {
+    const code = (body.error ?? '').toUpperCase()
+    if (code === 'TABLE_NOT_FOUND' || code === 'table_not_found'.toUpperCase()) {
+      throw new AuthError('TABLE_NOT_FOUND')
+    }
+    if (code === 'UNAUTHORIZED' || res.status === 401) {
+      // Token is bad / expired — clear local state so the UI shows logged-out.
+      writeToken(null)
+      writeUserCache(null)
+      emitAuthEvent()
+      throw new AuthError('UNAUTHORIZED')
+    }
+    if (
+      code === 'INVALID_EMAIL' || code === 'PASSWORD_TOO_SHORT' || code === 'PASSWORD_TOO_LONG' ||
+      code === 'USER_NOT_FOUND' || code === 'WRONG_PASSWORD' || code === 'USER_EXISTS' ||
+      code === 'INVALID_TELEGRAM' || code === 'INVALID_PHOTO' || code === 'PHOTO_TOO_LARGE'
+    ) {
+      throw new AuthError(code as AuthErrorCode)
+    }
+    throw new AuthError('NETWORK')
+  }
+  return body as unknown as T
 }
 
-function writeState(state: AuthState) {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  window.dispatchEvent(new Event(AUTH_EVENT))
+function authHeaders(): Record<string, string> {
+  const t = readToken()
+  return t ? { Authorization: `Bearer ${t}` } : {}
 }
+
+// ── Public API ──
 
 export function getUser(): User | null {
-  return readState().currentUser
+  return readUserCache()
 }
 
-export async function login(email: string, password: string): Promise<User> {
-  const normalized = email.trim().toLowerCase()
-  if (!EMAIL_REGEXP.test(normalized)) {
-    throw new AuthError('INVALID_EMAIL')
-  }
-
-  const state = readState()
-  const account = state.users[normalized]
-  if (!account) {
-    throw new AuthError('USER_NOT_FOUND')
-  }
-
-  const ok = await verifyPassword(password, account.password)
-  if (!ok) {
-    throw new AuthError('WRONG_PASSWORD')
-  }
-
-  // Upgrade legacy plain-text storage to PBKDF2 transparently.
-  if (typeof account.password === 'string') {
-    try {
-      const record = await makePasswordRecord(password)
-      writeState({
-        ...state,
-        users: { ...state.users, [normalized]: { name: account.name, password: record } },
-      })
-    } catch {
-      // crypto unavailable — leave as is rather than failing login
-    }
-  }
-
-  const user: User = {
-    name: account.name,
-    email: normalized,
-    firstName: account.firstName,
-    lastName: account.lastName,
-    phone: account.phone,
-    photo: account.photo,
-  }
-  const latest = readState()
-  writeState({ ...latest, currentUser: user })
-  return user
-}
-
-export function updateProfile(patch: Partial<Omit<User, 'email'>>): User {
-  const state = readState()
-  const current = state.currentUser
-  if (!current) {
-    throw new AuthError('USER_NOT_FOUND')
-  }
-  const account = state.users[current.email]
-  if (!account) {
-    throw new AuthError('USER_NOT_FOUND')
-  }
-  const nextAccount: StoredAccount = {
-    ...account,
-    name: patch.name ?? account.name,
-    firstName: patch.firstName ?? account.firstName,
-    lastName: patch.lastName ?? account.lastName,
-    phone: patch.phone ?? account.phone,
-    photo: patch.photo ?? account.photo,
-  }
-  const nextUser: User = {
-    email: current.email,
-    name: nextAccount.name,
-    firstName: nextAccount.firstName,
-    lastName: nextAccount.lastName,
-    phone: nextAccount.phone,
-    photo: nextAccount.photo,
-  }
-  writeState({
-    users: { ...state.users, [current.email]: nextAccount },
-    currentUser: nextUser,
-  })
-  return nextUser
+export function getToken(): string | null {
+  return readToken()
 }
 
 export async function register(name: string, email: string, password: string): Promise<User> {
-  const normalizedEmail = email.trim().toLowerCase()
-  if (!EMAIL_REGEXP.test(normalizedEmail)) {
-    throw new AuthError('INVALID_EMAIL')
-  }
+  const body = await callApi<{ token: string; user: User }>('/api/auth?action=register', {
+    method: 'POST',
+    body: JSON.stringify({ name, email, password }),
+  })
+  writeToken(body.token)
+  writeUserCache(body.user)
+  emitAuthEvent()
+  return body.user
+}
 
-  if (password.length < 8) {
-    throw new AuthError('PASSWORD_TOO_SHORT')
-  }
+export async function login(email: string, password: string): Promise<User> {
+  const body = await callApi<{ token: string; user: User }>('/api/auth?action=login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  })
+  writeToken(body.token)
+  writeUserCache(body.user)
+  emitAuthEvent()
+  return body.user
+}
 
-  const state = readState()
-  if (state.users[normalizedEmail]) {
-    throw new AuthError('USER_EXISTS')
+// Background refresh of the cached user (token validation + latest fields).
+// Returns null silently on any auth error so callers can use it on app boot.
+export async function refreshUser(): Promise<User | null> {
+  if (!readToken()) return null
+  try {
+    const body = await callApi<{ user: User }>('/api/auth?action=me', {
+      method: 'GET',
+      headers: authHeaders(),
+    })
+    writeUserCache(body.user)
+    emitAuthEvent()
+    return body.user
+  } catch (err) {
+    if (err instanceof AuthError && err.code === 'UNAUTHORIZED') return null
+    // On network / table-missing, keep showing the cached user so the UI
+    // doesn't flicker — the next interaction will reveal the problem.
+    return readUserCache()
   }
+}
 
-  const cleanName = name.trim() || normalizedEmail.split('@')[0]
-  const record = await makePasswordRecord(password)
-  const nextState: AuthState = {
-    users: {
-      ...state.users,
-      [normalizedEmail]: { name: cleanName, password: record },
-    },
-    currentUser: { name: cleanName, email: normalizedEmail },
-  }
-
-  writeState(nextState)
-  return nextState.currentUser as User
+export async function updateProfile(patch: Partial<Omit<User, 'id' | 'email'>>): Promise<User> {
+  const body = await callApi<{ user: User }>('/api/auth?action=profile', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(patch),
+  })
+  writeUserCache(body.user)
+  emitAuthEvent()
+  return body.user
 }
 
 export function logout() {
-  const state = readState()
-  writeState({ ...state, currentUser: null })
+  writeToken(null)
+  writeUserCache(null)
+  emitAuthEvent()
+  void fetch('/api/auth?action=logout', { method: 'POST', headers: authHeaders() }).catch(() => { /* ignore */ })
 }

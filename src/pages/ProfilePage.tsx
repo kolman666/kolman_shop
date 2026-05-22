@@ -5,6 +5,7 @@ import { AUTH_EVENT, getUser, logout, updateProfile, type User } from '../lib/au
 import { FAVORITES_EVENT, getFavorites, removeFavorite } from '../lib/favorites'
 import { getOrders, getReviews, removeReview, USER_DATA_EVENT, type Order as LocalOrder } from '../lib/userData'
 import { fetchMyOrders, fetchMyInquiries, fetchChatMessages, sendChatMessage, type ChatMessage, type RemoteInquiry } from '../lib/customerInbox'
+import { supabase } from '../lib/supabase'
 import { useProducts } from '../hooks/useProducts'
 import { productPath } from '../lib/productRoute'
 
@@ -92,21 +93,34 @@ function ProfileForm({ user }: { user: User }) {
   const [firstName, setFirstName] = useState(user.firstName ?? '')
   const [lastName, setLastName] = useState(user.lastName ?? '')
   const [phone, setPhone] = useState(user.phone ?? '')
+  const [telegram, setTelegram] = useState(user.telegram ?? '')
   const [photo, setPhoto] = useState(user.photo ?? '')
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSaving(true)
+    setError('')
     const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ') || user.name
-    updateProfile({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      phone: phone.trim(),
-      photo: photo.trim(),
-      name: fullName,
-    })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    try {
+      await updateProfile({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone.trim(),
+        telegram: telegram.trim(),
+        photo: photo.trim(),
+        name: fullName,
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (err) {
+      const code = err instanceof Error ? err.message : 'unknown'
+      setError(t(`ui.auth.errors.${code}`, { defaultValue: t('ui.auth.errors.UNKNOWN') }))
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
@@ -179,14 +193,34 @@ function ProfileForm({ user }: { user: User }) {
           />
         </label>
         <label className="catalog-field">
-          <span className="catalog-field__label">email</span>
-          <input className="catalog-search__input" value={user.email} disabled />
+          <span className="catalog-field__label">{t('ui.profile.profileSection.telegram')}</span>
+          <input
+            className="catalog-search__input"
+            value={telegram}
+            onChange={(e) => setTelegram(e.target.value)}
+            placeholder={t('ui.profile.profileSection.telegramPlaceholder')}
+            autoComplete="off"
+          />
         </label>
       </div>
 
+      <div className="profile-form__row">
+        <label className="catalog-field">
+          <span className="catalog-field__label">email</span>
+          <input className="catalog-search__input" value={user.email} disabled />
+        </label>
+        <div />
+      </div>
+
+      {error && <p className="profile-form__error">{error}</p>}
+
       <div className="profile-form__actions">
-        <button type="submit" className="cta-btn">
-          {saved ? t('ui.profile.profileSection.saved') : t('ui.profile.profileSection.save')}
+        <button type="submit" className="cta-btn" disabled={saving}>
+          {saving
+            ? t('ui.profile.profileSection.saving')
+            : saved
+              ? t('ui.profile.profileSection.saved')
+              : t('ui.profile.profileSection.save')}
         </button>
       </div>
     </form>
@@ -447,7 +481,22 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
 
   useEffect(() => {
     void load()
-    // Poll every 8s while the tab is open — cheap, simple.
+    // Prefer Supabase Realtime when configured: new admin replies appear
+    // instantly without polling. Falls back to an 8s poll if either Realtime
+    // isn't enabled for the `messages` table or the supabase client isn't
+    // configured (e.g. dev env without env vars).
+    const sb = supabase
+    if (sb) {
+      const channel = sb
+        .channel(`chat-${email}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_email=eq.${email}` },
+          () => { void load() },
+        )
+        .subscribe()
+      return () => { void sb.removeChannel(channel) }
+    }
     const t = window.setInterval(load, 8_000)
     return () => window.clearInterval(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -469,7 +518,14 @@ function ChatTab({ email, userName }: { email: string; userName: string }) {
       setMessages((prev) => [...prev, sent])
       setDraft('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'send failed')
+      const raw = err instanceof Error ? err.message : String(err)
+      // Friendlier message when the backend table hasn't been migrated yet —
+      // the API returns `table_not_found` for that case.
+      if (/table_not_found|schema cache|public\.messages/.test(raw)) {
+        setError(t('ui.profile.chatUnavailable'))
+      } else {
+        setError(raw)
+      }
     } finally {
       setSending(false)
     }

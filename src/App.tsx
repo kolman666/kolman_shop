@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useState, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BrowserRouter, Link, Route, Routes, useNavigate } from 'react-router-dom'
 import './App.css'
@@ -9,12 +9,14 @@ import BrandSpotlight from './components/BrandSpotlight'
 import BloggersBlock from './components/BloggersBlock'
 import NewsBlock from './components/NewsBlock'
 import AuthModal from './components/AuthModal'
-import { AUTH_EVENT, getUser, type User } from './lib/auth'
+import { AUTH_EVENT, getUser, refreshUser, type User } from './lib/auth'
 import ProfilePage from './pages/ProfilePage'
 import { fetchSiteContent, fetchSiteContentLocalized } from './lib/siteContent'
 import { safeBackgroundImage } from './lib/safeUrl'
 import AboutPage from './pages/AboutPage'
-import AdminPage from './pages/AdminPage'
+// Admin is a big chunk (~250kb) and only relevant for the shop owner. Code-split
+// it so first-paint for shoppers doesn't pull it in.
+const AdminPage = lazy(() => import('./pages/AdminPage'))
 import CatalogPage from './pages/CatalogPage'
 import ProductPage from './pages/ProductPage'
 import SupportPage from './pages/SupportPage'
@@ -355,6 +357,10 @@ function HomePage() {
     const syncUser = () => setCurrentUser(getUser())
     window.addEventListener(AUTH_EVENT, syncUser)
     window.addEventListener('storage', syncUser)
+    // Validate the cached token against the server on first paint — picks up
+    // profile changes made from other devices and signs us out if the token
+    // was revoked or expired.
+    void refreshUser()
     return () => {
       window.removeEventListener(AUTH_EVENT, syncUser)
       window.removeEventListener('storage', syncUser)
@@ -930,7 +936,14 @@ export default function App() {
           path="/news/:id"
           element={<SiteChrome><NewsArticlePage /></SiteChrome>}
         />
-        <Route path="/admin" element={<AdminPage />} />
+        <Route
+          path="/admin"
+          element={
+            <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-dim)' }}>Loading admin…</div>}>
+              <AdminPage />
+            </Suspense>
+          }
+        />
         <Route
           path="/profile"
           element={
