@@ -340,6 +340,7 @@
   display: flex;
   gap: 24px;
   overflow-x: auto;
+  align-items: center;
 }
 
 .main-nav__inner::-webkit-scrollbar {
@@ -9097,7 +9098,7 @@
 
 /* ===== Used market: red pill in nav (no-misseable accent) ===== */
 .nav-link--pill {
-  padding: 4px;
+  padding: 7px;
   border-radius: 999px;
   background: var(--color-main);
   color: var(--color-text) !important;
@@ -9110,7 +9111,6 @@
 }
 
 .nav-link--pill:hover {
-  background: var(--color-main-hover);
   transform: translateY(-1px);
 }
 
