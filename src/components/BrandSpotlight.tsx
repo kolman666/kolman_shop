@@ -17,7 +17,7 @@ function getVisibleCount() {
   return window.innerWidth <= 720 ? 1 : 4
 }
 
-export default function BrandSpotlight({ products, brandSlug, brandLabel, bannerImage }: Props) {
+export default function BrandSpotlight({ products, brandSlug, brandLabel, bannerImage, bannerUrl, bannerLabel }: Props) {
   const [offset, setOffset] = useState(0)
   const [visibleCount, setVisibleCount] = useState(getVisibleCount)
 
