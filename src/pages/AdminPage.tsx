@@ -1854,6 +1854,13 @@ function ChatTab() {
   // Bumped whenever the read-map changes (open a thread, etc.) so the JSX
   // re-evaluates `unreadFor(thread)`.
   const [readTick, setReadTick] = useState(0)
+  // Bumped every 10s so the "был X мин назад" label keeps ticking up even
+  // when no new data arrives.
+  const [, setPresenceTick] = useState(0)
+  useEffect(() => {
+    const id = window.setInterval(() => setPresenceTick((n) => n + 1), 10_000)
+    return () => window.clearInterval(id)
+  }, [])
   const [pendingPhotos, setPendingPhotos] = useState<string[]>([])
   const [attaching, setAttaching] = useState(false)
   const [chatLightbox, setChatLightbox] = useState<LightboxState | null>(null)
