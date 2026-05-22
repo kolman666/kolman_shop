@@ -5,13 +5,22 @@ import ProductCard from '../components/ProductCard'
 import { useProducts } from '../hooks/useProducts'
 import { addToCart, updateQuantity, getCart } from '../lib/cart'
 import { variantGroupLabel } from '../lib/variantGroups'
+import { FAVORITES_EVENT, isFavorite, toggleFavorite } from '../lib/favorites'
+import { AUTH_EVENT, getUser, type User } from '../lib/auth'
+import { addReview, getProductReviews, removeReview, USER_DATA_EVENT, type Review } from '../lib/userData'
 
 export default function ProductPage() {
   const { t } = useTranslation()
   const { slug } = useParams()
   const { products, loading } = useProducts()
   const product = products.find((item) => item.slug === slug) ?? products.find((item) => String(item.id) === slug)
-  const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'faq'>('description')
+  const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'faq' | 'reviews'>('description')
+  const [user, setUser] = useState<User | null>(() => getUser())
+  const [fav, setFav] = useState(false)
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [reviewText, setReviewText] = useState('')
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewError, setReviewError] = useState('')
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [isAskModalOpen, setIsAskModalOpen] = useState(false)
   const [questionName, setQuestionName] = useState('')
@@ -26,6 +35,32 @@ export default function ProductPage() {
     window.addEventListener('cart:update', sync)
     return () => window.removeEventListener('cart:update', sync)
   }, [product?.id])
+
+  useEffect(() => {
+    if (!product) return
+    const sync = () => setFav(isFavorite(product.id))
+    sync()
+    window.addEventListener(FAVORITES_EVENT, sync)
+    window.addEventListener(AUTH_EVENT, sync)
+    return () => {
+      window.removeEventListener(FAVORITES_EVENT, sync)
+      window.removeEventListener(AUTH_EVENT, sync)
+    }
+  }, [product?.id])
+
+  useEffect(() => {
+    if (!product) return
+    const sync = () => setReviews(getProductReviews(product.id))
+    sync()
+    window.addEventListener(USER_DATA_EVENT, sync)
+    return () => window.removeEventListener(USER_DATA_EVENT, sync)
+  }, [product?.id])
+
+  useEffect(() => {
+    const sync = () => setUser(getUser())
+    window.addEventListener(AUTH_EVENT, sync)
+    return () => window.removeEventListener(AUTH_EVENT, sync)
+  }, [])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -217,6 +252,17 @@ export default function ProductPage() {
               <button type="button" className="product-page__ghost" onClick={() => setIsAskModalOpen(true)}>
                 {t('ui.productPage.askQuestion')}
               </button>
+              <button
+                type="button"
+                className={`product-page__fav ${fav ? 'product-page__fav--active' : ''}`.trim()}
+                onClick={() => { toggleFavorite(product.id); setFav(isFavorite(product.id)) }}
+                aria-label={fav ? 'remove from favorites' : 'add to favorites'}
+                title={fav ? 'В избранном' : 'В избранное'}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill={fav ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+              </button>
             </div>
             <span className={`product-page__toast${added ? ' product-page__toast--visible' : ''}`}>{t('ui.productPage.addedToCart')}</span>
           </div>
@@ -245,6 +291,13 @@ export default function ProductPage() {
             onClick={() => setActiveTab('faq')}
           >
             {t('ui.productPage.tabFaq')}
+          </button>
+          <button
+            type="button"
+            className={`product-page__tab ${activeTab === 'reviews' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reviews')}
+          >
+            {t('ui.productPage.tabReviews')} {reviews.length > 0 ? `(${reviews.length})` : ''}
           </button>
         </div>
 
@@ -275,6 +328,89 @@ export default function ProductPage() {
                 <h3>{t('ui.productPage.faqQ3')}</h3>
                 <p>{t('ui.productPage.faqA3')}</p>
               </article>
+            </div>
+          )}
+
+          {activeTab === 'reviews' && (
+            <div className="product-reviews">
+              {user ? (
+                <form
+                  className="product-reviews__form"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    setReviewError('')
+                    const text = reviewText.trim()
+                    if (text.length < 3) { setReviewError(t('ui.productPage.reviewTooShort')); return }
+                    addReview(user.email, {
+                      id: `r-${Date.now()}`,
+                      createdAt: Date.now(),
+                      productId: product.id,
+                      productTitle: productTitle,
+                      rating: reviewRating,
+                      text,
+                      authorName: user.firstName || user.name,
+                      authorEmail: user.email,
+                    })
+                    setReviewText('')
+                    setReviewRating(5)
+                  }}
+                >
+                  <div className="product-reviews__form-row">
+                    <div className="product-reviews__stars" role="radiogroup" aria-label="rating">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          role="radio"
+                          aria-checked={reviewRating === n}
+                          onClick={() => setReviewRating(n)}
+                          className={`product-reviews__star ${n <= reviewRating ? 'product-reviews__star--filled' : ''}`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+                    <span className="product-reviews__author">— {user.firstName || user.name}</span>
+                  </div>
+                  <textarea
+                    className="product-reviews__input"
+                    rows={3}
+                    placeholder={t('ui.productPage.reviewPlaceholder')}
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                  />
+                  {reviewError && <p className="product-reviews__error">{reviewError}</p>}
+                  <button type="submit" className="cta-btn">{t('ui.productPage.reviewSubmit')}</button>
+                </form>
+              ) : (
+                <p className="product-reviews__login-hint">{t('ui.productPage.reviewLoginHint')}</p>
+              )}
+
+              {reviews.length === 0 ? (
+                <p className="product-reviews__empty">{t('ui.productPage.reviewEmpty')}</p>
+              ) : (
+                <ul className="product-reviews__list">
+                  {reviews.map((r) => (
+                    <li key={r.id} className="product-reviews__item">
+                      <div className="product-reviews__head">
+                        <div className="product-reviews__stars">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <span key={n} className={`product-reviews__star ${n <= r.rating ? 'product-reviews__star--filled' : ''}`}>★</span>
+                          ))}
+                        </div>
+                        <span className="product-reviews__author">— {r.authorName || (r.authorEmail ? r.authorEmail.split('@')[0] : '')}</span>
+                        <span className="product-reviews__date">{new Date(r.createdAt).toLocaleDateString()}</span>
+                        {user && r.authorEmail === user.email && (
+                          <button type="button" className="product-reviews__remove" onClick={() => removeReview(user.email, r.id)}>
+                            {t('ui.productPage.reviewDelete')}
+                          </button>
+                        )}
+                      </div>
+                      <p className="product-reviews__text">{r.text}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </div>

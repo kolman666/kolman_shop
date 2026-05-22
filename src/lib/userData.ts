@@ -21,6 +21,8 @@ export type Review = {
   productTitle: string
   rating: number
   text: string
+  authorEmail?: string
+  authorName?: string
 }
 
 type Bucket<T> = Record<string, T[]>
@@ -71,4 +73,16 @@ export function removeReview(email: string, id: string) {
   const data = read<Review>(REVIEWS_KEY)
   data[key] = (data[key] ?? []).filter((r) => r.id !== id)
   write(REVIEWS_KEY, data)
+}
+
+// Aggregated view: returns reviews for a product across all users.
+export function getProductReviews(productId: number): Review[] {
+  const data = read<Review>(REVIEWS_KEY)
+  const out: Review[] = []
+  for (const [email, list] of Object.entries(data)) {
+    for (const r of list) {
+      if (r.productId === productId) out.push({ ...r, authorEmail: email })
+    }
+  }
+  return out.sort((a, b) => b.createdAt - a.createdAt)
 }

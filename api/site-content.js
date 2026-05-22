@@ -31,6 +31,14 @@ function clean(s, max) {
   return s.replace(CONTROL_CHARS_RE, '').slice(0, max)
 }
 
+// Same as `clean`, but preserves \n and \r — for long-form text fields like
+// article bodies where paragraph breaks must survive.
+const CONTROL_CHARS_PRESERVE_NL_RE = new RegExp('[\\u0000-\\u0009\\u000B\\u000C\\u000E-\\u001F\\u007F]', 'g')
+function cleanMultiline(s, max) {
+  if (typeof s !== 'string') return ''
+  return s.replace(CONTROL_CHARS_PRESERVE_NL_RE, '').slice(0, max)
+}
+
 const FORBIDDEN_KEY_CHARS_RE = /[\s"'<>`]/
 const LANG_SUFFIX_RE = /_(ru|en)$/
 
@@ -124,6 +132,9 @@ const VALIDATORS = {
         readMin: clean(item.readMin, 40),
         title: clean(item.title, 200),
         excerpt: clean(item.excerpt, 600),
+        // Full article body for /news/:id detail pages. Newlines are preserved
+        // so paragraphs survive (split on double-newline at render time).
+        body: cleanMultiline(item.body, 12000),
         image,
         url,
       })
@@ -175,7 +186,7 @@ const VALIDATORS = {
 function sanitizePageValue(v, depth) {
   if (depth > 3) return undefined
   if (v === null) return ''
-  if (typeof v === 'string') return clean(v, 2000)
+  if (typeof v === 'string') return cleanMultiline(v, 2000)
   if (typeof v === 'number' || typeof v === 'boolean') return v
   if (Array.isArray(v)) {
     if (v.length > 40) return undefined

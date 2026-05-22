@@ -126,20 +126,19 @@ function ProfileForm({ user }: { user: User }) {
           {photo ? <img src={photo} alt="" /> : <div className="profile-form__photo-placeholder" />}
         </div>
         <div className="profile-form__photo-controls">
-          <label className="catalog-field">
-            <span className="catalog-field__label">{t('ui.profile.profileSection.photo')}</span>
-            <input
-              className="catalog-search__input"
-              type="url"
-              value={photo}
-              onChange={(e) => setPhoto(e.target.value)}
-              placeholder="https://..."
-            />
-          </label>
-          <label className="ghost-btn" style={{ cursor: 'pointer' }}>
-            <input type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
-            {t('ui.profile.profileSection.photoUpload')}
-          </label>
+          <span className="catalog-field__label">{t('ui.profile.profileSection.photo')}</span>
+          <p className="profile-form__photo-hint">{t('ui.profile.profileSection.photoHint')}</p>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <label className="cta-btn" style={{ cursor: 'pointer' }}>
+              <input type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
+              {t('ui.profile.profileSection.photoUpload')}
+            </label>
+            {photo && (
+              <button type="button" className="ghost-btn" onClick={() => setPhoto('')}>
+                {t('ui.profile.profileSection.photoRemove')}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { useProducts } from '../hooks/useProducts'
 import { getCart, updateQuantity, removeFromCart, clearCart } from '../lib/cart'
 import { sendTelegramMessage, TelegramSendError } from '../lib/telegram'
+import { getUser } from '../lib/auth'
+import { addOrder } from '../lib/userData'
 
 type CartDrawerProps = {
   isOpen: boolean
@@ -74,8 +76,16 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const [view, setView] = useState<View>('cart')
   const [cartEntries, setCartEntries] = useState<CartEntry[]>([])
 
-  const [name, setName] = useState('')
-  const [contact, setContact] = useState('')
+  const [name, setName] = useState(() => {
+    const u = getUser()
+    if (!u) return ''
+    return [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.name || ''
+  })
+  const [contact, setContact] = useState(() => {
+    const u = getUser()
+    if (!u) return ''
+    return u.phone?.trim() || u.email || ''
+  })
   const [delivery, setDelivery] = useState(DELIVERY_OPTIONS[0] ?? '')
   const [comment, setComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -185,6 +195,18 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         if (err instanceof TelegramSendError) throw err
         // network/CORS — try fallback
         await sendTelegramMessage(msg)
+      }
+      // Mirror the order into the user's local profile so it shows up in /profile
+      // immediately, without waiting for an admin to push it back.
+      const submitter = getUser()
+      if (submitter) {
+        addOrder(submitter.email, {
+          id: `local-${Date.now()}`,
+          createdAt: Date.now(),
+          total,
+          status: 'pending',
+          items: cartEntries.map((e) => ({ productId: e.id, title: e.title, qty: e.quantity, price: e.price })),
+        })
       }
       clearCart()
       setView('success')

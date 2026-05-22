@@ -22,6 +22,7 @@ import PartnershipPage from './pages/PartnershipPage'
 import HelpChoosePage from './pages/HelpChoosePage'
 import DeliveryPage from './pages/DeliveryPage'
 import ModdingPage from './pages/ModdingPage'
+import NewsArticlePage from './pages/NewsArticlePage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import { getCartCount } from './lib/cart'
 import SearchDropdown, { type SearchSection } from './components/SearchDropdown'
@@ -924,6 +925,10 @@ export default function App() {
         <Route
           path="/modding"
           element={<SiteChrome><ModdingPage /></SiteChrome>}
+        />
+        <Route
+          path="/news/:id"
+          element={<SiteChrome><NewsArticlePage /></SiteChrome>}
         />
         <Route path="/admin" element={<AdminPage />} />
         <Route

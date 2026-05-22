@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { fetchSiteContent } from '../lib/siteContent'
-import { safeBackgroundImage, safeHref } from '../lib/safeUrl'
+import { safeBackgroundImage } from '../lib/safeUrl'
 
 export type NewsItem = {
   id: string
@@ -137,15 +137,14 @@ export default function NewsBlock({ items: itemsProp }: NewsBlockProps = {}) {
         <div ref={wrapRef} className="news-track-wrap">
           <div ref={trackRef} className="news-track" style={{ transform: `translateX(-${offset}px)` }}>
             {items.map((item) => {
-              const safeUrl = safeHref(item.url) ?? '/catalog'
-              const isExternal = /^https?:\/\//i.test(safeUrl)
+              // Always link to the in-app news article route; the `url` field
+              // is preserved as an external "source" link on the detail page.
+              const articleHref = item.id ? `/news/${encodeURIComponent(item.id)}` : '/catalog'
               const bg = item.image ? safeBackgroundImage(item.image) : null
               return (
                 <a
                   key={item.id}
-                  href={safeUrl}
-                  target={isExternal ? '_blank' : undefined}
-                  rel={isExternal ? 'noopener noreferrer' : undefined}
+                  href={articleHref}
                   className="news-card"
                 >
                   <div className="news-card__media">

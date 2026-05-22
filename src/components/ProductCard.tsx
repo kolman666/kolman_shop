@@ -5,6 +5,7 @@ import type { Product } from '../data/products'
 import { productPath } from '../lib/productRoute'
 import { addToCart } from '../lib/cart'
 import { FAVORITES_EVENT, isFavorite, toggleFavorite } from '../lib/favorites'
+import { AUTH_EVENT } from '../lib/auth'
 
 type ProductCardProps = {
   product: Product
@@ -21,9 +22,11 @@ export default function ProductCard({ product }: ProductCardProps) {
   useEffect(() => {
     const sync = () => setFav(isFavorite(product.id))
     window.addEventListener(FAVORITES_EVENT, sync)
+    window.addEventListener(AUTH_EVENT, sync)
     window.addEventListener('storage', sync)
     return () => {
       window.removeEventListener(FAVORITES_EVENT, sync)
+      window.removeEventListener(AUTH_EVENT, sync)
       window.removeEventListener('storage', sync)
     }
   }, [product.id])

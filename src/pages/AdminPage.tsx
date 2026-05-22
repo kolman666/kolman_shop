@@ -881,10 +881,11 @@ type NewsItemAdmin = {
   readMin?: string
   title: string
   excerpt?: string
+  body?: string
   image?: string
   url?: string
 }
-const BLANK_NEWS: NewsItemAdmin = { id: '', tag: '', date: '', readMin: '', title: '', excerpt: '', image: '', url: '' }
+const BLANK_NEWS: NewsItemAdmin = { id: '', tag: '', date: '', readMin: '', title: '', excerpt: '', body: '', image: '', url: '' }
 const DEFAULT_NEWS: NewsItemAdmin[] = []
 
 const DEFAULT_SLIDES: HeroSlide[] = [
@@ -1314,6 +1315,19 @@ function ContentTab() {
                   <div className="admin__field">
                     <span className="admin__label">Краткий текст</span>
                     <input className="admin__input" value={item.excerpt ?? ''} onChange={(e) => updateNews(index, 'excerpt', e.target.value)} />
+                  </div>
+                  <div className="admin__field">
+                    <span className="admin__label">
+                      Полный текст статьи <span className="admin__label-hint">(пустая строка для абзаца)</span>
+                    </span>
+                    <textarea
+                      className="admin__input"
+                      rows={6}
+                      value={item.body ?? ''}
+                      onChange={(e) => updateNews(index, 'body', e.target.value)}
+                      placeholder="первая половина статьи..."
+                      style={{ resize: 'vertical', fontFamily: 'inherit', minHeight: 120 }}
+                    />
                   </div>
                   <div className="admin__two-col">
                     <div className="admin__field">

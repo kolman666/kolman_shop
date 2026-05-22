@@ -1,8 +1,9 @@
-import { useReducer, type FormEvent } from 'react'
+import { useEffect, useReducer, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { sendTelegramMessage, TelegramSendError } from '../lib/telegram'
 import { usePageContent } from '../hooks/usePageContent'
+import { getUser } from '../lib/auth'
 
 const REQUEST_TYPE_VALUES = ['order', 'product', 'choose', 'delivery', 'other'] as const
 type RequestTypeValue = (typeof REQUEST_TYPE_VALUES)[number]
@@ -132,6 +133,18 @@ export default function SupportPage() {
   const get = usePageContent('support', 'support')
   const [state, dispatch] = useReducer(supportReducer, INITIAL_SUPPORT_STATE)
   const { requestType, name, contact, message, status, errorDetail } = state
+
+  // Pre-fill name and contact when a user is logged in. Form remains fully
+  // editable so the user can change either field if they want.
+  useEffect(() => {
+    const user = getUser()
+    if (!user) return
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.name
+    if (fullName && !state.name) dispatch({ type: 'setName', value: fullName })
+    const preferContact = user.phone?.trim() || user.email
+    if (preferContact && !state.contact) dispatch({ type: 'setContact', value: preferContact })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const channels = t('support.channels', { returnObjects: true }) as Channel[]
   const quickTopics = t('support.quickTopics', { returnObjects: true }) as QuickTopic[]
