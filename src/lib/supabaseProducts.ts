@@ -2,24 +2,49 @@ import { supabase } from './supabase'
 import type { Product, VariantGroup } from '../data/products'
 import { normalizeVariantGroups } from './variantGroups'
 
+// Why long-lived localStorage cache?
+//
+// Free-tier Supabase + Vercel cold starts can take 5+ seconds, and on bad
+// mobile networks the first /rest call sometimes drops outright. Before this
+// hardening, a transient failure on initial page load meant the entire
+// catalog rendered as empty until the user manually reloaded — that's the
+// "products disappeared" report.
+//
+// New behaviour:
+//   1. Hydrate from localStorage on first call → user always sees the last
+//      known good catalog instantly, even before any network call.
+//   2. Background-refresh: even when a cache hit is served, we kick off a
+//      revalidation so admins get fresh data within seconds. Listeners can
+//      subscribe to `PRODUCTS_EVENT` to repaint when the refresh finishes.
+//   3. Retries with exponential backoff (400ms, 1.2s, 3s) before giving up.
+//   4. On failure we never wipe the cache — last known data stays visible
+//      until a successful refetch.
+
 const SUPABASE_ID_OFFSET = 1_000_000
-const SESSION_CACHE_KEY = 'kolman-products-cache'
-const SESSION_CACHE_TS_KEY = 'kolman-products-cache-ts'
-const SESSION_CACHE_TTL = 5 * 60_000 // 5 min — keeps catalog populated across reloads on slow networks
+const CACHE_KEY = 'kolman-products-cache'
+const CACHE_TS_KEY = 'kolman-products-cache-ts'
+// Long TTL: a day of last-known catalog is fine if network is broken; the
+// background refresh catches drift quickly when it works.
+const PERSIST_TTL = 24 * 60 * 60_000
+// Short in-memory TTL used to skip duplicate fetches within a single page
+// load.
+const MEMORY_TTL = 30_000
+
+export const PRODUCTS_EVENT = 'products:update'
 
 let _cache: Product[] | null = null
 let _cacheTs = 0
-const CACHE_TTL = 60_000
+let _refreshing: Promise<Product[]> | null = null
 
-function hydrateFromSession(): Product[] | null {
+function readPersisted(): Product[] | null {
   if (typeof window === 'undefined') return null
   try {
-    const raw = sessionStorage.getItem(SESSION_CACHE_KEY)
-    const tsRaw = sessionStorage.getItem(SESSION_CACHE_TS_KEY)
+    const raw = localStorage.getItem(CACHE_KEY)
+    const tsRaw = localStorage.getItem(CACHE_TS_KEY)
     if (!raw || !tsRaw) return null
     const ts = parseInt(tsRaw, 10)
     if (!Number.isFinite(ts)) return null
-    if (Date.now() - ts > SESSION_CACHE_TTL) return null
+    if (Date.now() - ts > PERSIST_TTL) return null
     const parsed = JSON.parse(raw) as unknown
     if (!Array.isArray(parsed)) return null
     return parsed as Product[]
@@ -28,14 +53,19 @@ function hydrateFromSession(): Product[] | null {
   }
 }
 
-function persistToSession(products: Product[]) {
+function writePersisted(products: Product[]) {
   if (typeof window === 'undefined') return
   try {
-    sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(products))
-    sessionStorage.setItem(SESSION_CACHE_TS_KEY, String(Date.now()))
+    localStorage.setItem(CACHE_KEY, JSON.stringify(products))
+    localStorage.setItem(CACHE_TS_KEY, String(Date.now()))
   } catch {
     // QuotaExceeded or disabled storage — silent fallback to in-memory only.
   }
+}
+
+function emitUpdate() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(PRODUCTS_EVENT))
 }
 
 export function invalidateProductCache() {
@@ -43,8 +73,8 @@ export function invalidateProductCache() {
   _cacheTs = 0
   if (typeof window !== 'undefined') {
     try {
-      sessionStorage.removeItem(SESSION_CACHE_KEY)
-      sessionStorage.removeItem(SESSION_CACHE_TS_KEY)
+      localStorage.removeItem(CACHE_KEY)
+      localStorage.removeItem(CACHE_TS_KEY)
     } catch { /* ignore */ }
   }
 }
@@ -94,44 +124,73 @@ export function rowToProduct(row: ProductRow): Product {
   }
 }
 
-export async function fetchSupabaseProducts(forceRefresh = false): Promise<Product[]> {
-  // First hit of the session: try to hydrate from sessionStorage so users see
-  // *something* even if the upcoming network fetch is slow or fails.
-  if (!_cache) {
-    const hydrated = hydrateFromSession()
-    if (hydrated) {
-      _cache = hydrated
-      _cacheTs = Date.now() - CACHE_TTL + 1 // expires soon so a fresh fetch runs
-    }
-  }
-
-  if (!supabase) return _cache ?? []
-
-  const now = Date.now()
-  if (!forceRefresh && _cache && now - _cacheTs < CACHE_TTL) {
-    return _cache
-  }
-
-  // Retry once on transient errors. Supabase free tier sometimes cold-starts
-  // and returns a 5xx on the first request.
+// Network fetch with retries. Returns null if every attempt failed — caller
+// is responsible for falling back to whatever cache it still has.
+async function networkFetchWithRetry(): Promise<Product[] | null> {
+  if (!supabase) return null
+  // Three attempts spaced by exponential backoff. Total worst-case ~5s.
+  const delays = [0, 400, 1200, 3000]
   let lastError: unknown = null
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < delays.length; attempt++) {
+    if (delays[attempt] > 0) await delay(delays[attempt])
     const { data, error } = await supabase
       .from('admin_products')
       .select('*')
       .order('id', { ascending: false })
-
     if (!error && data) {
-      _cache = (data as ProductRow[]).map(rowToProduct)
-      _cacheTs = now
-      persistToSession(_cache)
-      return _cache
+      return (data as ProductRow[]).map(rowToProduct)
     }
-
     lastError = error
-    if (attempt === 0) await delay(400)
+  }
+  console.warn('[supabase] admin_products fetch failed after retries:', lastError)
+  return null
+}
+
+async function refresh(): Promise<Product[]> {
+  if (_refreshing) return _refreshing
+  _refreshing = (async () => {
+    try {
+      const fresh = await networkFetchWithRetry()
+      if (fresh) {
+        _cache = fresh
+        _cacheTs = Date.now()
+        writePersisted(fresh)
+        emitUpdate()
+        return fresh
+      }
+      return _cache ?? []
+    } finally {
+      _refreshing = null
+    }
+  })()
+  return _refreshing
+}
+
+export async function fetchSupabaseProducts(forceRefresh = false): Promise<Product[]> {
+  // 1. Hydrate from localStorage on the very first call of the session. The
+  //    user sees the last known catalog before any network call even starts.
+  if (!_cache) {
+    const persisted = readPersisted()
+    if (persisted) {
+      _cache = persisted
+      _cacheTs = 0 // mark in-memory cache as stale so the background refresh runs
+    }
   }
 
-  console.error('[supabase] fetch admin_products failed after retry:', lastError)
-  return _cache ?? []
+  // 2. Fast in-memory hit — multiple components mounting at once don't re-fetch.
+  if (!forceRefresh && _cache && Date.now() - _cacheTs < MEMORY_TTL) {
+    return _cache
+  }
+
+  // 3. If we have any cache at all (persisted), serve it immediately and
+  //    refresh in the background. UI gets instant content; admins still see
+  //    fresh data within a few seconds.
+  if (!forceRefresh && _cache) {
+    void refresh()
+    return _cache
+  }
+
+  // 4. No cache yet — block on the network fetch.
+  const fresh = await refresh()
+  return fresh
 }

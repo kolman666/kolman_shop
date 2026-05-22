@@ -1,7 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ComponentType } from 'react'
 import { fetchSiteContent, updateSiteContent } from '../../lib/siteContent'
 import { AccordionSection } from './AccordionSection'
 import { ArrayEditor } from './ArrayEditor'
+import { PreviewModal } from './PreviewModal'
+import { PageContentOverrideProvider, type PageId as HookPageId } from '../../hooks/usePageContent'
+import AboutPage from '../AboutPage'
+import PartnershipPage from '../PartnershipPage'
+import DeliveryPage from '../DeliveryPage'
+import ModdingPage from '../ModdingPage'
+import HelpChoosePage from '../HelpChoosePage'
+import SupportPage from '../SupportPage'
 
 type PageId = 'about' | 'partnership' | 'delivery' | 'modding' | 'help_choose' | 'support'
 
@@ -143,6 +151,7 @@ export function PagesTabV2() {
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [error, setError] = useState('')
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -217,6 +226,14 @@ export function PagesTabV2() {
           {error && <span style={{ color: 'var(--color-main)', fontSize: 13 }}>{error}</span>}
           <button
             type="button"
+            className="accordion__btn"
+            onClick={() => setPreviewOpen(true)}
+            disabled={loading}
+          >
+            Превью страницы
+          </button>
+          <button
+            type="button"
             className={`admin__save-all ${dirty ? 'admin__save-all--dirty' : ''}`.trim()}
             onClick={() => void save()}
             disabled={saving || !dirty}
@@ -238,7 +255,48 @@ export function PagesTabV2() {
           {pageId === 'support' && <SupportEditor data={data as SupportData} onPatch={patch} />}
         </>
       )}
+
+      <PreviewModal
+        open={previewOpen}
+        title={`${PAGE_LABELS[pageId]} — превью`}
+        onClose={() => setPreviewOpen(false)}
+      >
+        <PagePreview pageId={pageId} data={data as Record<string, unknown>} />
+      </PreviewModal>
     </div>
+  )
+}
+
+// ── Universal page preview ──
+// Renders the actual frontend page component with the editor's in-memory data
+// injected through PageContentOverrideContext. This guarantees the preview
+// matches the live site pixel-for-pixel — same components, same CSS, same i18n
+// fallback for fields the editor hasn't touched. No more drift between hand-
+// crafted preview markup and reality.
+const PAGE_COMPONENTS: Record<PageId, ComponentType> = {
+  about: AboutPage,
+  partnership: PartnershipPage,
+  delivery: DeliveryPage,
+  modding: ModdingPage,
+  help_choose: HelpChoosePage,
+  support: SupportPage,
+}
+
+function PagePreview({ pageId, data }: { pageId: PageId; data: Record<string, unknown> }) {
+  const Component = PAGE_COMPONENTS[pageId]
+  // Pages also use legacy text-only overrides for some fields; passing the
+  // same object as both `data` and `text` is fine — usePageContent picks
+  // whichever resolves to a non-empty string.
+  const textFields: Record<string, string> = {}
+  for (const [k, v] of Object.entries(data)) {
+    if (typeof v === 'string') textFields[k] = v
+  }
+  return (
+    <PageContentOverrideProvider
+      override={{ pageId: pageId as HookPageId, data, text: textFields }}
+    >
+      <Component />
+    </PageContentOverrideProvider>
   )
 }
 
