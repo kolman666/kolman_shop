@@ -1,18 +1,24 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { usePageContent } from '../hooks/usePageContent'
+import { usePageContent, usePageData } from '../hooks/usePageContent'
 
 type Stat = { value: string; label: string }
 type TimelineItem = { num: string; title: string; text: string }
 type ValueItem = { num: string; title: string; text: string }
+type AboutData = {
+  stats?: Stat[]
+  timeline?: TimelineItem[]
+  values?: ValueItem[]
+}
 
 export default function AboutPage() {
   const { t } = useTranslation()
   const get = usePageContent('about', 'about')
+  const admin = usePageData<AboutData>('about')
 
-  const stats = t('about.stats', { returnObjects: true }) as Stat[]
-  const timeline = t('about.timeline', { returnObjects: true }) as TimelineItem[]
-  const values = t('about.values', { returnObjects: true }) as ValueItem[]
+  const stats = (admin.stats && admin.stats.length > 0) ? admin.stats : (t('about.stats', { returnObjects: true }) as Stat[])
+  const timeline = (admin.timeline && admin.timeline.length > 0) ? admin.timeline : (t('about.timeline', { returnObjects: true }) as TimelineItem[])
+  const values = (admin.values && admin.values.length > 0) ? admin.values : (t('about.values', { returnObjects: true }) as ValueItem[])
 
   return (
     <div className="page-shell">

@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { usePageContent } from '../hooks/usePageContent'
+import { usePageContent, usePageData } from '../hooks/usePageContent'
 
 type Option = { id: string; label: string; hint?: string }
 type Step = { question: string; options: Option[] }
+type HelpChooseAdminData = { steps?: Step[] }
 
 export default function HelpChoosePage() {
   const { t } = useTranslation()
   const get = usePageContent('help_choose', 'helpChoose')
-  const steps = t('helpChoose.steps', { returnObjects: true }) as Step[]
+  const admin = usePageData<HelpChooseAdminData>('help_choose')
+  const steps = (admin.steps && admin.steps.length > 0) ? admin.steps : (t('helpChoose.steps', { returnObjects: true }) as Step[])
   const [answers, setAnswers] = useState<Record<number, string>>({})
 
   const selected = (idx: number) => answers[idx]

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { usePageContent } from '../hooks/usePageContent'
+import { usePageContent, usePageData } from '../hooks/usePageContent'
 
 type Tier = {
   id: string
@@ -12,12 +12,15 @@ type Tier = {
 
 type PerkItem = { title: string; text: string }
 
+type PartnershipData = { tiers?: Tier[]; perks?: PerkItem[] }
+
 export default function PartnershipPage() {
   const { t } = useTranslation()
   const get = usePageContent('partnership', 'partnership')
+  const admin = usePageData<PartnershipData>('partnership')
 
-  const tiers = t('partnership.tiers', { returnObjects: true }) as Tier[]
-  const perks = t('partnership.perks', { returnObjects: true }) as PerkItem[]
+  const tiers = (admin.tiers && admin.tiers.length > 0) ? admin.tiers : (t('partnership.tiers', { returnObjects: true }) as Tier[])
+  const perks = (admin.perks && admin.perks.length > 0) ? admin.perks : (t('partnership.perks', { returnObjects: true }) as PerkItem[])
 
   return (
     <div className="page-shell">

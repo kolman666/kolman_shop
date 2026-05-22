@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { usePageContent } from '../hooks/usePageContent'
+import { usePageContent, usePageData } from '../hooks/usePageContent'
 
 type Perk = { title: string; text: string }
 type ProcessStep = { step: string; title: string; text: string }
@@ -52,15 +52,26 @@ function CheckIcon() {
   )
 }
 
+type ModdingAdminData = {
+  perks?: Perk[]
+  processSteps?: ProcessStep[]
+  services?: Service[]
+  bundles?: Bundle[]
+  finalCtaTitle?: string
+  finalCtaText?: string
+  finalCtaBtn?: string
+}
+
 export default function ModdingPage() {
   const { t } = useTranslation()
   const get = usePageContent('modding', 'modding')
+  const admin = usePageData<ModdingAdminData>('modding')
   const [tab, setTab] = useState<'all' | ServiceCategory>('all')
 
-  const perks = t('modding.perks', { returnObjects: true }) as Perk[]
-  const processSteps = t('modding.processSteps', { returnObjects: true }) as ProcessStep[]
-  const services = t('modding.services', { returnObjects: true }) as Service[]
-  const bundles = t('modding.bundles', { returnObjects: true }) as Bundle[]
+  const perks = (admin.perks && admin.perks.length > 0) ? admin.perks : (t('modding.perks', { returnObjects: true }) as Perk[])
+  const processSteps = (admin.processSteps && admin.processSteps.length > 0) ? admin.processSteps : (t('modding.processSteps', { returnObjects: true }) as ProcessStep[])
+  const services = (admin.services && admin.services.length > 0) ? admin.services : (t('modding.services', { returnObjects: true }) as Service[])
+  const bundles = (admin.bundles && admin.bundles.length > 0) ? admin.bundles : (t('modding.bundles', { returnObjects: true }) as Bundle[])
 
   const visibleServices = tab === 'all' ? services : services.filter((s) => s.category === tab)
 
@@ -202,8 +213,8 @@ export default function ModdingPage() {
         </section>
 
         <section className="modding-final-cta">
-          <h2 className="modding-final-cta__title">{t('modding.finalCta.title')}</h2>
-          <p className="modding-final-cta__text">{t('modding.finalCta.text')}</p>
+          <h2 className="modding-final-cta__title">{admin.finalCtaTitle || t('modding.finalCta.title')}</h2>
+          <p className="modding-final-cta__text">{admin.finalCtaText || t('modding.finalCta.text')}</p>
           <a
             href="https://t.me/kolman_shop_bot"
             target="_blank"
@@ -214,7 +225,7 @@ export default function ModdingPage() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
-            {t('modding.finalCta.btn')}
+            {admin.finalCtaBtn || t('modding.finalCta.btn')}
           </a>
         </section>
       </div>

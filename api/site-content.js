@@ -15,6 +15,13 @@ const LOCALIZABLE_BASE_KEYS = new Set([
   'homepage_categories',
   'homepage_perks',
   'homepage_news',
+  // Full structured page data — arrays of cards, tiers, services, faq etc.
+  // Pages merge this over their i18n defaults.
+  'about_data',
+  'partnership_data',
+  'delivery_data',
+  'modding_data',
+  'help_choose_data',
 ])
 
 // Page text content keys: page_<pageId>_<lang>. Validated as a flat object of short strings.
@@ -141,6 +148,15 @@ const VALIDATORS = {
     }
     return { ok: true, value: cleaned }
   },
+  // Generic structured page data: a flat object whose values are sanitized
+  // strings, numbers, booleans, or nested arrays/objects of the same. Used for
+  // about/partnership/delivery/modding/help_choose `*_data` keys.
+  about_data(value) { return validateStructuredPage(value) },
+  partnership_data(value) { return validateStructuredPage(value) },
+  delivery_data(value) { return validateStructuredPage(value) },
+  modding_data(value) { return validateStructuredPage(value) },
+  help_choose_data(value) { return validateStructuredPage(value) },
+
   search_popular_sections(value) {
     if (!Array.isArray(value)) return { ok: false, error: 'search_popular_sections must be an array' }
     if (value.length > 50) return { ok: false, error: 'too many sections' }
@@ -181,6 +197,15 @@ const VALIDATORS = {
     }
     return { ok: true, value: out }
   },
+}
+
+function validateStructuredPage(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { ok: false, error: 'page data must be an object' }
+  }
+  const sanitized = sanitizePageValue(value, 0)
+  if (sanitized === undefined) return { ok: false, error: 'invalid page data' }
+  return { ok: true, value: sanitized }
 }
 
 function sanitizePageValue(v, depth) {

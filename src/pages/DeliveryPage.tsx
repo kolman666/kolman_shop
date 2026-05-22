@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { usePageContent } from '../hooks/usePageContent'
+import { usePageContent, usePageData } from '../hooks/usePageContent'
 
 type FaqItem = { q: string; a: string }
 type TimelineStep = { num: string; title: string; text: string }
@@ -30,13 +30,21 @@ function FaqRow({ item }: { item: FaqItem }) {
   )
 }
 
+type DeliveryAdminData = {
+  timeline?: TimelineStep[]
+  payment?: PaymentMethod[]
+  coverage?: CoverageRow[]
+  faq?: FaqItem[]
+}
+
 export default function DeliveryPage() {
   const { t } = useTranslation()
   const get = usePageContent('delivery', 'delivery')
-  const faq = t('delivery.faq', { returnObjects: true }) as FaqItem[]
-  const timeline = t('delivery.timeline', { returnObjects: true }) as TimelineStep[]
-  const payment = t('delivery.payment', { returnObjects: true }) as PaymentMethod[]
-  const coverage = t('delivery.coverage', { returnObjects: true }) as CoverageRow[]
+  const admin = usePageData<DeliveryAdminData>('delivery')
+  const faq = (admin.faq && admin.faq.length > 0) ? admin.faq : (t('delivery.faq', { returnObjects: true }) as FaqItem[])
+  const timeline = (admin.timeline && admin.timeline.length > 0) ? admin.timeline : (t('delivery.timeline', { returnObjects: true }) as TimelineStep[])
+  const payment = (admin.payment && admin.payment.length > 0) ? admin.payment : (t('delivery.payment', { returnObjects: true }) as PaymentMethod[])
+  const coverage = (admin.coverage && admin.coverage.length > 0) ? admin.coverage : (t('delivery.coverage', { returnObjects: true }) as CoverageRow[])
 
   return (
     <div className="page-shell">
