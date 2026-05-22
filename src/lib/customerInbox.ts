@@ -92,7 +92,7 @@ export async function sendChatMessage(email: string, body: string, threadId?: nu
 // Customer-facing thread management.
 export async function fetchMyThreads(email: string): Promise<ChatThread[]> {
   try {
-    return await handle<ChatThread[]>(await fetch(`/api/chat-threads?my=${encodeURIComponent(email)}`))
+    return await handle<ChatThread[]>(await fetch(`/api/messages?resource=threads&my=${encodeURIComponent(email)}`))
   } catch {
     return []
   }
@@ -100,7 +100,7 @@ export async function fetchMyThreads(email: string): Promise<ChatThread[]> {
 
 export async function createThread(email: string, title: string): Promise<ChatThread> {
   return handle<ChatThread>(
-    await fetch('/api/chat-threads', {
+    await fetch('/api/messages?resource=threads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, title }),
@@ -110,7 +110,7 @@ export async function createThread(email: string, title: string): Promise<ChatTh
 
 export async function setThreadStatus(id: number, email: string, status: 'open' | 'closed'): Promise<ChatThread> {
   return handle<ChatThread>(
-    await fetch('/api/chat-threads', {
+    await fetch('/api/messages?resource=threads', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, email, status }),
@@ -140,13 +140,13 @@ export async function adminFetchThreadMessages(threadId: number): Promise<ChatMe
 
 export async function adminFetchUserThreads(email: string): Promise<ChatThread[]> {
   return handle<ChatThread[]>(
-    await fetch(`/api/chat-threads?email=${encodeURIComponent(email)}`, { headers: adminHeaders() }),
+    await fetch(`/api/messages?resource=threads&email=${encodeURIComponent(email)}`, { headers: adminHeaders() }),
   )
 }
 
 export async function adminSetThreadStatus(id: number, status: 'open' | 'closed'): Promise<ChatThread> {
   return handle<ChatThread>(
-    await fetch('/api/chat-threads', {
+    await fetch('/api/messages?resource=threads', {
       method: 'PATCH',
       headers: adminHeaders(),
       body: JSON.stringify({ id, status }),
@@ -174,7 +174,7 @@ export async function adminListThreads(): Promise<AdminThread[]> {
 // All chat_threads rows across all customers — used by the admin chat view.
 export async function adminListAllChatThreads(): Promise<ChatThread[]> {
   return handle<ChatThread[]>(
-    await fetch('/api/chat-threads', { headers: adminHeaders() }),
+    await fetch('/api/messages?resource=threads', { headers: adminHeaders() }),
   )
 }
 
@@ -194,7 +194,7 @@ export async function adminLookupUsers(emails: string[]): Promise<Record<string,
   const query = encodeURIComponent(emails.join(','))
   try {
     return await handle<Record<string, UserLookup>>(
-      await fetch(`/api/users-lookup?emails=${query}`, { headers: adminHeaders() }),
+      await fetch(`/api/auth?action=lookup&emails=${query}`, { headers: adminHeaders() }),
     )
   } catch {
     return {}
