@@ -45,7 +45,6 @@ import {
   adminListAllChatThreads,
   adminSetThreadStatus,
   adminLookupUsers,
-  type AdminThread,
   type ChatMessage,
   type ChatThread,
   type UserLookup,
