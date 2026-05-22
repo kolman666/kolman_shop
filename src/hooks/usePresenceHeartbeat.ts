@@ -9,14 +9,19 @@ import { getUser } from '../lib/auth'
 
 const HEARTBEAT_MS = 30_000
 
+// If the server has told us the migration isn't applied yet, we stop pinging
+// for the rest of the session — no point hammering the endpoint.
+let migrationMissing = false
+
 async function beat(): Promise<void> {
+  if (migrationMissing) return
   // We piggyback on the existing bearer token from /api/auth?action=login.
   const token = (() => {
     try { return localStorage.getItem('kolman-auth-token') || '' } catch { return '' }
   })()
   if (!token) return
   try {
-    await fetch('/api/auth?action=heartbeat', {
+    const r = await fetch('/api/auth?action=heartbeat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -27,6 +32,17 @@ async function beat(): Promise<void> {
       body: '{}',
       keepalive: true,
     })
+    if (r.ok) {
+      try {
+        const body = await r.json() as { ok?: boolean; reason?: string }
+        if (body?.reason === 'migration_needed') {
+          migrationMissing = true
+          // Make the issue obvious in the console so the admin can spot it.
+          // eslint-disable-next-line no-console
+          console.warn('[presence] auth_users.last_seen_at column is missing — run the migration in api/auth.js header comment, then NOTIFY pgrst, "reload schema"; in Supabase.')
+        }
+      } catch { /* ignore body parse */ }
+    }
   } catch {
     // Network blip — next tick will retry.
   }

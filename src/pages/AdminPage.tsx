@@ -247,7 +247,7 @@ export default function AdminPage() {
   return <AdminPanel onLogout={() => { clearAdminSecret(); setAuthStatus('guest') }} />
 }
 
-type AdminTab = 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat'
+type AdminTab = 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers'
 
 // ── Admin panel inner ─────────────────────────────────────────────────────────
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
@@ -530,9 +530,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           Чат
           {unreadChatCount > 0 && <span className="admin__tab-badge">{unreadChatCount}</span>}
         </button>
-        {/* Стандартный таб «Блогеры» удалён — управление блогерами теперь
-          * живёт внутри «Контент главной страницы» как отдельная секция
-          * (см. ниже, под основными аккордеонами). */}
+        <button type="button" className={`admin__tab-btn${activeTab === 'bloggers' ? ' active' : ''}`} onClick={() => setActiveTab('bloggers')}>
+          Блогеры
+        </button>
       </div>
 
       <div className={`chat-site-toast chat-site-toast--admin ${chatToast ? 'chat-site-toast--visible' : ''}`}>
@@ -540,28 +540,13 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         <span>{chatToast?.body}</span>
       </div>
 
-      {activeTab === 'content' && (
-        <>
-          <ContentTabV2 />
-          {/* Управление блогерами — раньше это был отдельный таб, теперь
-            * рендерится прямо под аккордеонами контента, чтобы редактирование
-            * блока «Выбор блогеров» жило рядом с превью этого же блока. */}
-          <section className="admin__content-tab" style={{ marginTop: 36 }}>
-            <header className="admin__content-tab-head" style={{ marginBottom: 12 }}>
-              <h2 className="admin__content-title">Блогеры</h2>
-              <p className="admin__content-subtitle">
-                Карточки в блоке «Выбор блогеров» на главной. Превью самого блока — выше, в аккордеоне «Блок «Выбор блогеров».
-              </p>
-            </header>
-            <BloggersTab allProducts={allProducts} />
-          </section>
-        </>
-      )}
+      {activeTab === 'content' && <ContentTabV2 />}
       {activeTab === 'pages' && <PagesTabV2 />}
       {activeTab === 'brands' && <BrandPagesTab />}
       {activeTab === 'orders' && <OrdersTab />}
       {activeTab === 'inquiries' && <InquiriesTab />}
       {activeTab === 'chat' && <ChatTab />}
+      {activeTab === 'bloggers' && <BloggersTab allProducts={allProducts} />}
 
       {activeTab === 'products' && (
       <div className="admin__body">
