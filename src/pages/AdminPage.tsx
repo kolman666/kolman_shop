@@ -49,7 +49,7 @@ import {
   type UserLookup,
 } from '../lib/customerInbox'
 import { supabase } from '../lib/supabase'
-import { playChatNotificationSound, showBrowserChatNotification } from '../lib/chatNotifications'
+import { initializeChatNotificationAudio, playChatNotificationSound, showBrowserChatNotification } from '../lib/chatNotifications'
 
 const CATEGORIES = [
   { key: 'products.categories.mice', label: 'Мышки' },
@@ -255,6 +255,12 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const unreadChat = unreadChatThreadIds.size
 
   useEffect(() => {
+    const unlockAudio = () => initializeChatNotificationAudio()
+    window.addEventListener('pointerdown', unlockAudio, { once: true })
+    return () => window.removeEventListener('pointerdown', unlockAudio)
+  }, [])
+
+  useEffect(() => {
     const sb = supabase
     if (!sb) return
     const channel = sb
@@ -266,13 +272,11 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           const row = payload?.new as { sender?: string; body?: string; thread_email?: string; thread_id?: number | null; id?: number } | null
           if (row?.sender !== 'user') return
           const threadKey = row.thread_id ?? row.thread_email ?? row.id ?? Date.now()
-          if (activeTab !== 'chat') {
-            setUnreadChatThreadIds((prev) => {
-              const next = new Set(prev)
-              next.add(threadKey)
-              return next
-            })
-          }
+          setUnreadChatThreadIds((prev) => {
+            const next = new Set(prev)
+            next.add(threadKey)
+            return next
+          })
           const nextToast = {
             title: 'Новое сообщение в чате',
             body: `${row.thread_email ?? 'клиент'}: ${(row.body ?? '').slice(0, 120)}`,
@@ -291,7 +295,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
   useEffect(() => {
     if (activeTab === 'chat') {
-      setUnreadChatThreadIds(new Set())
       setChatToast(null)
     }
   }, [activeTab])

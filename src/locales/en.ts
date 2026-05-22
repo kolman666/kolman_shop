@@ -138,6 +138,10 @@ const en = {
       home: 'home',
       catalog: 'catalog',
       product: 'product',
+      news: 'news',
+      usedMarket: 'used market',
+      brand: 'brand',
+      article: 'article',
     },
     catalog: {
       eyebrow: 'product archive',

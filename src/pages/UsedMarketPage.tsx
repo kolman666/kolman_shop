@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useProducts } from '../hooks/useProducts'
 import ProductCard from '../components/ProductCard'
@@ -78,6 +79,14 @@ export default function UsedMarketPage() {
           <h1 className="used-page__title">{t('ui.usedMarket.title')}</h1>
           <p className="used-page__lead">{t('ui.usedMarket.lead')}</p>
         </header>
+
+        <div className="used-page__seller-block">
+          <h2 className="used-page__seller-title">{t('ui.usedMarket.sellBlockTitle')}</h2>
+          <p className="used-page__seller-text">{t('ui.usedMarket.sellBlockText')}</p>
+          <Link to="/support" className="used-page__seller-link">
+            {t('ui.usedMarket.sellBlockAction')}
+          </Link>
+        </div>
 
         {conditions.length > 0 && (
           <div className="used-page__filter-group">

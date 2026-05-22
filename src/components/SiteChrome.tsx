@@ -8,7 +8,7 @@ import SearchDropdown, { type SearchSection } from './SearchDropdown'
 import AuthModal from './AuthModal'
 import { fetchSiteContent } from '../lib/siteContent'
 import { useCustomerChatNotifications } from '../hooks/useCustomerChatNotifications'
-import { markChatNotificationsRead } from '../lib/chatNotifications'
+import { markChatNotificationsRead, initializeChatNotificationAudio } from '../lib/chatNotifications'
 
 type SiteChromeContent = {
   address?: string
@@ -91,6 +91,12 @@ export default function SiteChrome({ children }: SiteChromeProps) {
       window.removeEventListener(AUTH_EVENT, syncUser)
       window.removeEventListener('storage', syncUser)
     }
+  }, [])
+
+  useEffect(() => {
+    const unlockAudio = () => initializeChatNotificationAudio()
+    window.addEventListener('pointerdown', unlockAudio, { once: true })
+    return () => window.removeEventListener('pointerdown', unlockAudio)
   }, [])
 
   const handleAccountClick = () => {
@@ -196,6 +202,12 @@ export default function SiteChrome({ children }: SiteChromeProps) {
   if (pathParts[0] === 'help-choose') breadcrumbs.push({ label: 'помочь с выбором' })
   if (pathParts[0] === 'delivery') breadcrumbs.push({ label: 'доставка и оплата' })
   if (pathParts[0] === 'modding') breadcrumbs.push({ label: 'моддинг' })
+  if (pathParts[0] === 'news') {
+    breadcrumbs.push({ label: t('ui.breadcrumbs.news') })
+    if (pathParts[1]) breadcrumbs.push({ label: t('ui.breadcrumbs.article') })
+  }
+  if (pathParts[0] === 'used') breadcrumbs.push({ label: t('ui.breadcrumbs.usedMarket') })
+  if (pathParts[0] === 'brand') breadcrumbs.push({ label: t('ui.breadcrumbs.brand') })
   if (pathParts[0] === 'profile') breadcrumbs.push({ label: 'личный кабинет' })
   if (pathParts[0] === 'privacy') breadcrumbs.push({ label: 'политика конфиденциальности' })
 

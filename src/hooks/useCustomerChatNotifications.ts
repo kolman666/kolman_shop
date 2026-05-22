@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import {
   CHAT_NOTIFICATIONS_READ_EVENT,
   CUSTOMER_CHAT_NOTIFICATION_EVENT,
+  initializeChatNotificationAudio,
   playChatNotificationSound,
   showBrowserChatNotification,
 } from '../lib/chatNotifications'
@@ -43,7 +44,6 @@ export function useCustomerChatNotifications(email?: string | null) {
 
     const handleMessage = (row: MessageRow | null) => {
       if (!row || row.sender !== 'admin') return
-      if ((row.thread_email ?? '').trim().toLowerCase() !== normalizedEmail) return
       const threadKey = row.thread_id ?? row.id ?? Date.now()
       setUnreadThreadIds((prev) => {
         const next = new Set(prev)
@@ -65,15 +65,26 @@ export function useCustomerChatNotifications(email?: string | null) {
 
     const sb = supabase
     if (sb) {
+      const unlockAudio = () => initializeChatNotificationAudio()
+      window.addEventListener('pointerdown', unlockAudio, { once: true })
+
       const channel = sb
         .channel(`customer-chat-notifications-${normalizedEmail}`)
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'messages' },
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `thread_email=eq.${normalizedEmail}`,
+          },
           (payload) => handleMessage(payload?.new as MessageRow | null),
         )
         .subscribe()
-      return () => { void sb.removeChannel(channel) }
+      return () => {
+        void sb.removeChannel(channel)
+        window.removeEventListener('pointerdown', unlockAudio)
+      }
     }
   }, [normalizedEmail])
 

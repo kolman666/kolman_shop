@@ -5,6 +5,24 @@ export function markChatNotificationsRead() {
   window.dispatchEvent(new Event(CHAT_NOTIFICATIONS_READ_EVENT))
 }
 
+let chatNotificationAudioPrimed = false
+
+export function initializeChatNotificationAudio() {
+  if (chatNotificationAudioPrimed) return
+  try {
+    const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!AudioContextCtor) return
+    const ctx = new AudioContextCtor()
+    if (ctx.state === 'suspended') {
+      void ctx.resume().catch(() => undefined)
+    }
+    window.setTimeout(() => { void ctx.close().catch(() => undefined) }, 320)
+    chatNotificationAudioPrimed = true
+  } catch {
+    // Browsers can block audio until the first user gesture. Silent failure is ok.
+  }
+}
+
 export function playChatNotificationSound() {
   try {
     const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext

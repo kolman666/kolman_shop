@@ -138,6 +138,10 @@ const ru = {
       home: 'главная',
       catalog: 'каталог',
       product: 'товар',
+      news: 'новости',
+      usedMarket: 'барахолка',
+      brand: 'бренд',
+      article: 'статья',
     },
     catalog: {
       eyebrow: 'каталог товаров',

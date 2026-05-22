@@ -9599,6 +9599,45 @@
 }
 
 /* ===== Used market: filter groups ===== */
+.used-page__seller-block {
+  padding: 24px;
+  border: 1px solid color-mix(in srgb, var(--color-main) 30%, var(--color-border));
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-elevated);
+  display: grid;
+  gap: 12px;
+}
+
+.used-page__seller-title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+  color: var(--color-text);
+}
+
+.used-page__seller-text {
+  margin: 0;
+  color: var(--color-text-dim);
+  line-height: 1.8;
+}
+
+.used-page__seller-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 11px 18px;
+  border-radius: 999px;
+  background: var(--color-main);
+  color: var(--color-text);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.used-page__seller-link:hover {
+  filter: brightness(1.05);
+}
+
 .used-page__filter-group {
   display: grid;
   gap: 8px;
