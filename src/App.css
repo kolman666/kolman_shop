@@ -464,7 +464,192 @@
   flex-direction: column;
   justify-content: flex-end;
   height: 100%;
-  padding: 48px 52px;
+  /* Right padding leaves room for the full-height CTA panel that lives in
+   * the hero-card right edge. Matches `--hero-cta-width` below. */
+  padding: 48px 280px 48px 52px;
+}
+
+/* ============================================================
+ * Hero CTA panel — vertical "начать покупки" strip on the right.
+ * Replaces the old inline cta-btn + ghost-btn pair. On wide
+ * screens it spans the full height of the hero card; on mobile
+ * it collapses to a chunky full-width strip at the bottom.
+ * ============================================================ */
+:root {
+  --hero-cta-width: 220px;
+}
+
+.hero-card__cta-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--hero-cta-width);
+  z-index: 2;
+  display: flex;
+  align-items: stretch;
+  text-decoration: none;
+  color: #fff;
+  background: linear-gradient(160deg, var(--color-main-hover) 0%, var(--color-main) 55%, #9d0d0d 100%);
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    width 0.45s cubic-bezier(0.22, 0.61, 0.36, 1),
+    filter 0.3s ease;
+}
+
+.hero-card__cta-panel:hover,
+.hero-card__cta-panel:focus-visible {
+  width: calc(var(--hero-cta-width) + 24px);
+  filter: brightness(1.06);
+}
+
+/* Decorative diagonal sheen — keeps the panel feeling alive even when
+ * idle. Painted via a 200%-wide gradient that slides across forever. */
+.hero-card__cta-shimmer {
+  position: absolute;
+  inset: -20% -50%;
+  background: linear-gradient(
+    120deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.22) 48%,
+    rgba(255, 255, 255, 0.05) 56%,
+    transparent 75%
+  );
+  transform: translateX(-30%);
+  animation: hero-cta-sheen 5.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes hero-cta-sheen {
+  0%   { transform: translateX(-40%); opacity: 0.6; }
+  50%  { transform: translateX(40%);  opacity: 1;   }
+  100% { transform: translateX(-40%); opacity: 0.6; }
+}
+
+/* Subtle dot grid on top of the gradient — adds texture without competing
+ * with the hero photo behind. */
+.hero-card__cta-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+  background-size: 14px 14px;
+  opacity: 0.35;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hero-card__cta-inner {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  padding: 28px 18px;
+  text-align: center;
+}
+
+.hero-card__cta-label {
+  font-family: var(--font-display);
+  font-size: clamp(22px, 2.6vw, 30px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  text-transform: lowercase;
+  /* Subtle drop shadow lifts the text off the dot-grid texture. */
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+  transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.hero-card__cta-panel:hover .hero-card__cta-label {
+  transform: translateY(-3px);
+}
+
+.hero-card__cta-arrow {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(2px);
+  transition:
+    transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1),
+    background 0.3s ease;
+  animation: hero-cta-arrow-bob 3.2s ease-in-out infinite;
+}
+
+@keyframes hero-cta-arrow-bob {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(6px); }
+}
+
+.hero-card__cta-panel:hover .hero-card__cta-arrow {
+  transform: translateX(10px);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Pull the inner content slightly down on hover for a layered effect. */
+.hero-card__cta-panel:active .hero-card__cta-inner {
+  transform: scale(0.985);
+  transition: transform 0.15s ease;
+}
+
+/* Tablet: shrink width to keep text readable on the slide. */
+@media (max-width: 1024px) {
+  :root { --hero-cta-width: 180px; }
+  .hero-card__content { padding-right: 200px; }
+  .hero-card__cta-label { font-size: clamp(18px, 3vw, 24px); }
+  .hero-card__cta-arrow { width: 52px; height: 52px; }
+}
+
+/* Mobile: panel collapses to a chunky bottom strip; content padding
+ * adjusts to make room. */
+@media (max-width: 720px) {
+  .hero-card__content {
+    padding: 28px 24px 110px;
+  }
+  .hero-card__cta-panel {
+    left: 0;
+    top: auto;
+    width: auto;
+    height: 84px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .hero-card__cta-panel:hover,
+  .hero-card__cta-panel:focus-visible {
+    width: auto;
+    height: 92px;
+  }
+  .hero-card__cta-inner {
+    flex-direction: row;
+    gap: 14px;
+    padding: 12px 24px;
+    justify-content: space-between;
+  }
+  .hero-card__cta-label {
+    font-size: 20px;
+    text-align: left;
+  }
+  .hero-card__cta-arrow {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+  }
+}
+
+/* Reduced-motion: kill the looping sheen + arrow bob so the panel stays
+ * still for users who prefer no movement. The hover transitions stay. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-card__cta-shimmer { animation: none; }
+  .hero-card__cta-arrow { animation: none; }
 }
 
 .hero-card__copy {
@@ -8456,6 +8641,69 @@
   margin-top: 6px;
   font-size: 11px;
   opacity: 0.55;
+}
+
+/* ---- Telegram-style status indicators ---- */
+.profile-chat__bubble-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.profile-chat__bubble-foot time {
+  display: inline-block;
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.chat-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  opacity: 0.55;
+  line-height: 0;
+  /* Buttons (failed/retry variant) need a reset. */
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: default;
+}
+
+.chat-status--retry { cursor: pointer; opacity: 0.85; }
+.chat-status--retry:hover { opacity: 1; }
+
+.chat-status--sending {
+  opacity: 0.85;
+  animation: chat-status-spin 1.2s linear infinite;
+}
+
+@keyframes chat-status-spin {
+  to { transform: rotate(360deg); }
+}
+
+.chat-status--failed { color: #ff6b6b; opacity: 1; }
+
+.chat-status--sent { opacity: 0.6; }
+
+.chat-status--read {
+  /* Bright accent ✓✓ when the other side has read the message. */
+  color: var(--color-main);
+  opacity: 1;
+}
+
+/* "Sending" bubble gets a subtle dimming so the user can tell it's in flight,
+ * even before they notice the spinner glyph. */
+.profile-chat__bubble--sending {
+  opacity: 0.78;
+  transition: opacity 0.25s ease;
+}
+
+.profile-chat__bubble--failed {
+  /* Hint that this needs attention — red-tinged border on the bubble. */
+  box-shadow: inset 0 0 0 1px rgba(255, 107, 107, 0.45);
 }
 
 .profile-chat__form {

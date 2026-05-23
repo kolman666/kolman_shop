@@ -53,10 +53,12 @@ import {
   adminListAllChatThreads,
   adminSetThreadStatus,
   adminLookupUsers,
+  adminMarkThreadSeen,
   type ChatMessage,
   type ChatThread,
   type UserLookup,
 } from '../lib/customerInbox'
+import ChatStatusIcon from '../components/ChatStatusIcon'
 import { formatChatTime, formatThreadTime } from '../lib/chatFormat'
 import ChatBubbleContent from '../components/ChatBubbleContent'
 import { fileToPhotoMarker } from '../lib/chatMessage'
@@ -2533,7 +2535,16 @@ function ChatTab({ onOpenCustomer }: { onOpenCustomer?: (email: string) => void 
     setLoadingMessages(true)
     try {
       const rows = await adminFetchThreadMessages(threadId)
-      setMessages(rows)
+      // Preserve in-flight optimistic placeholders that haven't been
+      // reconciled yet — drop ones whose real row arrived from the server.
+      setMessages((prev) => {
+        const pending = prev.filter((m) => m.clientStatus === 'sending' && m.id < 0)
+        const stillPending = pending.filter((p) => !rows.some(
+          (r) => r.sender === p.sender && r.body === p.body &&
+            Math.abs(new Date(r.created_at).getTime() - new Date(p.created_at).getTime()) < 30_000,
+        ))
+        return [...rows, ...stillPending]
+      })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'failed')
     } finally {
@@ -2598,6 +2609,10 @@ function ChatTab({ onOpenCustomer }: { onOpenCustomer?: (email: string) => void 
   useEffect(() => {
     if (!active) return
     void loadMessages(active)
+    // Mark this thread as seen by the admin so the customer sees ✓✓ next to
+    // their messages. Re-fires on every realtime push too, so an admin who
+    // stays parked on the thread keeps the receipts current.
+    void adminMarkThreadSeen(active)
     const sb = supabase
     if (sb) {
       const channel = sb
@@ -2605,7 +2620,10 @@ function ChatTab({ onOpenCustomer }: { onOpenCustomer?: (email: string) => void 
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${active}` },
-          () => { void loadMessages(active) },
+          () => {
+            void loadMessages(active)
+            void adminMarkThreadSeen(active)
+          },
         )
         .subscribe()
       const poll = window.setInterval(() => { void loadMessages(active) }, 3_000)
@@ -2632,24 +2650,36 @@ function ChatTab({ onOpenCustomer }: { onOpenCustomer?: (email: string) => void 
     // Inline photos via `[[photo:DATAURL]]` markers — same encoding as the
     // customer side, decoded by ChatBubbleContent on render.
     const fullBody = [text, ...pendingPhotos].filter(Boolean).join('\n')
-    const snapshotDraft = draft
-    const snapshotPhotos = pendingPhotos
-    // Optimistically clear the form so the admin can move on. If the request
-    // fails AND the message clearly didn't reach the DB, we restore.
+
+    // Optimistic placeholder — admin reply pops into the thread the moment
+    // they hit send, before the network resolves. Negative ID guarantees no
+    // collision with real server IDs; loadMessages drops it when the real
+    // row appears.
+    const tempId = -Date.now()
+    const optimistic: ChatMessage = {
+      id: tempId,
+      sender: 'admin',
+      body: fullBody,
+      created_at: new Date().toISOString(),
+      thread_id: activeThread.id,
+      clientStatus: 'sending',
+    }
+    setMessages((prev) => [...prev, optimistic])
     setDraft('')
     setPendingPhotos([])
     setSending(true)
     setError('')
+
     try {
       const sent = await adminReply(activeThread.user_email, fullBody, activeThread.id)
-      setMessages((prev) => [...prev, sent])
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...sent, clientStatus: 'sent' as const } : m)))
       void loadThreads(true)
     } catch (e) {
       const raw = e instanceof Error ? e.message : 'failed'
       // Some 500s come from side-effects (Telegram notify, stats refresh)
       // AFTER the message was actually inserted. To check: re-fetch the
-      // thread's messages and see whether ours is there. If yes — leave the
-      // form clear. If no — restore the draft so the admin can retry.
+      // thread's messages and see whether ours is there. If yes — promote the
+      // placeholder to "sent" anyway and skip the error toast.
       let actuallySent = false
       try {
         const fresh = await adminFetchThreadMessages(activeThread.id)
@@ -2657,16 +2687,20 @@ function ChatTab({ onOpenCustomer }: { onOpenCustomer?: (email: string) => void 
           (m) => m.sender === 'admin' && m.body === fullBody &&
                  Date.now() - new Date(m.created_at).getTime() < 60_000,
         )
-        if (actuallySent) setMessages(fresh)
+        if (actuallySent) {
+          setMessages((prev) => {
+            // Use the real rows but keep any newer pending items.
+            const pending = prev.filter((m) => m.clientStatus === 'sending' && m.id < 0 && m.id !== tempId)
+            return [...fresh, ...pending]
+          })
+        }
       } catch { /* network — assume not sent */ }
 
       if (actuallySent) {
-        // Success despite the 500 — silently swallow and refresh threads.
         void loadThreads(true)
       } else {
-        // Real failure — restore the input + surface a clear message.
-        setDraft(snapshotDraft)
-        setPendingPhotos(snapshotPhotos)
+        // Real failure — mark the placeholder as failed so admin can retry.
+        setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, clientStatus: 'failed' as const } : m)))
         if (/table_not_found|schema cache|public\.messages/.test(raw)) {
           setError('Таблица messages не создана. Откройте «Заявки» в админке, скопируйте SQL и запустите в Supabase.')
         } else if (/thread_closed/.test(raw)) {
@@ -2676,6 +2710,33 @@ function ChatTab({ onOpenCustomer }: { onOpenCustomer?: (email: string) => void 
           setError(`Не удалось отправить: ${raw}`)
         }
       }
+    } finally {
+      setSending(false)
+    }
+  }
+
+  // Retry handler attached to failed-bubble icons. Drops the failed
+  // placeholder, then restages the same body through the optimistic path.
+  async function retryFailedMessage(failed: ChatMessage) {
+    if (!activeThread) return
+    setMessages((prev) => prev.filter((m) => m.id !== failed.id))
+    const tempId = -Date.now()
+    const optimistic: ChatMessage = {
+      ...failed,
+      id: tempId,
+      created_at: new Date().toISOString(),
+      clientStatus: 'sending',
+    }
+    setMessages((prev) => [...prev, optimistic])
+    setError('')
+    setSending(true)
+    try {
+      const sent = await adminReply(activeThread.user_email, failed.body, activeThread.id)
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...sent, clientStatus: 'sent' as const } : m)))
+      void loadThreads(true)
+    } catch (e) {
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, clientStatus: 'failed' as const } : m)))
+      setError(e instanceof Error ? e.message : 'failed')
     } finally {
       setSending(false)
     }
@@ -2835,20 +2896,35 @@ function ChatTab({ onOpenCustomer }: { onOpenCustomer?: (email: string) => void 
                 ) : messages.length === 0 ? (
                   <p className="profile-chat__empty">Это новая переписка — напишите клиенту первым.</p>
                 ) : (
-                  messages.map((m) => (
-                    <div key={m.id} className={`profile-chat__msg profile-chat__msg--${m.sender}`}>
-                      <div className="profile-chat__bubble">
-                        {/* No sender label — the customer's name lives in the
-                          * conversation header (top of this column), bubble
-                          * alignment + colour convey direction. */}
-                        <ChatBubbleContent
-                          body={m.body}
-                          onOpenPhoto={(urls, index) => setChatLightbox({ images: urls, index })}
-                        />
-                        <time>{formatChatTime(m.created_at)}</time>
+                  messages.map((m) => {
+                    // Admin's "own" messages = sender 'admin'. Read iff
+                    // customer's last_user_seen_at on the thread is past the
+                    // message timestamp.
+                    const isOwn = m.sender === 'admin'
+                    const otherSeenAt = isOwn ? activeThread.last_user_seen_at : null
+                    const status: 'sending' | 'failed' | 'sent' | 'read' =
+                      m.clientStatus === 'sending' ? 'sending'
+                      : m.clientStatus === 'failed' ? 'failed'
+                      : (otherSeenAt && new Date(otherSeenAt) >= new Date(m.created_at)) ? 'read'
+                      : 'sent'
+                    return (
+                      <div key={m.id} className={`profile-chat__msg profile-chat__msg--${m.sender}`}>
+                        <div className={`profile-chat__bubble profile-chat__bubble--${status}`}>
+                          {/* No sender label — the customer's name lives in the
+                            * conversation header (top of this column), bubble
+                            * alignment + colour convey direction. */}
+                          <ChatBubbleContent
+                            body={m.body}
+                            onOpenPhoto={(urls, index) => setChatLightbox({ images: urls, index })}
+                          />
+                          <div className="profile-chat__bubble-foot">
+                            <time>{formatChatTime(m.created_at)}</time>
+                            {isOwn && <ChatStatusIcon status={status} onRetry={status === 'failed' ? () => void retryFailedMessage(m) : undefined} />}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    )
+                  })
                 )}
               </div>
               {activeThread.status === 'open' ? (

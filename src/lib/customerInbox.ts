@@ -47,6 +47,11 @@ export type ChatMessage = {
   body: string
   created_at: string
   thread_id?: number | null
+  // Client-only field. Lives on the message object purely so the UI can show
+  // a "sending / sent / failed" indicator next to the bubble — the server
+  // never sets this. Optimistic placeholders use negative IDs so they don't
+  // collide with real ones; the reconciler replaces them on ack.
+  clientStatus?: 'sending' | 'sent' | 'failed'
 }
 
 export type ChatThread = {
@@ -66,6 +71,14 @@ export type ChatThread = {
   // round-trip.
   last_message_preview?: string
   last_message_sender?: 'user' | 'admin'
+  // Optional read-receipt timestamps. Both sides bump their own column when
+  // they view the thread (PATCH `?resource=threads` with action=mark_seen).
+  // Used to render Telegram-style ✓/✓✓ on outgoing messages: anything sent
+  // before the *other* side's seen_at is considered read.
+  // Both columns are nullable to keep the feature backwards-compatible — the
+  // server silently degrades when the SQL migration hasn't been run.
+  last_admin_seen_at?: string | null
+  last_user_seen_at?: string | null
 }
 
 async function handle<T>(res: Response): Promise<T> {
@@ -175,6 +188,31 @@ export async function setThreadStatus(id: number, email: string, status: 'open' 
       body: JSON.stringify({ id, email, status }),
     }),
   )
+}
+
+// Telemetry-style ping that bumps the caller's "seen at" column on a thread.
+// Best-effort: failures (incl. missing schema column) are swallowed so we
+// never block UX. Server figures out which column to set from the auth role:
+//   - admin → last_admin_seen_at
+//   - user  → last_user_seen_at (own thread only)
+export async function markThreadSeen(id: number): Promise<void> {
+  try {
+    await fetch('/api/messages?resource=threads', {
+      method: 'PATCH',
+      headers: userHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ id, action: 'mark_seen' }),
+    })
+  } catch { /* network — non-fatal */ }
+}
+
+export async function adminMarkThreadSeen(id: number): Promise<void> {
+  try {
+    await fetch('/api/messages?resource=threads', {
+      method: 'PATCH',
+      headers: adminHeaders(),
+      body: JSON.stringify({ id, action: 'mark_seen' }),
+    })
+  } catch { /* non-fatal */ }
 }
 
 // Admin-only — uses X-Admin-Secret to identify thread participants.

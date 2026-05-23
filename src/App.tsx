@@ -588,39 +588,6 @@ function HomePage() {
                 <h1 className="hero-title">{slide.title}</h1>
                 <p className="hero-subtitle">{slide.subtitle}</p>
                 <p className="hero-accent-text">{slide.accent}</p>
-
-                <div className="hero-actions">
-                  <Link to="/catalog" className="cta-btn">
-                    {t('ui.shopNow')}
-                  </Link>
-                  {(() => {
-                    const url = (slide.detailsUrl ?? '').trim()
-                    if (!url) return null
-                    // Internal route — render with React Router Link to keep SPA behavior
-                    if (url.startsWith('/')) {
-                      return (
-                        <Link to={url} className="ghost-btn">
-                          {t('ui.learnMore')}
-                        </Link>
-                      )
-                    }
-                    // External — only allow http(s) to block javascript:/data: payloads
-                    if (/^https?:\/\//i.test(url)) {
-                      return (
-                        <a
-                          href={url}
-                          className="ghost-btn"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ textDecoration: 'none' }}
-                        >
-                          {t('ui.learnMore')}
-                        </a>
-                      )
-                    }
-                    return null
-                  })()}
-                </div>
               </div>
 
               <div className="hero-dots" aria-label="slides navigation">
@@ -635,6 +602,26 @@ function HomePage() {
                 ))}
               </div>
             </div>
+
+            {/*
+              Big full-height CTA panel on the right edge of the hero. Replaces
+              the old inline button row + the "учше каталог" secondary link.
+              The whole panel is one clickable target; the inner shimmer and
+              arrow animate on idle + hover.
+            */}
+            <Link to="/catalog" className="hero-card__cta-panel" aria-label={t('ui.shopNow')}>
+              <span className="hero-card__cta-shimmer" aria-hidden="true" />
+              <span className="hero-card__cta-grid" aria-hidden="true" />
+              <span className="hero-card__cta-inner">
+                <span className="hero-card__cta-label">{t('ui.shopNow')}</span>
+                <span className="hero-card__cta-arrow" aria-hidden="true">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+                </span>
+              </span>
+            </Link>
 
             <div className="hero-arrows">
               <button

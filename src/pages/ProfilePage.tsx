@@ -7,6 +7,7 @@ import { getOrders, USER_DATA_EVENT, type Order as LocalOrder } from '../lib/use
 import { fetchMyReviewsRemote, deleteReviewRemote, type RemoteReview } from '../lib/reviews'
 import PhotoLightbox, { type LightboxState } from '../components/PhotoLightbox'
 import ChatBubbleContent from '../components/ChatBubbleContent'
+import ChatStatusIcon from '../components/ChatStatusIcon'
 import { fileToPhotoMarker } from '../lib/chatMessage'
 import { formatChatTime, formatThreadTime } from '../lib/chatFormat'
 import { isOnline, formatLastSeen } from '../lib/presence'
@@ -18,6 +19,7 @@ import {
   createThread,
   setThreadStatus,
   sendChatMessage,
+  markThreadSeen,
   trackingUrl,
   type ChatMessage,
   type ChatThread,
@@ -651,7 +653,20 @@ function ChatTab({ email, userName: _userName }: { email: string; userName: stri
 
   async function loadMessages(threadId: number) {
     const rows = await fetchThreadMessages(threadId)
-    setMessages(rows)
+    // Merge with any optimistic placeholders still in-flight (negative IDs)
+    // so the bubble doesn't blink out and back in while the network race
+    // resolves. Real messages from the server overwrite same-id placeholders
+    // by definition (negative IDs never collide with positive ones).
+    setMessages((prev) => {
+      const pending = prev.filter((m) => m.clientStatus === 'sending' && m.id < 0)
+      // Drop optimistic items that are now reconciled (matched by body+sender
+      // arriving within ~30s). Lets late acks merge cleanly.
+      const stillPending = pending.filter((p) => !rows.some(
+        (r) => r.sender === p.sender && r.body === p.body &&
+          Math.abs(new Date(r.created_at).getTime() - new Date(p.created_at).getTime()) < 30_000,
+      ))
+      return [...rows, ...stillPending]
+    })
   }
 
   useEffect(() => {
@@ -700,6 +715,11 @@ function ChatTab({ email, userName: _userName }: { email: string; userName: stri
   useEffect(() => {
     if (!activeId) { setMessages([]); return }
     void loadMessages(activeId)
+    // Telegram-style read receipts: bump our seen_at on the thread the moment
+    // the user opens it. Best-effort — the server tolerates missing schema.
+    // We do this on every visibility refresh too (focus / channel push) so
+    // staying on the thread keeps the admin's ✓✓ accurate.
+    void markThreadSeen(activeId)
     const sb = supabase
     if (sb) {
       const channel = sb
@@ -707,7 +727,10 @@ function ChatTab({ email, userName: _userName }: { email: string; userName: stri
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${activeId}` },
-          () => { void loadMessages(activeId) },
+          () => {
+            void loadMessages(activeId)
+            void markThreadSeen(activeId)
+          },
         )
         .subscribe()
       const poll = window.setInterval(() => { void loadMessages(activeId) }, 3_000)
@@ -735,16 +758,39 @@ function ChatTab({ email, userName: _userName }: { email: string; userName: stri
     // Photos are appended after the text — the renderer (ChatBubbleContent)
     // strips and lays them out separately.
     const fullBody = [text, ...pendingPhotos].filter(Boolean).join('\n')
-    setSending(true)
+
+    // Optimistic placeholder — appears immediately in the UI with a "sending"
+    // status (⏱). Negative ID guarantees no collision with real server IDs;
+    // the reconciler in `loadMessages` drops it once the server-side row
+    // shows up via realtime push or polling. On the happy path the explicit
+    // ack below replaces it first, so the swap is invisible.
+    const tempId = -Date.now()
+    const optimistic: ChatMessage = {
+      id: tempId,
+      sender: 'user',
+      body: fullBody,
+      created_at: new Date().toISOString(),
+      thread_id: activeId,
+      clientStatus: 'sending',
+    }
+    setMessages((prev) => [...prev, optimistic])
+    setDraft('')
+    setPendingPhotos([])
     setError('')
+    setSending(true)
+
     try {
       const sent = await sendChatMessage(email, fullBody, activeId)
-      setMessages((prev) => [...prev, sent])
-      setDraft('')
-      setPendingPhotos([])
+      // Replace the optimistic row by tempId. The real row has clientStatus
+      // implicit-undefined → renderer treats it as 'sent'.
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...sent, clientStatus: 'sent' as const } : m)))
       void loadThreads()
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err)
+      // Mark the optimistic row as failed so the user sees a retry hint
+      // instead of having their text vanish. The bubble renders a ⚠ icon
+      // and a clickable retry handler (below in JSX).
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, clientStatus: 'failed' as const } : m)))
       if (/table_not_found|schema cache|public\.messages/.test(raw)) {
         setError(t('ui.profile.chatUnavailable'))
       } else if (/thread_closed/.test(raw)) {
@@ -755,6 +801,34 @@ function ChatTab({ email, userName: _userName }: { email: string; userName: stri
       } else {
         setError(raw)
       }
+    } finally {
+      setSending(false)
+    }
+  }
+
+  // Retry a previously-failed optimistic message. Drops the failed row, then
+  // restages the same body through the optimistic path so the placeholder
+  // appears anew with a 'sending' status.
+  async function retryFailed(failed: ChatMessage) {
+    if (!activeId) return
+    setMessages((prev) => prev.filter((m) => m.id !== failed.id))
+    const tempId = -Date.now()
+    const optimistic: ChatMessage = {
+      ...failed,
+      id: tempId,
+      created_at: new Date().toISOString(),
+      clientStatus: 'sending',
+    }
+    setMessages((prev) => [...prev, optimistic])
+    setError('')
+    setSending(true)
+    try {
+      const sent = await sendChatMessage(email, failed.body, activeId)
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...sent, clientStatus: 'sent' as const } : m)))
+      void loadThreads()
+    } catch (err) {
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, clientStatus: 'failed' as const } : m)))
+      setError(err instanceof Error ? err.message : 'failed')
     } finally {
       setSending(false)
     }
@@ -875,20 +949,36 @@ function ChatTab({ email, userName: _userName }: { email: string; userName: stri
           ) : messages.length === 0 ? (
             <p className="profile-chat__empty">{t('ui.profile.chatEmpty')}</p>
           ) : (
-            messages.map((m) => (
-              <div key={m.id} className={`profile-chat__msg profile-chat__msg--${m.sender}`}>
-                <div className="profile-chat__bubble">
-                  {/* No sender label at all — the bubble's side/colour and the
-                    * conversation header at the top of the chat panel already
-                    * make it obvious who's writing. */}
-                  <ChatBubbleContent
-                    body={m.body}
-                    onOpenPhoto={(urls, index) => setChatLightbox({ images: urls, index })}
-                  />
-                  <time>{formatChatTime(m.created_at)}</time>
+            messages.map((m) => {
+              // Read-receipt resolution: messages we sent are "read" when the
+              // other side's seen_at is >= our message's created_at. The
+              // server may not yet expose `last_admin_seen_at` (schema
+              // migration optional) — when undefined we fall back to "sent".
+              const isOwn = m.sender === 'user'
+              const otherSeenAt = isOwn ? activeThread?.last_admin_seen_at : null
+              const status: 'sending' | 'failed' | 'sent' | 'read' =
+                m.clientStatus === 'sending' ? 'sending'
+                : m.clientStatus === 'failed' ? 'failed'
+                : (otherSeenAt && new Date(otherSeenAt) >= new Date(m.created_at)) ? 'read'
+                : 'sent'
+              return (
+                <div key={m.id} className={`profile-chat__msg profile-chat__msg--${m.sender}`}>
+                  <div className={`profile-chat__bubble profile-chat__bubble--${status}`}>
+                    {/* No sender label at all — the bubble's side/colour and the
+                      * conversation header at the top of the chat panel already
+                      * make it obvious who's writing. */}
+                    <ChatBubbleContent
+                      body={m.body}
+                      onOpenPhoto={(urls, index) => setChatLightbox({ images: urls, index })}
+                    />
+                    <div className="profile-chat__bubble-foot">
+                      <time>{formatChatTime(m.created_at)}</time>
+                      {isOwn && <ChatStatusIcon status={status} onRetry={status === 'failed' ? () => void retryFailed(m) : undefined} />}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
         {activeThread && activeThread.status === 'open' && (
