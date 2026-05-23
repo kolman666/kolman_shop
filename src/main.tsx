@@ -4,18 +4,11 @@ import './index.css'
 import App from './App.tsx'
 import './i18n'
 import { initTheme } from './lib/theme'
-import { importCartFromUrl } from './lib/cart'
 
 // Apply the saved/OS theme before React mounts so the very first paint
 // already has the right colour palette — otherwise users see a flash of
 // the default dark theme before the toggle resolves.
 initTheme()
-
-// Early import before React — CartShareListener repeats on SPA navigations.
-const shareImport = importCartFromUrl()
-if (shareImport.imported) {
-  window.dispatchEvent(new Event('cart:update'))
-}
 
 // Register the service worker (PWA install + offline caching of static
 // assets). Registration is best-effort — failures are logged once but never
