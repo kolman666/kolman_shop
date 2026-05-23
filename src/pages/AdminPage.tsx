@@ -811,7 +811,10 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       {activeTab === 'promos' && <PromoTab />}
       {activeTab === 'media' && <MediaTab />}
       {activeTab === 'audit' && <AuditLogTab />}
-      </main>
+
+      {/* Products tab — kept INSIDE the main column so it gets the same
+        * full-width edge-to-edge layout as the other tabs. Was previously
+        * dangling outside <main>, which hid it entirely. */}
 
       <CustomerModal email={openCustomer} onClose={() => setOpenCustomer(null)} />
 
@@ -1336,6 +1339,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           </div>
         </div>
       )}
+      </main>
     </div>
   )
 }

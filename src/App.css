@@ -12007,16 +12007,18 @@
   max-width: none;
 }
 .marquee-wrap {
-  /* Wider clear zone in the middle so logos remain visible while moving. */
-  mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+  /* Pixel-based mask: the fade is always a fixed 12px on each edge regardless
+   * of viewport width. With the old `%`-based mask, 4% on a 1200px viewport
+   * was ~48px — that ate ~half the leftmost logo (see screenshot). 12px
+   * gives a subtle fade-in feel without ever clipping a recognisable logo. */
+  mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
 }
 @media (max-width: 720px) {
   .marquee-wrap {
-    /* Even smaller bleed on mobile (2%) — a 5px fade is plenty to suggest
-     * motion without erasing the first/last visible logo. */
-    mask-image: linear-gradient(to right, transparent, #000 2%, #000 98%, transparent);
-    -webkit-mask-image: linear-gradient(to right, transparent, #000 2%, #000 98%, transparent);
+    /* Even smaller fade on phones — 8px is enough to imply motion. */
+    mask-image: linear-gradient(to right, transparent 0, #000 8px, #000 calc(100% - 8px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 8px, #000 calc(100% - 8px), transparent 100%);
   }
   .marquee-item {
     /* Tighter padding on phones so 5–6 logos fit on screen at once and the
@@ -12263,8 +12265,16 @@
    * inside the main column, individual sections set their own padding. */
 }
 /* Inside the new shell, the legacy `.admin__content-tab` wrapper has its
- * legacy max-width / centering / height / padding stripped. Content goes
- * edge-to-edge inside the main column; padding lives on `.admin__main-content`. */
+ * max-width / centering / height stripped so content goes edge-to-edge
+ * inside the main column. We intentionally DO NOT override `display` here
+ * because:
+ *   - .dashboard sets `display: grid` for hero/row layout
+ *   - .admin__body (products tab) sets `display: grid` for sidebar layout
+ *   - Promo tab keeps its native flex
+ * Stripping display would collapse the gaps between sections.
+ *
+ * Padding lives on `.admin__main-content` so the page edge has breathing
+ * room, individual tabs add their own internal padding as needed. */
 .admin--shell .admin__content-tab,
 .admin--shell .admin__body {
   padding: 0 !important;
@@ -12275,7 +12285,6 @@
   width: 100% !important;
   height: auto !important;
   overflow: visible !important;
-  display: block !important;
 }
 .admin--shell .admin__content-tab-head {
   margin-bottom: 24px;
