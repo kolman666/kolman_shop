@@ -11,6 +11,8 @@ import { getOrders } from '../lib/userData'
 import { fetchMyOrders } from '../lib/customerInbox'
 import { resizeImageToDataUrl } from '../lib/imageResize'
 import PhotoLightbox, { type LightboxState } from '../components/PhotoLightbox'
+import { logRecentlyViewed } from '../lib/recentlyViewed'
+import RecentlyViewedStrip from '../components/RecentlyViewedStrip'
 import {
   createReviewRemote,
   deleteReviewRemote,
@@ -82,6 +84,12 @@ export default function ProductPage() {
     window.addEventListener(AUTH_EVENT, sync)
     return () => window.removeEventListener(AUTH_EVENT, sync)
   }, [])
+
+  // Log this product to the "recently viewed" buffer so other pages (and the
+  // strip below) can surface it. Only runs when we resolved an actual product.
+  useEffect(() => {
+    if (product?.slug) logRecentlyViewed(product.slug)
+  }, [product?.slug])
 
   // Re-check purchase status whenever the user or product changes. Looks at
   // both the local order mirror (instant feedback after checkout) and remote
@@ -624,6 +632,8 @@ export default function ProductPage() {
           </div>
         </div>
       )}
+
+      <RecentlyViewedStrip excludeSlug={product.slug} />
 
       <PhotoLightbox
         state={lightbox}

@@ -185,18 +185,93 @@ export default async function handler(req, res) {
     if (!(await requestOwnsEmail(req, supabase, email))) {
       return res.status(401).json({ error: 'unauthorized' })
     }
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('orders')
-      .select('id, status, total, items, delivery, comment, created_at')
+      .select('id, status, total, items, delivery, comment, created_at, tracking_number, tracking_carrier')
       .eq('customer_email', email)
       .order('created_at', { ascending: false })
       .limit(50)
+    // Pre-migration deployments may lack tracking columns OR customer_email
+    // — gracefully fall back so existing data still loads.
+    if (error && /tracking_(number|carrier)/i.test(error.message)) {
+      const retry = await supabase
+        .from('orders')
+        .select('id, status, total, items, delivery, comment, created_at')
+        .eq('customer_email', email)
+        .order('created_at', { ascending: false })
+        .limit(50)
+      data = retry.data
+      error = retry.error
+    }
     if (error) {
-      // Pre-migration deployments may lack the customer_email column entirely.
       if (isTableMissing(error) || /customer_email/i.test(error.message)) return res.status(200).json([])
       return res.status(500).json({ error: error.message })
     }
     return res.status(200).json(data ?? [])
+  }
+
+  // ── Admin dashboard stats ─────────────────────────────────────────────
+  // Aggregated counters for the admin home tab. Returns revenue + order
+  // counts for today / 7d / 30d, status breakdown, and top-N products
+  // (by quantity sold over the last 30d). All computed server-side from
+  // the orders table so the client doesn't need to fetch the whole history.
+  if (req.method === 'GET' && req.query.stats === '1') {
+    if (!isAuthorized(req)) return res.status(401).json({ error: 'unauthorized' })
+    const now = Date.now()
+    const day = 86_400_000
+    const since30 = new Date(now - 30 * day).toISOString()
+    const since7 = new Date(now - 7 * day).toISOString()
+    const sinceToday = new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
+    const { data: rows, error } = await supabase
+      .from('orders')
+      .select('id, status, total, items, created_at')
+      .gte('created_at', since30)
+      .order('created_at', { ascending: false })
+      .limit(500)
+    if (error) {
+      if (isTableMissing(error)) {
+        return res.status(200).json({
+          revenue: { today: 0, week: 0, month: 0 },
+          counts: { today: 0, week: 0, month: 0, new: 0, in_progress: 0, done: 0, cancelled: 0 },
+          top: [],
+        })
+      }
+      return res.status(500).json({ error: error.message })
+    }
+    const revenue = { today: 0, week: 0, month: 0 }
+    const counts = { today: 0, week: 0, month: 0, new: 0, in_progress: 0, done: 0, cancelled: 0 }
+    const productAgg = new Map()
+    for (const r of rows ?? []) {
+      const total = typeof r.total === 'number' ? r.total : 0
+      const created = r.created_at
+      counts.month++
+      counts[r.status] = (counts[r.status] ?? 0) + 1
+      // Cancelled orders don't contribute to revenue.
+      if (r.status !== 'cancelled') revenue.month += total
+      if (created >= since7) {
+        counts.week++
+        if (r.status !== 'cancelled') revenue.week += total
+      }
+      if (created >= sinceToday) {
+        counts.today++
+        if (r.status !== 'cancelled') revenue.today += total
+      }
+      // Top products by units sold (excluding cancelled).
+      if (r.status !== 'cancelled' && Array.isArray(r.items)) {
+        for (const it of r.items) {
+          if (!it || typeof it.title !== 'string') continue
+          const key = it.title
+          const prev = productAgg.get(key) ?? { title: key, qty: 0, revenue: 0 }
+          prev.qty += Number(it.quantity) || 0
+          prev.revenue += (Number(it.price) || 0) * (Number(it.quantity) || 0)
+          productAgg.set(key, prev)
+        }
+      }
+    }
+    const top = Array.from(productAgg.values())
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 5)
+    return res.status(200).json({ revenue, counts, top })
   }
 
   // From here on — admin only
@@ -216,17 +291,46 @@ export default async function handler(req, res) {
     return res.status(200).json(data ?? [])
   }
 
-  // PATCH — update status
+  // PATCH — update status and/or tracking info
   if (req.method === 'PATCH') {
-    const { id, status } = req.body ?? {}
+    const body = req.body ?? {}
+    const id = Number(body.id)
     if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' })
-    if (!ALLOWED_STATUSES.includes(status)) return res.status(400).json({ error: 'invalid status' })
-    const { data, error } = await supabase
+    const patch = {}
+    if (body.status !== undefined) {
+      if (!ALLOWED_STATUSES.includes(body.status)) return res.status(400).json({ error: 'invalid status' })
+      patch.status = body.status
+    }
+    // Tracking number / carrier are optional. Sanitized to ASCII printable
+    // so a buggy paste doesn't break the DB row. Carrier is a short slug.
+    if (typeof body.tracking_number === 'string') {
+      patch.tracking_number = s(body.tracking_number, 80)
+    }
+    if (typeof body.tracking_carrier === 'string') {
+      const c = s(body.tracking_carrier, 24).toLowerCase()
+      patch.tracking_carrier = c.replace(/[^a-z0-9_-]/g, '')
+    }
+    if (Object.keys(patch).length === 0) {
+      return res.status(400).json({ error: 'nothing to update' })
+    }
+    let { data, error } = await supabase
       .from('orders')
-      .update({ status })
+      .update(patch)
       .eq('id', id)
       .select()
       .single()
+    // If tracking columns don't exist yet (pre-migration), retry without them.
+    if (error && /tracking_(number|carrier)/i.test(error.message)) {
+      const fallback = { ...patch }
+      delete fallback.tracking_number
+      delete fallback.tracking_carrier
+      if (Object.keys(fallback).length === 0) {
+        return res.status(503).json({ error: 'tracking_columns_missing' })
+      }
+      const retry = await supabase.from('orders').update(fallback).eq('id', id).select().single()
+      data = retry.data
+      error = retry.error
+    }
     if (error) return res.status(500).json({ error: error.message })
     return res.status(200).json(data)
   }

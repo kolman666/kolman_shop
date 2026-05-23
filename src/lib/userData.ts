@@ -12,6 +12,10 @@ export type Order = {
   total: number
   status: 'pending' | 'shipped' | 'delivered' | 'cancelled'
   items: { productId: number; title: string; qty: number; price: number }[]
+  // Carrier tracking — only populated for remote orders, never for the legacy
+  // localStorage-only ones (which never had a real shipment number anyway).
+  trackingNumber?: string | null
+  trackingCarrier?: string | null
 }
 
 export type Review = {

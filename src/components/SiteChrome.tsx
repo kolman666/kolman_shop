@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useProducts } from '../hooks/useProducts'
 import { getCartCount } from '../lib/cart'
 import CartDrawer from './CartDrawer'
+import MobileBottomNav from './MobileBottomNav'
 import SearchDropdown, { type SearchSection } from './SearchDropdown'
 import AuthModal from './AuthModal'
 import { fetchSiteContent } from '../lib/siteContent'
@@ -279,9 +280,11 @@ export default function SiteChrome({ children }: SiteChromeProps) {
               />
             </form>
             <SearchDropdown
-              open={searchOpen && searchValue.trim() === ''}
+              open={searchOpen}
               onClose={() => setSearchOpen(false)}
               hitProducts={allProducts.filter((p) => p.isFeatured).slice(0, 4)}
+              allProducts={allProducts}
+              query={searchValue}
               popularSections={popularSections}
               anchorRef={searchWrapRef}
             />
@@ -475,6 +478,11 @@ export default function SiteChrome({ children }: SiteChromeProps) {
 
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+
+      <MobileBottomNav
+        onCartClick={() => setIsCartOpen(true)}
+        onProfileClick={handleAccountClick}
+      />
 
       <footer className="site-footer">
         <div className="container footer-grid">

@@ -15,6 +15,8 @@ import {
 import { ContentTabV2 } from './admin/ContentTabV2'
 import { BrandPagesTab } from './admin/BrandPagesTab'
 import { PagesTabV2 } from './admin/PagesTabV2'
+import DashboardTab from './admin/DashboardTab'
+import { toCsv, downloadCsv } from '../lib/csv'
 import {
   fetchBloggersAdmin,
   createBlogger,
@@ -25,6 +27,7 @@ import {
 import {
   listOrders,
   updateOrderStatus,
+  updateOrderTracking,
   deleteOrder,
   ORDER_STATUSES,
   type AdminOrder,
@@ -247,12 +250,15 @@ export default function AdminPage() {
   return <AdminPanel onLogout={() => { clearAdminSecret(); setAuthStatus('guest') }} />
 }
 
-type AdminTab = 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers'
+type AdminTab = 'dashboard' | 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers'
 
 // ── Admin panel inner ─────────────────────────────────────────────────────────
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const { products: allProducts, loading: productsLoading, refresh } = useProducts()
-  const [activeTab, setActiveTab] = useState<AdminTab>('products')
+  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard')
+  // Persisted across sessions so an admin doesn't lose their last view on
+  // refresh. Localized in a tiny `useEffect` below.
+  const [ordersStatusFilter, setOrdersStatusFilter] = useState<'' | 'new' | 'in_progress' | 'done' | 'cancelled'>('')
   // Total number of unread customer chat messages received while the admin is
   // outside the chat tab.
   const [unreadChatCount, setUnreadChatCount] = useState(0)
@@ -508,6 +514,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       </header>
 
       <div className="admin__tab-bar">
+        <button type="button" className={`admin__tab-btn${activeTab === 'dashboard' ? ' active' : ''}`} onClick={() => setActiveTab('dashboard')}>
+          Дашборд
+        </button>
         <button type="button" className={`admin__tab-btn${activeTab === 'products' ? ' active' : ''}`} onClick={() => setActiveTab('products')}>
           Товары
         </button>
@@ -540,10 +549,18 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         <span>{chatToast?.body}</span>
       </div>
 
+      {activeTab === 'dashboard' && (
+        <DashboardTab
+          onJumpToOrders={(status) => {
+            setOrdersStatusFilter(status)
+            setActiveTab('orders')
+          }}
+        />
+      )}
       {activeTab === 'content' && <ContentTabV2 />}
       {activeTab === 'pages' && <PagesTabV2 />}
       {activeTab === 'brands' && <BrandPagesTab />}
-      {activeTab === 'orders' && <OrdersTab />}
+      {activeTab === 'orders' && <OrdersTab initialStatus={ordersStatusFilter} />}
       {activeTab === 'inquiries' && <InquiriesTab />}
       {activeTab === 'chat' && <ChatTab />}
       {activeTab === 'bloggers' && <BloggersTab allProducts={allProducts} />}
@@ -1541,9 +1558,38 @@ function BloggersTab({ allProducts }: { allProducts: Product[] }) {
 }
 
 // ── Orders tab ────────────────────────────────────────────────────────────────
-function OrdersTab() {
+function exportOrdersCsv(orders: AdminOrder[]) {
+  // Flatten one row per order. The `items` JSON is collapsed into a single
+  // semicolon-separated string — fine for Avito / accountant copy-paste.
+  const rows = orders.map((o) => ({
+    id: o.id,
+    created_at: o.created_at,
+    status: o.status,
+    customer_name: o.customer_name,
+    customer_contact: o.customer_contact,
+    customer_email: o.customer_email ?? '',
+    delivery: o.delivery,
+    comment: o.comment,
+    total: o.total,
+    items: (o.items ?? [])
+      .map((it) => `${it.title} ×${it.quantity} (${it.price}₽)`)
+      .join('; '),
+    tracking_carrier: o.tracking_carrier ?? '',
+    tracking_number: o.tracking_number ?? '',
+  }))
+  const csv = toCsv(rows, [
+    'id', 'created_at', 'status',
+    'customer_name', 'customer_contact', 'customer_email',
+    'delivery', 'comment', 'total', 'items',
+    'tracking_carrier', 'tracking_number',
+  ])
+  const stamp = new Date().toISOString().slice(0, 10)
+  downloadCsv(`kolman-orders-${stamp}.csv`, csv)
+}
+
+function OrdersTab({ initialStatus = '' }: { initialStatus?: OrderStatus | '' } = {}) {
   const [orders, setOrders] = useState<AdminOrder[]>([])
-  const [filter, setFilter] = useState<OrderStatus | ''>('')
+  const [filter, setFilter] = useState<OrderStatus | ''>(initialStatus)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState<number | null>(null)
@@ -1601,6 +1647,15 @@ function OrdersTab() {
           <button type="button" className="admin__save-btn" onClick={() => void load()} disabled={loading}>
             {loading ? 'Обновляем...' : 'Обновить'}
           </button>
+          <button
+            type="button"
+            className="accordion__btn"
+            onClick={() => exportOrdersCsv(orders)}
+            disabled={orders.length === 0}
+            title="Выгрузить отображаемые заказы в CSV"
+          >
+            ⤓ CSV
+          </button>
         </div>
       </div>
       <p className="admin__label-hint" style={{ marginBottom: 16 }}>
@@ -1642,6 +1697,7 @@ function OrdersTab() {
                 <span>Итого</span>
                 <strong>{o.total.toLocaleString('ru-RU')} ₽</strong>
               </div>
+              <TrackingEditor order={o} onUpdate={(updated) => setOrders((prev) => prev.map((x) => x.id === updated.id ? updated : x))} />
               <div className="admin__inbox-actions">
                 <div className="admin__inbox-statuses">
                   {ORDER_STATUSES.map((s) => (
@@ -1673,6 +1729,55 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   in_progress: 'в работе',
   done: 'выполнен',
   cancelled: 'отменён',
+}
+
+// Inline editor for the carrier + tracking number on an order. Updates are
+// pushed through PATCH /api/orders. Submit on Enter or by clicking Save.
+function TrackingEditor({ order, onUpdate }: { order: AdminOrder; onUpdate: (next: AdminOrder) => void }) {
+  const [carrier, setCarrier] = useState(order.tracking_carrier ?? 'cdek')
+  const [num, setNum] = useState(order.tracking_number ?? '')
+  const [saving, setSaving] = useState(false)
+  const dirty = carrier !== (order.tracking_carrier ?? 'cdek') || num !== (order.tracking_number ?? '')
+
+  async function save() {
+    if (!dirty) return
+    setSaving(true)
+    try {
+      const updated = await updateOrderTracking(order.id, num.trim(), carrier)
+      onUpdate(updated)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="admin-order-tracking">
+      <select value={carrier} onChange={(e) => setCarrier(e.target.value)}>
+        <option value="cdek">CDEK</option>
+        <option value="post">Почта России</option>
+        <option value="avito">Avito</option>
+        <option value="other">другое</option>
+      </select>
+      <input
+        type="text"
+        placeholder="трек-номер"
+        value={num}
+        onChange={(e) => setNum(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') void save() }}
+        maxLength={80}
+      />
+      <button
+        type="button"
+        className="accordion__btn"
+        onClick={() => void save()}
+        disabled={!dirty || saving}
+      >
+        {saving ? 'Сохраняем…' : 'Сохранить'}
+      </button>
+    </div>
+  )
 }
 
 // ── Inquiries tab ─────────────────────────────────────────────────────────────
@@ -1835,6 +1940,128 @@ function markAdminThreadRead(threadId: number) {
     m[threadId] = new Date().toISOString()
     localStorage.setItem(ADMIN_READ_KEY, JSON.stringify(m))
   } catch { /* ignore */ }
+}
+
+// ── Saved chat replies ────────────────────────────────────────────────────
+// A small row of clickable templates the admin can use to insert canned
+// responses into the chat. Built-in templates ship by default; custom ones
+// are persisted in localStorage under `admin-chat-templates` so each admin
+// has their own list without a server round-trip.
+//
+// {name} placeholder gets replaced with the active thread's display name.
+const BUILTIN_CHAT_TEMPLATES: Array<{ label: string; body: string }> = [
+  { label: 'привет', body: 'Здравствуйте, {name}! Спасибо за обращение. Чем можем помочь?' },
+  { label: 'в наличии', body: 'Этот товар сейчас в наличии — можем оформить и отправить в течение 1 рабочего дня.' },
+  { label: 'оплата', body: 'Оплатить можно картой через Тинькофф / Сбер, переводом по СБП или при получении в CDEK.' },
+  { label: 'доставка', body: 'Отправляем СДЭКом, обычно посылка приходит за 3–5 рабочих дней. Трек-номер пришлю как только передадим в курьерскую службу.' },
+  { label: 'предзаказ', body: 'Сейчас товар под предзаказ — мы добавим вас в очередь, поставка ориентировочно через 7–10 дней. Предоплата не требуется.' },
+  { label: 'спасибо', body: 'Пожалуйста! Если появятся ещё вопросы — всегда на связи.' },
+]
+
+const CUSTOM_TEMPLATES_KEY = 'admin-chat-templates'
+
+function loadCustomTemplates(): Array<{ label: string; body: string }> {
+  try {
+    const raw = localStorage.getItem(CUSTOM_TEMPLATES_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter((t) => t && typeof t.label === 'string' && typeof t.body === 'string') : []
+  } catch { return [] }
+}
+
+function saveCustomTemplates(list: Array<{ label: string; body: string }>) {
+  try { localStorage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(list)) } catch { /* ignore quota */ }
+}
+
+function ChatTemplates({ customerName, onInsert }: { customerName: string; onInsert: (text: string) => void }) {
+  const [custom, setCustom] = useState<Array<{ label: string; body: string }>>(loadCustomTemplates())
+  const [open, setOpen] = useState(false)
+  const [draftLabel, setDraftLabel] = useState('')
+  const [draftBody, setDraftBody] = useState('')
+
+  function insert(body: string) {
+    const text = body.replace(/\{name\}/g, customerName)
+    onInsert(text)
+  }
+
+  function addCustom() {
+    if (!draftLabel.trim() || !draftBody.trim()) return
+    const next = [...custom, { label: draftLabel.trim().slice(0, 24), body: draftBody.trim().slice(0, 1000) }]
+    setCustom(next)
+    saveCustomTemplates(next)
+    setDraftLabel('')
+    setDraftBody('')
+  }
+
+  function removeCustom(i: number) {
+    const next = custom.filter((_, idx) => idx !== i)
+    setCustom(next)
+    saveCustomTemplates(next)
+  }
+
+  const all = [...BUILTIN_CHAT_TEMPLATES, ...custom]
+
+  return (
+    <div className="chat-templates">
+      <div className="chat-templates__row">
+        {all.map((t, i) => (
+          <button
+            key={`${t.label}-${i}`}
+            type="button"
+            className="chat-templates__chip"
+            onClick={() => insert(t.body)}
+            title={t.body}
+          >
+            {t.label}
+          </button>
+        ))}
+        <button
+          type="button"
+          className={`chat-templates__chip chat-templates__chip--manage ${open ? 'chat-templates__chip--active' : ''}`.trim()}
+          onClick={() => setOpen((v) => !v)}
+        >
+          ⚙ шаблоны
+        </button>
+      </div>
+      {open && (
+        <div className="chat-templates__manage">
+          <div className="chat-templates__add">
+            <input
+              type="text"
+              placeholder="название"
+              value={draftLabel}
+              onChange={(e) => setDraftLabel(e.target.value)}
+              maxLength={24}
+            />
+            <input
+              type="text"
+              placeholder="текст ответа — поддерживается {name}"
+              value={draftBody}
+              onChange={(e) => setDraftBody(e.target.value)}
+              maxLength={1000}
+            />
+            <button type="button" className="accordion__btn" onClick={addCustom} disabled={!draftLabel.trim() || !draftBody.trim()}>
+              + добавить
+            </button>
+          </div>
+          {custom.length > 0 && (
+            <ul className="chat-templates__list">
+              {custom.map((t, i) => (
+                <li key={i}>
+                  <strong>{t.label}</strong>
+                  <span>{t.body}</span>
+                  <button type="button" onClick={() => removeCustom(i)} aria-label="удалить">×</button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="admin__label-hint" style={{ margin: 0 }}>
+            Шаблоны хранятся локально в этом браузере. Подставится <code>{'{name}'}</code> → имя клиента активного чата.
+          </p>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function ChatTab() {
@@ -2116,6 +2343,14 @@ function ChatTab() {
                       <span className="admin__chat-thread-emailsub">{th.user_email}</span>
                     </span>
                     <span className="admin__chat-thread-title">{th.title || 'новый чат'}</span>
+                    {th.last_message_preview && (
+                      <span className={`admin__chat-thread-preview admin__chat-thread-preview--${th.last_message_sender ?? 'user'}`}>
+                        <span className="admin__chat-thread-preview-who">
+                          {th.last_message_sender === 'admin' ? 'вы: ' : ''}
+                        </span>
+                        {th.last_message_preview}
+                      </span>
+                    )}
                     {unreadFor(th) > 0 && (
                       <span className="admin__chat-thread-badge">{unreadFor(th)}</span>
                     )}
@@ -2210,6 +2445,10 @@ function ChatTab() {
                       })}
                     </div>
                   )}
+                  <ChatTemplates
+                    customerName={displayNameFor(activeThread.user_email)}
+                    onInsert={(text) => setDraft((prev) => prev ? `${prev}\n${text}` : text)}
+                  />
                   <form className="admin__chat-form" onSubmit={(e) => { void send(e) }}>
                     <label className={`chat-attach-btn ${attaching ? 'chat-attach-btn--busy' : ''}`.trim()} title="прикрепить фото">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

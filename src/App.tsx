@@ -8,6 +8,7 @@ import { usePresenceHeartbeat } from './hooks/usePresenceHeartbeat'
 import SiteChrome from './components/SiteChrome'
 import CartDrawer from './components/CartDrawer'
 import BrandSpotlight from './components/BrandSpotlight'
+import MobileBottomNav from './components/MobileBottomNav'
 import BloggersBlock from './components/BloggersBlock'
 import NewsBlock from './components/NewsBlock'
 import AuthModal from './components/AuthModal'
@@ -455,9 +456,11 @@ function HomePage() {
               />
             </form>
             <SearchDropdown
-              open={searchOpen && searchValue.trim() === ''}
+              open={searchOpen}
               onClose={() => setSearchOpen(false)}
               hitProducts={products.filter((p) => p.isFeatured).slice(0, 4)}
+              allProducts={products}
+              query={searchValue}
               popularSections={popularSections}
               anchorRef={searchWrapRef}
             />
@@ -870,6 +873,11 @@ function HomePage() {
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+
+      <MobileBottomNav
+        onCartClick={() => setIsCartOpen(true)}
+        onProfileClick={handleAccountClick}
+      />
 
       <div className={`chat-site-toast ${chatNotifications.toast ? 'chat-site-toast--visible' : ''}`}>
         <strong>{chatNotifications.toast?.title}</strong>

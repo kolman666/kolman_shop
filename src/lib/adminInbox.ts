@@ -34,10 +34,25 @@ export type AdminOrder = {
   status: OrderStatus
   customer_name: string
   customer_contact: string
+  customer_email?: string | null
   delivery: string
   comment: string
   total: number
   items: OrderItem[]
+  // Set by admin once the parcel is handed to the carrier. Becomes a clickable
+  // link in both the admin orders list and the customer's profile.
+  tracking_number?: string | null
+  tracking_carrier?: 'cdek' | 'post' | 'avito' | string | null
+}
+
+export async function updateOrderTracking(id: number, tracking_number: string, tracking_carrier: string): Promise<AdminOrder> {
+  return handle<AdminOrder>(
+    await fetch('/api/orders', {
+      method: 'PATCH',
+      headers: adminHeaders(),
+      body: JSON.stringify({ id, tracking_number, tracking_carrier }),
+    }),
+  )
 }
 
 export type InquiryStatus = 'new' | 'in_progress' | 'done'

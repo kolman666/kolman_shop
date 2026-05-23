@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Form
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useProducts } from '../hooks/useProducts'
-import { getCart, updateQuantity, removeFromCart, clearCart } from '../lib/cart'
+import { getCart, updateQuantity, removeFromCart, clearCart, buildShareCartUrl } from '../lib/cart'
 import { sendTelegramMessage, TelegramSendError } from '../lib/telegram'
 import { getUser } from '../lib/auth'
 import { addOrder } from '../lib/userData'
@@ -461,6 +461,7 @@ function CartView({ entries, total, onClose, onQtyChange, onRemove, onCheckout }
           <button type="button" className="cta-btn" onClick={onCheckout} style={{ width: '100%', justifyContent: 'center' }}>
             оформить заказ
           </button>
+          <ShareCartButton />
         </div>
       )}
     </>
@@ -671,6 +672,48 @@ function SuccessView({ onClose }: { onClose: () => void }) {
       <button type="button" className="cta-btn" onClick={onClose} style={{ marginTop: 8 }}>
         закрыть
       </button>
+    </div>
+  )
+}
+
+// Share the current cart as a URL. On click: try the native share sheet
+// first (mobile), fall back to copying the link to the clipboard with a
+// "скопировано" hint.
+function ShareCartButton() {
+  const [hint, setHint] = useState('')
+
+  async function onShare() {
+    const url = buildShareCartUrl()
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'kolman.shop — корзина', url })
+        return
+      }
+    } catch {
+      // user cancelled or denied — fall through to clipboard copy
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+      setHint('ссылка скопирована')
+      window.setTimeout(() => setHint(''), 1800)
+    } catch {
+      setHint(url)
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <button
+        type="button"
+        className="ghost-btn"
+        onClick={() => { void onShare() }}
+        style={{ width: '100%', justifyContent: 'center' }}
+      >
+        поделиться корзиной
+      </button>
+      {hint && (
+        <span style={{ fontSize: 12, color: 'var(--color-text-dim)', textAlign: 'center' }}>{hint}</span>
+      )}
     </div>
   )
 }

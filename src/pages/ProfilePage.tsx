@@ -18,6 +18,7 @@ import {
   createThread,
   setThreadStatus,
   sendChatMessage,
+  trackingUrl,
   type ChatMessage,
   type ChatThread,
   type RemoteInquiry,
@@ -347,6 +348,8 @@ function OrdersTab({ email }: { email: string }) {
         // map them onto the four UI buckets the profile already knows about.
         status: r.status === 'new' ? 'pending' : r.status === 'in_progress' ? 'shipped' : r.status === 'done' ? 'delivered' : 'cancelled',
         items: (r.items ?? []).map((it) => ({ productId: it.id ?? 0, title: it.title, qty: it.quantity, price: it.price })),
+        trackingNumber: r.tracking_number ?? null,
+        trackingCarrier: r.tracking_carrier ?? null,
       })))
       setLoading(false)
     })
@@ -406,6 +409,25 @@ function OrdersTab({ email }: { email: string }) {
             <span>total</span>
             <strong>{order.total.toLocaleString('ru-RU')} ₽</strong>
           </div>
+          {order.trackingNumber && (() => {
+            const url = trackingUrl(order.trackingCarrier, order.trackingNumber)
+            const carrierLabel =
+              order.trackingCarrier === 'cdek' ? 'CDEK' :
+              order.trackingCarrier === 'post' ? 'Почта России' :
+              order.trackingCarrier === 'avito' ? 'Avito' :
+              (order.trackingCarrier || 'трекинг')
+            return (
+              <div className="profile-card__tracking">
+                <span className="profile-card__tracking-label">{carrierLabel}:</span>
+                <code className="profile-card__tracking-num">{order.trackingNumber}</code>
+                {url && (
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="profile-card__tracking-link">
+                    отследить →
+                  </a>
+                )}
+              </div>
+            )
+          })()}
         </article>
       ))}
     </div>

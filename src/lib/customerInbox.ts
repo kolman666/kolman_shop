@@ -11,6 +11,26 @@ export type RemoteOrder = {
   delivery: string
   comment: string
   created_at: string
+  tracking_number?: string | null
+  tracking_carrier?: string | null
+}
+
+// Build a public tracking URL for the carrier's site, given the tracking
+// number. Returns null for unknown carriers.
+export function trackingUrl(carrier: string | null | undefined, number: string | null | undefined): string | null {
+  if (!number) return null
+  const n = encodeURIComponent(number.trim())
+  switch ((carrier ?? '').toLowerCase()) {
+    case 'cdek':
+      return `https://www.cdek.ru/ru/tracking?order_id=${n}`
+    case 'post':
+      return `https://www.pochta.ru/tracking#${n}`
+    case 'avito':
+      // Avito doesn't have a public tracker; surface the order page lookup.
+      return `https://www.avito.ru/profile/orders?search=${n}`
+    default:
+      return null
+  }
 }
 
 export type RemoteInquiry = {
@@ -40,6 +60,12 @@ export type ChatThread = {
   // in this specific thread. Sent by /api/messages?resource=threads when the
   // request has the admin secret.
   unread_user_messages?: number
+  // Admin-only: tiny preview of the most recent message in the thread
+  // (with `[[photo:…]]` markers replaced by 📷) + the sender, so the sidebar
+  // can show "вы: ok, отправил" or "клиент: когда придёт?" without an extra
+  // round-trip.
+  last_message_preview?: string
+  last_message_sender?: 'user' | 'admin'
 }
 
 async function handle<T>(res: Response): Promise<T> {
