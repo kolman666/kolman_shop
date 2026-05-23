@@ -184,7 +184,9 @@ function AdminLogin({ onLogin }: { onLogin: (secret: string) => Promise<boolean>
   return (
     <div className="admin">
       <header className="admin__header">
-        <div className="admin__logo"><span>kolman</span> admin</div>
+        <div className="admin__logo">
+          <img src="/favicon.svg" alt="kolman" style={{ height: '32px', width: 'auto' }} />
+        </div>
         <div className="admin__header-actions">
           <Link to="/" className="admin__back-link">← На сайт</Link>
         </div>
