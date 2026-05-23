@@ -40,7 +40,7 @@ type Props = {
   ariaLabel?: string
 }
 
-export default function BrandTicker({ items, speed = 60, gap = 20, ariaLabel = 'brands' }: Props) {
+export default function BrandTicker({ items, speed = 60, gap = 30, ariaLabel = 'brands' }: Props) {
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const trackRef = useRef<HTMLDivElement | null>(null)
   const copyRef = useRef<HTMLDivElement | null>(null)
