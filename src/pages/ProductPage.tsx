@@ -144,7 +144,14 @@ export default function ProductPage() {
   }
 
   const relatedProducts = products.filter((item) => item.id !== product.id && item.categoryKey === product.categoryKey).slice(0, 2)
-  const statusLabel = product.availability === 'inStock' ? t('ui.catalog.statusInStock') : t('ui.catalog.statusPreorder')
+  // Unified availability check: explicit quantity=0 overrides the
+  // `availability` flag so "in stock + 0 шт" no longer renders as "в наличии".
+  const isOutOfStock = typeof product.quantity === 'number' && product.quantity === 0
+  const statusLabel = isOutOfStock
+    ? t('ui.productPage.statusOutOfStock', { defaultValue: 'нет в наличии' })
+    : product.availability === 'inStock'
+      ? t('ui.catalog.statusInStock')
+      : t('ui.catalog.statusPreorder')
   const gallery = product.gallery && product.gallery.length > 0 ? product.gallery : [product.image]
   const productTitle = product.titleDirect ?? t(product.titleKey)
   const productDescription = product.descriptionDirect ?? t(product.descriptionKey)
@@ -252,17 +259,12 @@ export default function ProductPage() {
             <div className="product-page__meta-card">
               <span className="product-page__meta-label">{t('ui.productPage.statusLabel')}</span>
               <strong className="product-page__meta-value">{statusLabel}</strong>
-              {/* Stock badge: shows the precise count when it's low enough to
-                * matter ("осталось 2 шт") and a hint that the product is
-                * sold out otherwise. */}
+              {/* "Осталось N шт" — only when there's a low cap. We don't
+                * render a separate "нет в наличии" badge anymore because the
+                * status label above already reflects OOS via `isOutOfStock`. */}
               {typeof product.quantity === 'number' && product.quantity > 0 && product.quantity <= 5 && (
                 <span className="product-page__stock-badge product-page__stock-badge--low">
                   осталось {product.quantity} шт
-                </span>
-              )}
-              {typeof product.quantity === 'number' && product.quantity === 0 && product.availability !== 'preorder' && (
-                <span className="product-page__stock-badge product-page__stock-badge--out">
-                  нет в наличии
                 </span>
               )}
             </div>

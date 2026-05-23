@@ -18,8 +18,16 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
   const [isAdded, setIsAdded] = useState(false)
   const [fav, setFav] = useState(() => isFavorite(product.id))
   const [comparing, setComparing] = useState(() => isInCompare(product.id))
-  const statusLabel =
-    product.availability === 'inStock' ? t('ui.catalog.statusInStock') : t('ui.catalog.statusPreorder')
+  // Single source of truth: if quantity is explicitly 0, the product is OOS
+  // regardless of what the `availability` flag says. Used (second-hand)
+  // products treat null/undefined quantity as "one-off" — still in stock.
+  const isOutOfStock = typeof product.quantity === 'number' && product.quantity === 0
+  const statusLabel = isOutOfStock
+    ? t('ui.productPage.statusOutOfStock', { defaultValue: 'нет в наличии' })
+    : product.availability === 'inStock'
+      ? t('ui.catalog.statusInStock')
+      : t('ui.catalog.statusPreorder')
+  const statusClass = isOutOfStock ? 'outOfStock' : product.availability
   const title = product.titleDirect ?? t(product.titleKey)
   const isUsedCard = variant === 'used'
   const conditionKey = (product.condition || '').toLowerCase()
@@ -99,7 +107,7 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
       </button>
       <div className="product-card__visual">
         <div className="product-card__badges">
-          <span className={`product-card__status product-card__status--${product.availability}`}>{statusLabel}</span>
+          <span className={`product-card__status product-card__status--${statusClass}`}>{statusLabel}</span>
         </div>
         <img className="product-card__image" src={product.image} alt={title} />
       </div>

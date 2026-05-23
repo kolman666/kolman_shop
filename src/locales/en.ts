@@ -146,9 +146,18 @@ const en = {
     },
     presence: {
       online: 'online',
-      wasMinutesAgo: 'was {{minutes}}m ago',
-      wasHoursAgo: 'was {{hours}}h ago',
-      wasDaysAgo: 'was {{days}}d ago',
+      never: 'never visited',
+      justNow: 'just now',
+      wasMinutesAgo: '{{minutes}}m ago',
+      wasHoursAgo: '{{hours}}h ago',
+      wasHoursMinutesAgo: '{{hours}}h {{minutes}}m ago',
+      wasDaysAgo: '{{days}}d ago',
+      wasDaysHoursAgo: '{{days}}d {{hours}}h ago',
+      wasOnDate: '{{date}}',
+      // legacy keys kept for back-compat
+      wasMinutesAgo_legacy: 'was {{minutes}}m ago',
+      wasHoursAgo_legacy: 'was {{hours}}h ago',
+      wasDaysAgo_legacy: 'was {{days}}d ago',
     },
     breadcrumbs: {
       home: 'home',

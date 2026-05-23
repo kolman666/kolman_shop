@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Product, VariantGroup } from '../data/products'
 import { useProducts } from '../hooks/useProducts'
@@ -213,6 +213,199 @@ function AdminLogin({ onLogin }: { onLogin: (secret: string) => Promise<boolean>
   )
 }
 
+// ── Sidebar navigation ────────────────────────────────────────────────────────
+// Vertical sidebar (Linear/Vercel-style). On phones it collapses behind a
+// hamburger trigger that flips a body-level state class; the panel slides in
+// from the left as a drawer.
+type AdminTab = 'dashboard' | 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers' | 'promos' | 'media' | 'audit'
+
+const ADMIN_NAV: Array<{ key: AdminTab; label: string; icon: ReactNode; badgeKey?: 'chat' }> = [
+  { key: 'dashboard', label: 'Дашборд', icon: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="9" rx="1.5" />
+      <rect x="14" y="3" width="7" height="5" rx="1.5" />
+      <rect x="14" y="12" width="7" height="9" rx="1.5" />
+      <rect x="3" y="16" width="7" height="5" rx="1.5" />
+    </svg>
+  ) },
+  { key: 'products', label: 'Товары', icon: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+      <line x1="12" y1="22.08" x2="12" y2="12" />
+    </svg>
+  ) },
+  { key: 'orders', label: 'Заказы', icon: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="21" r="1" />
+      <circle cx="20" cy="21" r="1" />
+      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+    </svg>
+  ) },
+  { key: 'inquiries', label: 'Заявки', icon: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="9" y1="13" x2="15" y2="13" />
+      <line x1="9" y1="17" x2="15" y2="17" />
+    </svg>
+  ) },
+  { key: 'chat', label: 'Чат', badgeKey: 'chat', icon: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    </svg>
+  ) },
+  { key: 'content', label: 'Главная', icon: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  ) },
+  { key: 'pages', label: 'Страницы', icon: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+    </svg>
+  ) },
+  { key: 'brands', label: 'Бренды', icon: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <line x1="7" y1="7" x2="7.01" y2="7" />
+    </svg>
+  ) },
+  { key: 'bloggers', label: 'Блогеры', icon: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ) },
+  { key: 'promos', label: 'Промокоды', icon: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" />
+      <path d="M4 6v12c0 1.1.9 2 2 2h14v-4" />
+      <path d="M18 12a2 2 0 0 0 0 4h4v-4z" />
+    </svg>
+  ) },
+  { key: 'media', label: 'Медиа', icon: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  ) },
+  { key: 'audit', label: 'Журнал', icon: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    </svg>
+  ) },
+]
+
+function AdminSidebar({
+  activeTab,
+  setActiveTab,
+  unreadChatCount,
+  onLogout,
+  saved,
+}: {
+  activeTab: AdminTab
+  setActiveTab: (t: AdminTab) => void
+  unreadChatCount: number
+  onLogout: () => void
+  saved: boolean
+}) {
+  const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  return (
+    <>
+      {/* Mobile trigger */}
+      <button
+        type="button"
+        className="admin-sidebar-trigger"
+        onClick={() => setMobileOpen((v) => !v)}
+        aria-label="меню"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      </button>
+      {mobileOpen && (
+        <button type="button" className="admin-sidebar__overlay" aria-label="закрыть" onClick={() => setMobileOpen(false)} />
+      )}
+      <aside className={`admin-sidebar ${collapsed ? 'admin-sidebar--collapsed' : ''} ${mobileOpen ? 'admin-sidebar--mobile-open' : ''}`.trim()}>
+        <div className="admin-sidebar__brand">
+          <span className="admin-sidebar__brand-mark">k</span>
+          <span className="admin-sidebar__brand-text">
+            <strong>kolman</strong>
+            <em>admin</em>
+          </span>
+          <button
+            type="button"
+            className="admin-sidebar__collapse"
+            onClick={() => setCollapsed((v) => !v)}
+            aria-label="свернуть"
+            title="свернуть боковую панель"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points={collapsed ? '9 18 15 12 9 6' : '15 18 9 12 15 6'} />
+            </svg>
+          </button>
+        </div>
+
+        <nav className="admin-sidebar__nav" aria-label="разделы">
+          {ADMIN_NAV.map((item) => {
+            const isActive = activeTab === item.key
+            const badge = item.badgeKey === 'chat' && unreadChatCount > 0 ? unreadChatCount : null
+            return (
+              <button
+                key={item.key}
+                type="button"
+                className={`admin-sidebar__item ${isActive ? 'admin-sidebar__item--active' : ''}`.trim()}
+                onClick={() => { setActiveTab(item.key); setMobileOpen(false) }}
+                title={item.label}
+              >
+                <span className="admin-sidebar__icon">{item.icon}</span>
+                <span className="admin-sidebar__label">{item.label}</span>
+                {badge !== null && <span className="admin-sidebar__badge">{badge}</span>}
+              </button>
+            )
+          })}
+        </nav>
+
+        <div className="admin-sidebar__footer">
+          {saved && (
+            <span className="admin-sidebar__saved" role="status">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              сохранено
+            </span>
+          )}
+          <Link to="/" className="admin-sidebar__link" title="на сайт">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
+            <span>на сайт</span>
+          </Link>
+          <button type="button" className="admin-sidebar__link" onClick={onLogout} title="выйти">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <span>выйти</span>
+          </button>
+        </div>
+      </aside>
+    </>
+  )
+}
+
 // ── Main admin panel ──────────────────────────────────────────────────────────
 type AuthStatus = 'checking' | 'guest' | 'authed'
 
@@ -264,8 +457,6 @@ export default function AdminPage() {
     />
   )
 }
-
-type AdminTab = 'dashboard' | 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers' | 'promos' | 'media' | 'audit'
 
 const ADMIN_TAB_ORDER: AdminTab[] = ['dashboard', 'products', 'content', 'pages', 'brands', 'orders', 'inquiries', 'chat', 'bloggers', 'promos', 'media', 'audit']
 const ADMIN_TAB_STORAGE_KEY = 'kolman-admin-tab'
@@ -584,58 +775,16 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const isEditingStatic = false
 
   return (
-    <div className="admin">
-      <header className="admin__header">
-        <div className="admin__logo"><span>kolman</span> admin</div>
-        <div className="admin__header-actions">
-          {saved && <span className="admin__saved-toast">Сохранено ✓</span>}
-          <Link to="/" className="admin__back-link">← На сайт</Link>
-          <button type="button" className="admin__back-link" onClick={onLogout}>
-            Выйти
-          </button>
-        </div>
-      </header>
+    <div className="admin admin--shell">
+      <AdminSidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        unreadChatCount={unreadChatCount}
+        onLogout={onLogout}
+        saved={saved}
+      />
 
-      <div className="admin__tab-bar">
-        <button type="button" className={`admin__tab-btn${activeTab === 'dashboard' ? ' active' : ''}`} onClick={() => setActiveTab('dashboard')}>
-          Дашборд
-        </button>
-        <button type="button" className={`admin__tab-btn${activeTab === 'products' ? ' active' : ''}`} onClick={() => setActiveTab('products')}>
-          Товары
-        </button>
-        <button type="button" className={`admin__tab-btn${activeTab === 'content' ? ' active' : ''}`} onClick={() => setActiveTab('content')}>
-          Главная
-        </button>
-        <button type="button" className={`admin__tab-btn${activeTab === 'pages' ? ' active' : ''}`} onClick={() => setActiveTab('pages')}>
-          Страницы
-        </button>
-        <button type="button" className={`admin__tab-btn${activeTab === 'brands' ? ' active' : ''}`} onClick={() => setActiveTab('brands')}>
-          Бренды
-        </button>
-        <button type="button" className={`admin__tab-btn${activeTab === 'orders' ? ' active' : ''}`} onClick={() => setActiveTab('orders')}>
-          Заказы
-        </button>
-        <button type="button" className={`admin__tab-btn${activeTab === 'inquiries' ? ' active' : ''}`} onClick={() => setActiveTab('inquiries')}>
-          Заявки
-        </button>
-        <button type="button" className={`admin__tab-btn${activeTab === 'chat' ? ' active' : ''}`} onClick={() => setActiveTab('chat')}>
-          Чат
-          {unreadChatCount > 0 && <span className="admin__tab-badge">{unreadChatCount}</span>}
-        </button>
-        <button type="button" className={`admin__tab-btn${activeTab === 'bloggers' ? ' active' : ''}`} onClick={() => setActiveTab('bloggers')}>
-          Блогеры
-        </button>
-        <button type="button" className={`admin__tab-btn${activeTab === 'promos' ? ' active' : ''}`} onClick={() => setActiveTab('promos')}>
-          Промокоды
-        </button>
-        <button type="button" className={`admin__tab-btn${activeTab === 'media' ? ' active' : ''}`} onClick={() => setActiveTab('media')}>
-          Медиа
-        </button>
-        <button type="button" className={`admin__tab-btn${activeTab === 'audit' ? ' active' : ''}`} onClick={() => setActiveTab('audit')}>
-          Журнал
-        </button>
-      </div>
-
+      <main className="admin__main-content">
       <div className={`chat-site-toast chat-site-toast--admin ${chatToast ? 'chat-site-toast--visible' : ''}`}>
         <strong>{chatToast?.title}</strong>
         <span>{chatToast?.body}</span>
@@ -662,6 +811,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       {activeTab === 'promos' && <PromoTab />}
       {activeTab === 'media' && <MediaTab />}
       {activeTab === 'audit' && <AuditLogTab />}
+      </main>
 
       <CustomerModal email={openCustomer} onClose={() => setOpenCustomer(null)} />
 

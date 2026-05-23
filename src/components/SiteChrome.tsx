@@ -315,7 +315,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
 
             {/* ThemeToggle temporarily removed — light theme is being redone */}
 
-            <button type="button" className="icon-button" aria-label="cart" onClick={() => setIsCartOpen(true)}>
+            <button type="button" className="icon-button hide-on-mobile" aria-label="cart" onClick={() => setIsCartOpen(true)}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
                 <path d="M3 6h18" />
@@ -326,7 +326,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
 
             <button
               type="button"
-              className="icon-button icon-button--avatar"
+              className="icon-button icon-button--avatar hide-on-mobile"
               aria-label="account"
               onClick={handleAccountClick}
               title={currentUser ? (currentUser.firstName || currentUser.name) : t('ui.auth.loginTitle')}

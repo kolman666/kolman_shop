@@ -146,9 +146,14 @@ const ru = {
     },
     presence: {
       online: 'в сети',
-      wasMinutesAgo: 'был {{minutes}}м назад',
-      wasHoursAgo: 'был {{hours}}ч назад',
-      wasDaysAgo: 'был {{days}}д назад',
+      never: 'не заходил',
+      justNow: 'был только что',
+      wasMinutesAgo: 'был {{minutes}} мин назад',
+      wasHoursAgo: 'был {{hours}} ч назад',
+      wasHoursMinutesAgo: 'был {{hours}} ч {{minutes}} мин назад',
+      wasDaysAgo: 'был {{days}} дн назад',
+      wasDaysHoursAgo: 'был {{days}} дн {{hours}} ч назад',
+      wasOnDate: 'был {{date}}',
     },
     breadcrumbs: {
       home: 'главная',

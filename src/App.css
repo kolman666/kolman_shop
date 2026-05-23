@@ -1863,6 +1863,11 @@
   background: #e11d1d;
 }
 
+.product-card__status--outOfStock {
+  background: #4a4a4f;
+  color: #fff;
+}
+
 .product-card__body {
   display: grid;
   gap: 7px;
@@ -11488,7 +11493,6 @@
 /* ── The actual button ────────────────────────────────────────────────── */
 .cookie-btn {
   position: relative;
-  isolation: isolate;
   overflow: hidden;
   appearance: none;
   padding: 10px 22px;
@@ -11500,28 +11504,40 @@
   font-weight: 700;
   letter-spacing: 0.03em;
   cursor: pointer;
-  transition: color 0.35s ease, border-color 0.35s ease;
+  transition: border-color 0.35s ease;
+  /* New stacking context without isolation: simpler and works in Chrome where
+   * `isolation: isolate` + `z-index: -1` sometimes hides the pseudo behind
+   * the backdrop-filtered parent. */
+  z-index: 0;
 }
 .cookie-btn--accept { color: var(--color-main); }
 .cookie-btn--decline { color: var(--color-text-soft); }
 
-/* The wave: pseudo element that scales from the bottom on hover. */
+/* The wave: pseudo element that scales from the bottom on hover.
+ * Lives at z-index 0 (above the button's own bg, below the label). */
 .cookie-btn::before {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   background: currentColor;
   transform: scaleY(0);
   transform-origin: bottom center;
   transition: transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
   border-radius: inherit;
   will-change: transform;
+  pointer-events: none;
 }
 .cookie-btn:hover::before,
 .cookie-btn:active::before,
 .cookie-btn:focus-visible::before {
   transform: scaleY(1);
+}
+.cookie-btn__label {
+  position: relative;
+  z-index: 1;
+  transition: color 0.35s ease;
+  display: inline-block;
 }
 /* On hover invert the label colour so it reads over the filled wave. */
 .cookie-btn:hover .cookie-btn__label,
@@ -11532,11 +11548,6 @@
 .cookie-btn--decline:focus-visible .cookie-btn__label {
   /* dark fill — pick a colour that contrasts with the panel background */
   color: var(--color-bg);
-}
-.cookie-btn__label {
-  position: relative;
-  z-index: 1;
-  transition: color 0.35s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -11938,4 +11949,338 @@
   gap: 16px;
   margin-top: 20px;
   padding-bottom: 24px;
+}
+
+/* ===== Utility: hide on phones, replaced by bottom-nav ===== */
+@media (max-width: 720px) {
+  .hide-on-mobile { display: none !important; }
+}
+
+/* ===== Cart drawer mobile reachability =====
+ * On phones the sticky bottom nav covers the bottom 64px. The drawer's
+ * sticky footer (with "оформить заказ" + "поделиться корзиной" + promo
+ * input) needs extra bottom-padding so all the buttons stay tappable
+ * above the nav. */
+@media (max-width: 720px) {
+  .cart-drawer__footer,
+  .cart-drawer__success {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px) !important;
+  }
+  /* Generic safety: if the drawer's footer doesn't have its own class but
+   * is the last <div> in the panel, still give it space. Captured by
+   * inline-style flex containers — see CartDrawer.tsx line ~444. */
+  .cart-drawer-shell > [style*="border-top"] {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px) !important;
+  }
+}
+
+/* ===== Privacy page: keep long Russian words from blowing out the layout ===== */
+.page-shell,
+.page-container,
+.privacy-page,
+.privacy-page * {
+  /* Avoid 23-letter words like "конфиденциальности" overflowing in narrow
+   * viewports. word-break: normal would split mid-word — we use overflow-wrap
+   * so wrapping only kicks in when the word genuinely doesn't fit. */
+  overflow-wrap: anywhere;
+}
+
+/* ===== Brand carousel mobile clipping =====
+ * The brand marquee row uses CSS animations + flex. On phones the wrap
+ * sometimes clips logos because the row height is smaller than the SVG.
+ * Pin a min-height and stop logos from shrinking under flex. */
+@media (max-width: 720px) {
+  .brand-marquee,
+  .brand-strip {
+    min-height: 72px;
+  }
+  .brand-marquee__item,
+  .brand-strip__item,
+  .brand-marquee__svg,
+  .brand-strip__svg {
+    flex: 0 0 auto !important;
+    min-width: 110px;
+  }
+}
+
+/* ============================================================
+ * Admin redesign — sidebar layout.
+ *
+ * Inspired by Linear / Vercel / Stripe: vertical nav with icons,
+ * dark surface, no extra "content container" wrapper. The old
+ * `.admin__tab-bar` is hidden by `display: none` so existing
+ * styles don't double up.
+ * ============================================================ */
+
+.admin--shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+.admin--shell .admin__header,
+.admin--shell .admin__tab-bar { display: none; }
+
+.admin-sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #0d0d10 0%, #0a0a0c 100%);
+  border-right: 1px solid var(--color-border);
+  overflow: hidden;
+  transition: width 0.22s ease;
+  width: 240px;
+}
+.admin-sidebar--collapsed { width: 64px; }
+.admin-sidebar--collapsed .admin-sidebar__label,
+.admin-sidebar--collapsed .admin-sidebar__brand-text,
+.admin-sidebar--collapsed .admin-sidebar__saved,
+.admin-sidebar--collapsed .admin-sidebar__link span,
+.admin-sidebar--collapsed .admin-sidebar__badge {
+  display: none;
+}
+.admin-sidebar--collapsed .admin-sidebar__item,
+.admin-sidebar--collapsed .admin-sidebar__link {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.admin-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 18px;
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
+}
+.admin-sidebar__brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--color-main);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 16px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+.admin-sidebar__brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  min-width: 0;
+}
+.admin-sidebar__brand-text strong {
+  font-size: 14px;
+  color: var(--color-text);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.admin-sidebar__brand-text em {
+  font-size: 10px;
+  font-style: normal;
+  color: var(--color-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.admin-sidebar__collapse {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.04);
+  color: var(--color-text-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.18s, border-color 0.18s;
+}
+.admin-sidebar__collapse:hover { color: var(--color-text); border-color: var(--color-main); }
+.admin-sidebar--collapsed .admin-sidebar__collapse { right: 50%; transform: translate(50%, -50%); top: auto; bottom: -20px; }
+
+.admin-sidebar__nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.admin-sidebar__nav::-webkit-scrollbar { width: 4px; }
+.admin-sidebar__nav::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 999px; }
+
+.admin-sidebar__item {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: transparent;
+  border: 0;
+  color: var(--color-text-dim);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+  position: relative;
+  width: 100%;
+}
+.admin-sidebar__item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text);
+}
+.admin-sidebar__item--active {
+  background: rgba(225, 29, 29, 0.14);
+  color: var(--color-text);
+  font-weight: 600;
+}
+.admin-sidebar__item--active::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--color-main);
+}
+.admin-sidebar__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: currentColor;
+  opacity: 0.85;
+}
+.admin-sidebar__item--active .admin-sidebar__icon { opacity: 1; color: var(--color-main); }
+.admin-sidebar__label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-sidebar__badge {
+  background: var(--color-main);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 7px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.admin-sidebar__footer {
+  border-top: 1px solid var(--color-border);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+}
+.admin-sidebar__saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #28c057;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+}
+.admin-sidebar__link {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-dim);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.admin-sidebar__link:hover { background: rgba(255,255,255,0.05); color: var(--color-text); }
+
+/* ── Content area: full-width, no extra container ─────────────────────── */
+.admin__main-content {
+  padding: 28px 32px 60px;
+  min-width: 0;
+  /* Drop the old `.admin__content-tab` framing — content goes edge-to-edge
+   * inside the main column, individual sections set their own padding. */
+}
+.admin--shell .admin__content-tab {
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+}
+.admin--shell .admin__content-tab-head {
+  margin-bottom: 24px;
+}
+
+/* Mobile: sidebar becomes a slide-in drawer ──────────────────────────── */
+.admin-sidebar-trigger { display: none; }
+@media (max-width: 900px) {
+  .admin--shell { grid-template-columns: 1fr; }
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    transform: translateX(-100%);
+    z-index: 70;
+    transition: transform 0.25s ease;
+  }
+  .admin-sidebar--mobile-open { transform: translateX(0); box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .admin-sidebar--collapsed { width: 260px; }
+  .admin-sidebar__collapse { display: none; }
+  .admin-sidebar__overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    border: 0;
+    padding: 0;
+    z-index: 65;
+    cursor: pointer;
+  }
+  .admin-sidebar-trigger {
+    display: inline-flex;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    cursor: pointer;
+    z-index: 60;
+    align-items: center;
+    justify-content: center;
+  }
+  .admin__main-content { padding: 64px 16px 60px; }
 }
