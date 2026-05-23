@@ -77,8 +77,36 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'database not configured' })
   }
 
-  // POST — public (place an order)
+  // POST — public (place an order), except admin promo CRUD (?promo=1)
   if (req.method === 'POST') {
+    if (req.query.promo === '1') {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: 'unauthorized' })
+      const b = req.body ?? {}
+      const code = s(String(b.code ?? ''), 32).toUpperCase().replace(/[^A-Z0-9_-]/g, '')
+      if (!code || code.length < 2) return res.status(400).json({ error: 'invalid code' })
+      const kind = b.kind === 'percent' || b.kind === 'fixed' ? b.kind : null
+      if (!kind) return res.status(400).json({ error: 'invalid kind' })
+      const value = Number(b.value)
+      if (!Number.isFinite(value) || value <= 0) return res.status(400).json({ error: 'invalid value' })
+      if (kind === 'percent' && value > 99) return res.status(400).json({ error: 'percent must be 1..99' })
+      const row = {
+        code,
+        kind,
+        value,
+        min_total: Number.isFinite(Number(b.min_total)) ? Math.max(0, Number(b.min_total)) : 0,
+        valid_from: typeof b.valid_from === 'string' && b.valid_from ? b.valid_from : null,
+        valid_to: typeof b.valid_to === 'string' && b.valid_to ? b.valid_to : null,
+        max_uses: Number.isInteger(b.max_uses) && b.max_uses > 0 ? b.max_uses : null,
+        note: typeof b.note === 'string' ? s(b.note, 200) : '',
+      }
+      const r = await supabase.from('promo_codes').upsert(row, { onConflict: 'code' }).select().single()
+      if (r.error) {
+        if (isTableMissing(r.error)) return res.status(503).json({ error: 'table_not_found' })
+        return res.status(500).json({ error: r.error.message })
+      }
+      return res.status(201).json(r.data)
+    }
+
     const ip = getIp(req)
     if (rateLimited(ip)) return res.status(429).json({ error: 'too many requests' })
 
@@ -384,34 +412,6 @@ export default async function handler(req, res) {
       discount,
       note: c.note ?? '',
     })
-  }
-
-  if (req.method === 'POST' && req.query.promo === '1') {
-    if (!isAdminAuthorized(req)) return res.status(401).json({ error: 'unauthorized' })
-    const b = req.body ?? {}
-    const code = s(String(b.code ?? ''), 32).toUpperCase().replace(/[^A-Z0-9_-]/g, '')
-    if (!code || code.length < 2) return res.status(400).json({ error: 'invalid code' })
-    const kind = b.kind === 'percent' || b.kind === 'fixed' ? b.kind : null
-    if (!kind) return res.status(400).json({ error: 'invalid kind' })
-    const value = Number(b.value)
-    if (!Number.isFinite(value) || value <= 0) return res.status(400).json({ error: 'invalid value' })
-    if (kind === 'percent' && value > 99) return res.status(400).json({ error: 'percent must be 1..99' })
-    const row = {
-      code,
-      kind,
-      value,
-      min_total: Number.isFinite(Number(b.min_total)) ? Math.max(0, Number(b.min_total)) : 0,
-      valid_from: typeof b.valid_from === 'string' && b.valid_from ? b.valid_from : null,
-      valid_to: typeof b.valid_to === 'string' && b.valid_to ? b.valid_to : null,
-      max_uses: Number.isInteger(b.max_uses) && b.max_uses > 0 ? b.max_uses : null,
-      note: typeof b.note === 'string' ? s(b.note, 200) : '',
-    }
-    const r = await supabase.from('promo_codes').upsert(row, { onConflict: 'code' }).select().single()
-    if (r.error) {
-      if (isTableMissing(r.error)) return res.status(503).json({ error: 'table_not_found' })
-      return res.status(500).json({ error: r.error.message })
-    }
-    return res.status(201).json(r.data)
   }
 
   if (req.method === 'DELETE' && req.query.promo === '1') {

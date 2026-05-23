@@ -30,6 +30,20 @@ async function listPromos(): Promise<PromoRow[]> {
   return r.json() as Promise<PromoRow[]>
 }
 
+const PROMO_ERRORS: Record<string, string> = {
+  'cart is empty': 'ошибка сервера: запрос ушёл в оформление заказа вместо промокодов',
+  unauthorized: 'нужен вход в админку',
+  'invalid code': 'некорректный код',
+  'invalid kind': 'некорректный тип скидки',
+  'invalid value': 'некорректное значение',
+  'percent must be 1..99': 'процент должен быть от 1 до 99',
+  table_not_found: 'таблица promo_codes не создана — выполните SQL-миграцию',
+}
+
+function promoErrorMessage(code: string): string {
+  return PROMO_ERRORS[code] ?? code
+}
+
 async function savePromo(row: Partial<PromoRow>) {
   const r = await fetch('/api/orders?promo=1', {
     method: 'POST',
@@ -38,7 +52,8 @@ async function savePromo(row: Partial<PromoRow>) {
   })
   if (!r.ok) {
     const b = await r.json().catch(() => ({}))
-    throw new Error((b as { error?: string }).error ?? `${r.status}`)
+    const raw = (b as { error?: string }).error ?? `${r.status}`
+    throw new Error(promoErrorMessage(raw))
   }
   return r.json()
 }
