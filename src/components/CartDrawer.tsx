@@ -21,6 +21,9 @@ type CartEntry = {
   price: number
   image: string
   quantity: number
+  // Available stock from `admin_products.quantity` (mirrored client-side).
+  // `null` means the admin hasn't set a stock cap (unlimited).
+  stockMax: number | null
 }
 
 const DELIVERY_OPTIONS = [
@@ -103,12 +106,15 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       const id = Number(idStr)
       const product = products.find((p) => p.id === id)
       if (product && qty > 0) {
+        // null/undefined quantity = unlimited (admin never set a cap).
+        const stockMax = typeof product.quantity === 'number' && product.quantity >= 0 ? product.quantity : null
         entries.push({
           id: product.id,
           title: product.titleDirect ?? t(product.titleKey),
           price: product.price,
           image: product.image,
-          quantity: qty,
+          quantity: stockMax !== null ? Math.min(qty, stockMax) : qty,
+          stockMax,
         })
       }
     }
@@ -196,6 +202,14 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             const detail = (body as { error?: string; detail?: string }).detail
             if (res.status === 503 && errMsg === 'table_not_found') {
               await sendTelegramMessage(msg)
+            } else if (res.status === 409 && errMsg === 'out_of_stock') {
+              // Server rejected because we asked for more than is in stock.
+              // Reset cart line quantities to the available amount + surface
+              // a readable error message so the shopper can retry.
+              const items = (body as { items?: Array<{ title: string; requested: number; available: number; product_id: number }> }).items ?? []
+              for (const oos of items) updateQuantity(oos.product_id, oos.available)
+              const lines = items.map((oos) => `«${oos.title}» — есть только ${oos.available} (вы заказали ${oos.requested})`)
+              throw new TelegramSendError(409, `Не хватает товара на складе:\n${lines.join('\n')}`)
             } else {
               throw new TelegramSendError(res.status, errMsg, detail)
             }
@@ -412,6 +426,11 @@ function CartView({ entries, total, onClose, onQtyChange, onRemove, onCheckout }
                   <span style={{ fontSize: 13, color: 'var(--color-text-dim)' }}>
                     {(entry.price * entry.quantity).toLocaleString('ru-RU')} ₽
                   </span>
+                  {entry.stockMax !== null && entry.stockMax <= 5 && (
+                    <span style={{ fontSize: 11, color: '#f0b020', fontWeight: 700 }}>
+                      осталось {entry.stockMax} шт
+                    </span>
+                  )}
                 </div>
                 <div className="cart-item__qty">
                   <button
@@ -429,6 +448,8 @@ function CartView({ entries, total, onClose, onQtyChange, onRemove, onCheckout }
                     type="button"
                     className="cart-qty-btn"
                     aria-label="увеличить количество"
+                    disabled={entry.stockMax !== null && entry.quantity >= entry.stockMax}
+                    title={entry.stockMax !== null && entry.quantity >= entry.stockMax ? 'больше нет в наличии' : ''}
                     onClick={() => onQtyChange(entry.id, 1, entry.quantity)}
                   >
                     +

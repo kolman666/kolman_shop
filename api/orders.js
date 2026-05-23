@@ -97,6 +97,49 @@ export default async function handler(req, res) {
         quantity: typeof it.quantity === 'number' && Number.isInteger(it.quantity) && it.quantity > 0 ? it.quantity : 1,
       })
     }
+    // ── Stock check ───────────────────────────────────────────────────
+    // Before saving the order we look up the current `quantity` for every
+    // product in the cart and reject if anyone is asking for more than is
+    // available. The product table may not have a quantity column on older
+    // deployments — we treat null/undefined as "unlimited" so legacy items
+    // keep checking out.
+    const productIds = safeItems.map((it) => it.id).filter((id) => Number.isInteger(id))
+    if (productIds.length > 0) {
+      let pr = await supabase
+        .from('admin_products')
+        .select('id, quantity, title, brand')
+        .in('id', productIds)
+      // Fallback to legacy table name.
+      if (pr.error && /admin_products/i.test(pr.error.message)) {
+        pr = await supabase.from('products').select('id, quantity, title, brand').in('id', productIds)
+      }
+      if (!pr.error && Array.isArray(pr.data)) {
+        const stockById = new Map(pr.data.map((p) => [p.id, p]))
+        const outOfStock = []
+        for (const it of safeItems) {
+          if (!Number.isInteger(it.id)) continue
+          const p = stockById.get(it.id)
+          if (!p) continue
+          // null / undefined / negative = unlimited (admin hasn't set a limit).
+          if (typeof p.quantity !== 'number' || p.quantity < 0) continue
+          if (it.quantity > p.quantity) {
+            outOfStock.push({
+              product_id: it.id,
+              title: p.title || it.title,
+              requested: it.quantity,
+              available: p.quantity,
+            })
+          }
+        }
+        if (outOfStock.length > 0) {
+          return res.status(409).json({
+            error: 'out_of_stock',
+            items: outOfStock,
+          })
+        }
+      }
+    }
+
     // Always derive total server-side from the validated items. The client's
     // `body.total` is intentionally ignored — otherwise an attacker could
     // submit a $100 cart with `total: 1` and the DB would store the cheap
@@ -180,6 +223,28 @@ export default async function handler(req, res) {
     if (error) {
       if (isTableMissing(error)) return res.status(503).json({ error: 'table_not_found', detail: error.message })
       return res.status(500).json({ error: 'failed to save order', detail: error.message })
+    }
+
+    // ── Decrement stock ──────────────────────────────────────────────
+    // Best-effort decrement of the `quantity` column for every product in
+    // the order. The check above already confirmed there's enough stock.
+    // We run updates in parallel; if any fails it doesn't abort the order
+    // (the order is already saved). Admin sees the discrepancy in the
+    // dashboard / orders list and can adjust manually.
+    for (const it of safeItems) {
+      if (!Number.isInteger(it.id) || it.quantity <= 0) continue
+      void supabase.rpc('decrement_product_quantity', { p_id: it.id, p_delta: it.quantity }).then(
+        () => undefined,
+        async () => {
+          // RPC may not exist — fall back to read-modify-write. Race-prone
+          // for two simultaneous orders of the same item, acceptable at
+          // current store volume.
+          const got = await supabase.from('admin_products').select('quantity').eq('id', it.id).maybeSingle()
+          if (got.error || !got.data || typeof got.data.quantity !== 'number') return
+          const next = Math.max(0, got.data.quantity - it.quantity)
+          await supabase.from('admin_products').update({ quantity: next }).eq('id', it.id)
+        },
+      )
     }
 
     // Always rebuild the Telegram payload server-side — never trust client HTML.
