@@ -367,59 +367,167 @@ export default async function handler(req, res) {
     if (!isAuthorized(req)) return res.status(401).json({ error: 'unauthorized' })
     const now = Date.now()
     const day = 86_400_000
+    // Look back 60 days so we can compute "previous period" deltas. Older
+    // rows are filtered out per-bucket below.
+    const since60 = new Date(now - 60 * day).toISOString()
     const since30 = new Date(now - 30 * day).toISOString()
+    const since14 = new Date(now - 14 * day).toISOString()
     const since7 = new Date(now - 7 * day).toISOString()
     const sinceToday = new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
+    const sinceYesterday = new Date(new Date().setHours(0, 0, 0, 0) - day).toISOString()
+
+    const emptyStats = {
+      revenue: { today: 0, yesterday: 0, week: 0, weekPrev: 0, month: 0, monthPrev: 0 },
+      counts: { today: 0, week: 0, month: 0, new: 0, in_progress: 0, done: 0, cancelled: 0 },
+      aov: { current: 0, previous: 0 },
+      top: [],
+      daily: [],
+      pending: { needTracking: 0, openInquiries: 0, openChats: 0 },
+      recentOrders: [],
+    }
+
     const { data: rows, error } = await supabase
       .from('orders')
-      .select('id, status, total, items, created_at')
-      .gte('created_at', since30)
+      .select('id, status, total, items, created_at, customer_name, tracking_number')
+      .gte('created_at', since60)
       .order('created_at', { ascending: false })
-      .limit(500)
-    if (error) {
-      if (isTableMissing(error)) {
-        return res.status(200).json({
-          revenue: { today: 0, week: 0, month: 0 },
-          counts: { today: 0, week: 0, month: 0, new: 0, in_progress: 0, done: 0, cancelled: 0 },
-          top: [],
-        })
-      }
+      .limit(1000)
+    if (error && !/tracking_/i.test(error.message)) {
+      if (isTableMissing(error)) return res.status(200).json(emptyStats)
       return res.status(500).json({ error: error.message })
     }
-    const revenue = { today: 0, week: 0, month: 0 }
+    let safeRows = rows
+    if (error) {
+      // tracking columns missing — retry minus those columns
+      const retry = await supabase
+        .from('orders')
+        .select('id, status, total, items, created_at, customer_name')
+        .gte('created_at', since60)
+        .order('created_at', { ascending: false })
+        .limit(1000)
+      if (retry.error) {
+        if (isTableMissing(retry.error)) return res.status(200).json(emptyStats)
+        return res.status(500).json({ error: retry.error.message })
+      }
+      safeRows = retry.data
+    }
+
+    const revenue = { today: 0, yesterday: 0, week: 0, weekPrev: 0, month: 0, monthPrev: 0 }
     const counts = { today: 0, week: 0, month: 0, new: 0, in_progress: 0, done: 0, cancelled: 0 }
+    let aovCurrentSum = 0, aovCurrentN = 0, aovPrevSum = 0, aovPrevN = 0
     const productAgg = new Map()
-    for (const r of rows ?? []) {
+    // Daily revenue / order count, last 30 days, oldest → newest for sparkline.
+    const dailyMap = new Map()
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(Date.now() - i * day)
+      d.setHours(0, 0, 0, 0)
+      dailyMap.set(d.toISOString().slice(0, 10), { date: d.toISOString().slice(0, 10), revenue: 0, orders: 0 })
+    }
+
+    let needTracking = 0
+    const recentOrders = []
+
+    for (const r of safeRows ?? []) {
       const total = typeof r.total === 'number' ? r.total : 0
       const created = r.created_at
-      counts.month++
-      counts[r.status] = (counts[r.status] ?? 0) + 1
-      // Cancelled orders don't contribute to revenue.
-      if (r.status !== 'cancelled') revenue.month += total
-      if (created >= since7) {
-        counts.week++
-        if (r.status !== 'cancelled') revenue.week += total
-      }
-      if (created >= sinceToday) {
-        counts.today++
-        if (r.status !== 'cancelled') revenue.today += total
-      }
-      // Top products by units sold (excluding cancelled).
-      if (r.status !== 'cancelled' && Array.isArray(r.items)) {
-        for (const it of r.items) {
-          if (!it || typeof it.title !== 'string') continue
-          const key = it.title
-          const prev = productAgg.get(key) ?? { title: key, qty: 0, revenue: 0 }
-          prev.qty += Number(it.quantity) || 0
-          prev.revenue += (Number(it.price) || 0) * (Number(it.quantity) || 0)
-          productAgg.set(key, prev)
+      const isFresh = created >= since30
+      if (isFresh) {
+        counts.month++
+        counts[r.status] = (counts[r.status] ?? 0) + 1
+        if (r.status !== 'cancelled') {
+          revenue.month += total
+          aovCurrentSum += total
+          aovCurrentN++
+        }
+        if (created >= since7) {
+          counts.week++
+          if (r.status !== 'cancelled') revenue.week += total
+        }
+        if (created >= sinceYesterday && created < sinceToday) {
+          if (r.status !== 'cancelled') revenue.yesterday += total
+        }
+        if (created >= sinceToday) {
+          counts.today++
+          if (r.status !== 'cancelled') revenue.today += total
+        }
+        if (r.status !== 'cancelled' && Array.isArray(r.items)) {
+          for (const it of r.items) {
+            if (!it || typeof it.title !== 'string') continue
+            const key = it.title
+            const prev = productAgg.get(key) ?? { title: key, qty: 0, revenue: 0 }
+            prev.qty += Number(it.quantity) || 0
+            prev.revenue += (Number(it.price) || 0) * (Number(it.quantity) || 0)
+            productAgg.set(key, prev)
+          }
+        }
+        // Daily bucket
+        const dayKey = created.slice(0, 10)
+        const bucket = dailyMap.get(dayKey)
+        if (bucket && r.status !== 'cancelled') {
+          bucket.revenue += total
+          bucket.orders += 1
+        }
+      } else {
+        // 30-60d window → "previous period" comparisons.
+        if (r.status !== 'cancelled' && created >= since60) {
+          revenue.monthPrev += total
+          aovPrevSum += total
+          aovPrevN++
+        }
+        if (r.status !== 'cancelled' && created >= since14 && created < since7) {
+          revenue.weekPrev += total
         }
       }
+      // Pending tracking: in_progress orders without a tracking number.
+      if (r.status === 'in_progress' && !r.tracking_number) needTracking++
+      // Recent orders for the activity feed (max 10, already newest-first).
+      if (recentOrders.length < 10) {
+        recentOrders.push({
+          id: r.id,
+          customer_name: r.customer_name || '',
+          total,
+          status: r.status,
+          created_at: r.created_at,
+        })
+      }
     }
+
     const top = Array.from(productAgg.values())
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 5)
-    return res.status(200).json({ revenue, counts, top })
+
+    const daily = Array.from(dailyMap.values())
+
+    // Pending: open inquiries + open chats — cheap lookups, single COUNT each.
+    let openInquiries = 0
+    let openChats = 0
+    try {
+      const rI = await supabase
+        .from('inquiries')
+        .select('id', { count: 'exact', head: true })
+        .neq('status', 'done')
+      openInquiries = rI.count ?? 0
+    } catch { /* table missing */ }
+    try {
+      const rC = await supabase
+        .from('chat_threads')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'open')
+      openChats = rC.count ?? 0
+    } catch { /* ignore */ }
+
+    return res.status(200).json({
+      revenue,
+      counts,
+      aov: {
+        current: aovCurrentN > 0 ? Math.round(aovCurrentSum / aovCurrentN) : 0,
+        previous: aovPrevN > 0 ? Math.round(aovPrevSum / aovPrevN) : 0,
+      },
+      top,
+      daily,
+      pending: { needTracking, openInquiries, openChats },
+      recentOrders,
+    })
   }
 
   // From here on — admin only

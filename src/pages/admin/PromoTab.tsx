@@ -110,53 +110,71 @@ export default function PromoTab() {
       </header>
 
       <div className="promo-admin-form">
-        <input
-          placeholder="код (PAVEL10)"
-          value={draft.code ?? ''}
-          maxLength={32}
-          onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })}
-        />
-        <select
-          value={draft.kind ?? 'percent'}
-          onChange={(e) => setDraft({ ...draft, kind: e.target.value as 'percent' | 'fixed' })}
-        >
-          <option value="percent">%</option>
-          <option value="fixed">₽</option>
-        </select>
-        <input
-          type="number"
-          placeholder="значение"
-          min={1}
-          value={draft.value ?? ''}
-          onChange={(e) => setDraft({ ...draft, value: Number(e.target.value) || 0 })}
-        />
-        <input
-          type="number"
-          placeholder="min cart (₽)"
-          min={0}
-          value={draft.min_total ?? ''}
-          onChange={(e) => setDraft({ ...draft, min_total: Number(e.target.value) || 0 })}
-        />
-        <input
-          type="number"
-          placeholder="лимит использований"
-          min={1}
-          value={draft.max_uses ?? ''}
-          onChange={(e) => setDraft({ ...draft, max_uses: e.target.value ? Number(e.target.value) : null })}
-        />
-        <input
-          placeholder="заметка (для админа)"
-          value={draft.note ?? ''}
-          maxLength={200}
-          onChange={(e) => setDraft({ ...draft, note: e.target.value })}
-        />
+        <label className="promo-admin-form__field">
+          <span className="promo-admin-form__label">Код</span>
+          <input
+            placeholder="PAVEL10"
+            value={draft.code ?? ''}
+            maxLength={32}
+            onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })}
+          />
+        </label>
+        <label className="promo-admin-form__field promo-admin-form__field--narrow">
+          <span className="promo-admin-form__label">Тип</span>
+          <select
+            value={draft.kind ?? 'percent'}
+            onChange={(e) => setDraft({ ...draft, kind: e.target.value as 'percent' | 'fixed' })}
+          >
+            <option value="percent">% процент</option>
+            <option value="fixed">₽ сумма</option>
+          </select>
+        </label>
+        <label className="promo-admin-form__field promo-admin-form__field--narrow">
+          <span className="promo-admin-form__label">Значение</span>
+          <input
+            type="number"
+            placeholder={draft.kind === 'fixed' ? '500' : '10'}
+            min={1}
+            value={draft.value ?? ''}
+            onChange={(e) => setDraft({ ...draft, value: Number(e.target.value) || 0 })}
+          />
+        </label>
+        <label className="promo-admin-form__field">
+          <span className="promo-admin-form__label">Мин. сумма корзины</span>
+          <input
+            type="number"
+            placeholder="0"
+            min={0}
+            value={draft.min_total ?? ''}
+            onChange={(e) => setDraft({ ...draft, min_total: Number(e.target.value) || 0 })}
+          />
+        </label>
+        <label className="promo-admin-form__field">
+          <span className="promo-admin-form__label">Лимит использований</span>
+          <input
+            type="number"
+            placeholder="∞"
+            min={1}
+            value={draft.max_uses ?? ''}
+            onChange={(e) => setDraft({ ...draft, max_uses: e.target.value ? Number(e.target.value) : null })}
+          />
+        </label>
+        <label className="promo-admin-form__field promo-admin-form__field--wide">
+          <span className="promo-admin-form__label">Заметка</span>
+          <input
+            placeholder="для какого блогера / какой акции"
+            value={draft.note ?? ''}
+            maxLength={200}
+            onChange={(e) => setDraft({ ...draft, note: e.target.value })}
+          />
+        </label>
         <button
           type="button"
-          className="admin__save-btn"
+          className="admin__save-btn promo-admin-form__submit"
           onClick={() => void onCreate()}
           disabled={saving || !draft.code?.trim() || !draft.value}
         >
-          {saving ? 'сохраняем…' : '+ создать'}
+          {saving ? 'сохраняем…' : '+ создать промокод'}
         </button>
       </div>
 
@@ -211,9 +229,6 @@ export default function PromoTab() {
         </table>
       )}
 
-      <p className="admin__label-hint" style={{ marginTop: 16 }}>
-        Перед использованием нужно прогнать миграцию: <code>CREATE TABLE promo_codes (code TEXT PRIMARY KEY, kind TEXT NOT NULL, value NUMERIC NOT NULL, min_total NUMERIC DEFAULT 0, valid_from TIMESTAMPTZ, valid_to TIMESTAMPTZ, max_uses INTEGER, used_count INTEGER DEFAULT 0, note TEXT, created_at TIMESTAMPTZ DEFAULT NOW())</code> и в orders добавить колонки <code>promo_code TEXT, promo_discount NUMERIC</code>.
-      </p>
     </div>
   )
 }

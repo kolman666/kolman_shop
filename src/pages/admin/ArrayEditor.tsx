@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { useState, type DragEvent, type ReactNode } from 'react'
 
 type ArrayEditorProps<T> = {
   items: T[]
@@ -12,9 +12,14 @@ type ArrayEditorProps<T> = {
 }
 
 // Generic editor for an array of object items. Renders an indexed card per
-// item with a remove button, plus an "add" button at the bottom. The caller
-// supplies the inner field markup via `renderItem(item, index, update)` —
-// `update({ field: newValue })` merges a patch into that item.
+// item with a remove button, plus an "add" button at the bottom. Cards are
+// reorderable in three ways:
+//   1. drag the ⋮⋮ handle (HTML5 native DnD — no extra dependency)
+//   2. ↑ / ↓ arrows in the head
+//   3. keyboard: focus a card head, ⌥↑ / ⌥↓ to move
+//
+// The caller supplies the inner field markup via `renderItem(item, index,
+// update)` — `update({ field: newValue })` merges a patch into that item.
 export function ArrayEditor<T>({
   items,
   onChange,
@@ -25,6 +30,10 @@ export function ArrayEditor<T>({
   emptyText = 'Пусто. Добавьте первый элемент.',
   max,
 }: ArrayEditorProps<T>) {
+  // Index of the card currently being dragged. -1 when nothing is dragging.
+  const [dragIdx, setDragIdx] = useState<number>(-1)
+  const [dropTarget, setDropTarget] = useState<number>(-1)
+
   function update(index: number, patch: Partial<T>) {
     onChange(items.map((item, i) => i === index ? { ...item, ...patch } : item))
   }
@@ -34,14 +43,42 @@ export function ArrayEditor<T>({
   function move(index: number, dir: -1 | 1) {
     const target = index + dir
     if (target < 0 || target >= items.length) return
+    swap(index, target)
+  }
+  function swap(from: number, to: number) {
+    if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length) return
     const next = items.slice()
-    const [item] = next.splice(index, 1)
-    next.splice(target, 0, item)
+    const [item] = next.splice(from, 1)
+    next.splice(to, 0, item)
     onChange(next)
   }
   function add() {
     if (max && items.length >= max) return
     onChange([...items, blank()])
+  }
+
+  function onDragStart(e: DragEvent<HTMLElement>, index: number) {
+    setDragIdx(index)
+    e.dataTransfer.effectAllowed = 'move'
+    // Setting some data is required by Firefox for the drag to start.
+    e.dataTransfer.setData('text/plain', String(index))
+  }
+  function onDragOver(e: DragEvent<HTMLDivElement>, index: number) {
+    if (dragIdx === -1) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dropTarget !== index) setDropTarget(index)
+  }
+  function onDrop(e: DragEvent<HTMLDivElement>, index: number) {
+    e.preventDefault()
+    if (dragIdx === -1 || dragIdx === index) return
+    swap(dragIdx, index)
+    setDragIdx(-1)
+    setDropTarget(-1)
+  }
+  function onDragEnd() {
+    setDragIdx(-1)
+    setDropTarget(-1)
   }
 
   return (
@@ -51,8 +88,37 @@ export function ArrayEditor<T>({
       ) : (
         <div className="array-editor__list">
           {items.map((item, index) => (
-            <div key={index} className="array-editor__item">
-              <div className="array-editor__item-head">
+            <div
+              key={index}
+              className={
+                `array-editor__item` +
+                (dragIdx === index ? ' array-editor__item--dragging' : '') +
+                (dropTarget === index && dragIdx !== index ? ' array-editor__item--drop-target' : '')
+              }
+              draggable={dragIdx === index}
+              onDragOver={(e) => onDragOver(e, index)}
+              onDrop={(e) => onDrop(e, index)}
+              onDragEnd={onDragEnd}
+            >
+              <div
+                className="array-editor__item-head"
+                onKeyDown={(e) => {
+                  if (e.altKey && e.key === 'ArrowUp') { e.preventDefault(); move(index, -1) }
+                  if (e.altKey && e.key === 'ArrowDown') { e.preventDefault(); move(index, 1) }
+                }}
+                tabIndex={-1}
+              >
+                <button
+                  type="button"
+                  className="array-editor__drag"
+                  aria-label="перетащить"
+                  title="перетащите, чтобы изменить порядок"
+                  draggable
+                  onDragStart={(e) => onDragStart(e, index)}
+                  onDragEnd={onDragEnd}
+                >
+                  ⋮⋮
+                </button>
                 <span className="array-editor__item-label">{itemLabel(index, item)}</span>
                 <div className="array-editor__item-tools">
                   <button type="button" className="array-editor__move" onClick={() => move(index, -1)} disabled={index === 0} aria-label="вверх">↑</button>

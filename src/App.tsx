@@ -10,6 +10,7 @@ import CartDrawer from './components/CartDrawer'
 import BrandSpotlight from './components/BrandSpotlight'
 import MobileBottomNav from './components/MobileBottomNav'
 import CompareBar from './components/CompareBar'
+import CookieConsent from './components/CookieConsent'
 import BloggersBlock from './components/BloggersBlock'
 import NewsBlock from './components/NewsBlock'
 import AuthModal from './components/AuthModal'
@@ -881,6 +882,7 @@ function HomePage() {
         onProfileClick={handleAccountClick}
       />
       <CompareBar />
+      <CookieConsent />
 
       <div className={`chat-site-toast ${chatNotifications.toast ? 'chat-site-toast--visible' : ''}`}>
         <strong>{chatNotifications.toast?.title}</strong>

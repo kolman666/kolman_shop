@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { fetchSiteContent, updateSiteContent } from '../../lib/siteContent'
 import { AccordionSection } from './AccordionSection'
 import { ArrayEditor } from './ArrayEditor'
+import MediaPicker from '../../components/admin/MediaPicker'
 import { PreviewModal } from './PreviewModal'
 import BrandPage from '../BrandPage'
 
@@ -343,15 +344,7 @@ function MultiField({ label, value, onChange, rows = 3, hint }: { label: string;
 function ImageField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div className="admin__field">
-      <span className="admin__label">{label}</span>
-      <div className="admin__image-field">
-        <input className="admin__input" type="url" value={value} onChange={(event) => onChange(event.target.value)} placeholder="https://..." />
-        {value ? (
-          <img className="admin__image-preview" src={value} alt="preview" onError={(event) => { (event.target as HTMLImageElement).style.opacity = '0.3' }} />
-        ) : (
-          <div className="admin__image-preview admin__image-preview--empty" />
-        )}
-      </div>
+      <MediaPicker label={label} value={value} onChange={onChange} />
     </div>
   )
 }

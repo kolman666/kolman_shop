@@ -18,6 +18,8 @@ import { PagesTabV2 } from './admin/PagesTabV2'
 import DashboardTab from './admin/DashboardTab'
 import CustomerModal from './admin/CustomerModal'
 import PromoTab from './admin/PromoTab'
+import MediaTab from './admin/MediaTab'
+import MediaPicker from '../components/admin/MediaPicker'
 import { toCsv, downloadCsv } from '../lib/csv'
 import {
   fetchBloggersAdmin,
@@ -252,7 +254,7 @@ export default function AdminPage() {
   return <AdminPanel onLogout={() => { clearAdminSecret(); setAuthStatus('guest') }} />
 }
 
-type AdminTab = 'dashboard' | 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers' | 'promos'
+type AdminTab = 'dashboard' | 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers' | 'promos' | 'media'
 
 // ── Admin panel inner ─────────────────────────────────────────────────────────
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
@@ -267,7 +269,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   // by calling setOpenCustomer('<email>').
   const [openCustomer, setOpenCustomer] = useState<string | null>(null)
   useEffect(() => {
-    const ORDER: AdminTab[] = ['dashboard', 'products', 'content', 'pages', 'brands', 'orders', 'inquiries', 'chat', 'bloggers']
+    const ORDER: AdminTab[] = ['dashboard', 'products', 'content', 'pages', 'brands', 'orders', 'inquiries', 'chat', 'bloggers', 'promos', 'media']
     const onKey = (e: KeyboardEvent) => {
       // Don't hijack typing into inputs / textareas / contenteditable.
       const t = e.target as HTMLElement | null
@@ -591,6 +593,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         <button type="button" className={`admin__tab-btn${activeTab === 'promos' ? ' active' : ''}`} onClick={() => setActiveTab('promos')}>
           Промокоды
         </button>
+        <button type="button" className={`admin__tab-btn${activeTab === 'media' ? ' active' : ''}`} onClick={() => setActiveTab('media')}>
+          Медиа
+        </button>
       </div>
 
       <div className={`chat-site-toast chat-site-toast--admin ${chatToast ? 'chat-site-toast--visible' : ''}`}>
@@ -604,6 +609,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
             setOrdersStatusFilter(status)
             setActiveTab('orders')
           }}
+          onJumpToTab={(tab) => setActiveTab(tab)}
         />
       )}
       {activeTab === 'content' && <ContentTabV2 />}
@@ -616,6 +622,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       {activeTab === 'chat' && <ChatTab onOpenCustomer={setOpenCustomer} />}
       {activeTab === 'bloggers' && <BloggersTab allProducts={allProducts} />}
       {activeTab === 'promos' && <PromoTab />}
+      {activeTab === 'media' && <MediaTab />}
 
       <CustomerModal email={openCustomer} onClose={() => setOpenCustomer(null)} />
 
@@ -803,30 +810,12 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
               <div className="admin__form-section">
                 <p className="admin__form-section-title">Фото</p>
                 <div className="admin__field">
-                  <span className="admin__label">
-                    Главное фото (URL){' '}
-                    <span className="admin__label-hint">(рекомендуемый размер: 800×600 px)</span>
-                  </span>
-                  <div className="admin__image-field">
-                    <input
-                      className="admin__input"
-                      type="url"
-                      placeholder="https://example.com/product.jpg"
-                      value={form.image}
-                      onChange={(e) => setField('image', e.target.value)}
-                    />
-                    {form.image ? (
-                      <img className="admin__image-preview" src={form.image} alt="preview" />
-                    ) : (
-                      <div className="admin__image-preview admin__image-preview--empty">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                          <rect x="3" y="3" width="18" height="18" rx="2" />
-                          <circle cx="8.5" cy="8.5" r="1.5" />
-                          <polyline points="21 15 16 10 5 21" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
+                  <MediaPicker
+                    label="Главное фото"
+                    hint="Загрузите файл или вставьте URL. Рекомендуемый размер 800×600."
+                    value={form.image}
+                    onChange={(v) => setField('image', v)}
+                  />
                 </div>
                 <div className="admin__field">
                   <span className="admin__label">
@@ -1534,21 +1523,12 @@ function BloggersTab({ allProducts }: { allProducts: Product[] }) {
 
             <div className="admin__form-section">
               <p className="admin__form-section-title">Фото</p>
-              <div className="admin__field">
-                <span className="admin__label">URL фото <span className="admin__label-hint">(фон карточки, рекомендуется 600×400 px)</span></span>
-                <div className="admin__image-field">
-                  <input className="admin__input" type="url" value={form.image} onChange={(e) => setField('image', e.target.value)} placeholder="https://..." />
-                  {form.image ? (
-                    <img className="admin__image-preview" src={form.image} alt="preview" />
-                  ) : (
-                    <div className="admin__image-preview admin__image-preview--empty">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <MediaPicker
+                label="Фото блогера"
+                hint="Фон карточки, рекомендуется 600×400 px"
+                value={form.image}
+                onChange={(v) => setField('image', v)}
+              />
             </div>
 
             <div className="admin__form-section">

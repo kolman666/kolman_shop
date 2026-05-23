@@ -8,6 +8,7 @@ import { AccordionSection } from './AccordionSection'
 import { PreviewModal } from './PreviewModal'
 import { ArrayEditor } from './ArrayEditor'
 import BBCodeEditor from '../../components/BBCodeEditor'
+import MediaPicker from '../../components/admin/MediaPicker'
 
 type HeroSlide = { tag: string; title: string; subtitle: string; accent: string; image: string; detailsUrl?: string }
 type ContentCategory = { catalogKey: string; title: string; image: string }
@@ -604,18 +605,14 @@ function MultilineField({ label, value, onChange, rows = 3, hint }: { label: str
   )
 }
 
+// ImageField is now a thin wrapper around <MediaPicker>: the admin can
+// either paste a URL (legacy) or upload a file / pick from the library.
+// Existing URLs in `site_content` keep working — the picker accepts them as
+// the initial value verbatim.
 function ImageField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div className="admin__field">
-      <span className="admin__label">{label}</span>
-      <div className="admin__image-field">
-        <input className="admin__input" type="url" value={value} onChange={(e) => onChange(e.target.value)} placeholder="https://..." />
-        {value ? (
-          <img className="admin__image-preview" src={value} alt="preview" onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3' }} />
-        ) : (
-          <div className="admin__image-preview admin__image-preview--empty" />
-        )}
-      </div>
+      <MediaPicker label={label} value={value} onChange={onChange} />
     </div>
   )
 }
