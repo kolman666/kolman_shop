@@ -12349,18 +12349,13 @@
   position: relative;
 }
 .admin-sidebar__brand-mark {
-  width: 32px;
-  height: 32px;
+  width: 64px;
+  height: 64px;
   border-radius: 9px;
-  background: var(--color-main);
-  color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: 16px;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: -0.02em;
+  flex-shrink: 0;
 }
 .admin-sidebar__brand-text {
   display: flex;

@@ -340,7 +340,7 @@ function AdminSidebar({
       )}
       <aside className={`admin-sidebar ${collapsed ? 'admin-sidebar--collapsed' : ''} ${mobileOpen ? 'admin-sidebar--mobile-open' : ''}`.trim()}>
         <div className="admin-sidebar__brand">
-          <span className="admin-sidebar__brand-mark">k</span>
+          <img src="/favicon.svg" alt="kolman" className="admin-sidebar__brand-mark" />
           <span className="admin-sidebar__brand-text">
             <strong>kolman</strong>
             <em>admin</em>
