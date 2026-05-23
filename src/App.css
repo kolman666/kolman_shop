@@ -12348,7 +12348,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 20px 18px;
+  padding: 20px 14px;
   border-bottom: 1px solid var(--color-border);
   position: relative;
 }
