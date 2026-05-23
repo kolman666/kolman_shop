@@ -137,6 +137,19 @@ const en = {
     privacyPolicy: 'privacy policy',
     developedBy: 'developed by',
     language: 'language',
+    nav: {
+      home: 'home',
+      catalog: 'catalog',
+      cart: 'cart',
+      profile: 'profile',
+      signIn: 'sign in',
+    },
+    presence: {
+      online: 'online',
+      wasMinutesAgo: 'was {{minutes}}m ago',
+      wasHoursAgo: 'was {{hours}}h ago',
+      wasDaysAgo: 'was {{days}}d ago',
+    },
     breadcrumbs: {
       home: 'home',
       catalog: 'catalog',

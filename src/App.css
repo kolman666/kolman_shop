@@ -2630,6 +2630,12 @@
     gap: 12px;
   }
 
+  /* Hide cart and account buttons on mobile since MobileBottomNav has them */
+  .header-actions .icon-button[aria-label="cart"],
+  .header-actions .icon-button[aria-label="account"] {
+    display: none;
+  }
+
   .hero-card {
     height: 500px;
     min-height: unset;
@@ -11510,8 +11516,10 @@
   transform-origin: bottom center;
   transition: transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
   border-radius: inherit;
+  will-change: transform;
 }
 .cookie-btn:hover::before,
+.cookie-btn:active::before,
 .cookie-btn:focus-visible::before {
   transform: scaleY(1);
 }

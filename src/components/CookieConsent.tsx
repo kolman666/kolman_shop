@@ -6,7 +6,6 @@
 // transform-origin sits at the bottom edge.
 
 import { useEffect, useState } from 'react'
-import { IconCookie } from './icons/UiIcons'
 
 const KEY = 'kolman-cookie-consent'
 export const COOKIE_CONSENT_EVENT = 'cookie-consent:update'
@@ -49,9 +48,6 @@ export default function CookieConsent() {
     <div className="cookie-consent" role="dialog" aria-label="cookies">
       <div className="cookie-consent__panel">
         <div className="cookie-consent__text">
-          <span className="cookie-consent__icon" aria-hidden="true">
-            <IconCookie size={24} />
-          </span>
           <div>
             <p className="cookie-consent__title">мы используем cookies</p>
             <p className="cookie-consent__sub">

@@ -137,6 +137,19 @@ const ru = {
     privacyPolicy: 'политика конфиденциальности',
     developedBy: 'разработано',
     language: 'язык',
+    nav: {
+      home: 'главная',
+      catalog: 'каталог',
+      cart: 'корзина',
+      profile: 'профиль',
+      signIn: 'войти',
+    },
+    presence: {
+      online: 'в сети',
+      wasMinutesAgo: 'был {{minutes}}м назад',
+      wasHoursAgo: 'был {{hours}}ч назад',
+      wasDaysAgo: 'был {{days}}д назад',
+    },
     breadcrumbs: {
       home: 'главная',
       catalog: 'каталог',

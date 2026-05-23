@@ -7,6 +7,7 @@
 
 import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getCartCount } from '../lib/cart'
 import { AUTH_EVENT, getUser, type User } from '../lib/auth'
 
@@ -16,6 +17,7 @@ type Props = {
 }
 
 export default function MobileBottomNav({ onCartClick, onProfileClick }: Props) {
+  const { t } = useTranslation()
   const { pathname } = useLocation()
   const [cartCount, setCartCount] = useState(0)
   const [user, setUser] = useState<User | null>(() => getUser())
@@ -43,13 +45,13 @@ export default function MobileBottomNav({ onCartClick, onProfileClick }: Props) 
   const isActive = (re: RegExp) => re.test(pathname)
 
   return (
-    <nav className="mobile-bottom-nav" aria-label="навигация">
+    <nav className="mobile-bottom-nav" aria-label={t('ui.nav.catalog')}>
       <Link to="/" className={`mobile-bottom-nav__item ${pathname === '/' ? 'mobile-bottom-nav__item--active' : ''}`.trim()}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
           <path d="M3 12L12 4l9 8" />
           <path d="M5 10v10h14V10" />
         </svg>
-        <span>главная</span>
+        <span>{t('ui.nav.home')}</span>
       </Link>
       <Link to="/catalog" className={`mobile-bottom-nav__item ${isActive(/^\/(catalog|product|brand|used|modding)/) ? 'mobile-bottom-nav__item--active' : ''}`.trim()}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -58,13 +60,13 @@ export default function MobileBottomNav({ onCartClick, onProfileClick }: Props) 
           <rect x="3" y="14" width="7" height="7" rx="1" />
           <rect x="14" y="14" width="7" height="7" rx="1" />
         </svg>
-        <span>каталог</span>
+        <span>{t('ui.nav.catalog')}</span>
       </Link>
       <button
         type="button"
         className="mobile-bottom-nav__item mobile-bottom-nav__item--cart"
         onClick={() => onCartClick?.()}
-        aria-label="корзина"
+        aria-label={t('ui.nav.cart')}
       >
         <span className="mobile-bottom-nav__cart-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -74,7 +76,7 @@ export default function MobileBottomNav({ onCartClick, onProfileClick }: Props) 
           </svg>
           {cartCount > 0 && <span className="mobile-bottom-nav__badge">{cartCount}</span>}
         </span>
-        <span>корзина</span>
+        <span>{t('ui.nav.cart')}</span>
       </button>
       {user ? (
         <Link
@@ -89,20 +91,20 @@ export default function MobileBottomNav({ onCartClick, onProfileClick }: Props) 
                 <path d="M4 20a8 8 0 0116 0" />
               </svg>
             )}
-          <span>профиль</span>
+          <span>{t('ui.nav.profile')}</span>
         </Link>
       ) : (
         <button
           type="button"
           className="mobile-bottom-nav__item"
           onClick={() => onProfileClick?.()}
-          aria-label="войти"
+          aria-label={t('ui.nav.profile')}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
             <circle cx="12" cy="8" r="4" />
             <path d="M4 20a8 8 0 0116 0" />
           </svg>
-          <span>войти</span>
+          <span>{t('ui.nav.signIn')}</span>
         </button>
       )}
     </nav>
