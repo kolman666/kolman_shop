@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { isAdminAuthorized } from './_lib/auth.js'
 import { isTableMissing } from './_lib/db.js'
 import { requestOwnsEmail } from './_lib/auth-users.js'
+import { writeAuditLog } from './_lib/audit-log.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -34,6 +35,20 @@ function rateLimited(ip) {
 }
 
 const ALLOWED_STATUSES = ['new', 'in_progress', 'done', 'cancelled']
+// Must match src/lib/supabaseProducts.ts — client cart keys use offset ids.
+const SUPABASE_ID_OFFSET = 1_000_000
+
+function toDbProductId(raw) {
+  if (!Number.isInteger(raw) || raw <= 0) return null
+  if (raw >= SUPABASE_ID_OFFSET) return raw - SUPABASE_ID_OFFSET
+  return raw
+}
+
+function clientCartProductId(dbId, rawClientId) {
+  if (Number.isInteger(rawClientId) && rawClientId >= SUPABASE_ID_OFFSET) return rawClientId
+  if (Number.isInteger(dbId) && dbId > 0) return SUPABASE_ID_OFFSET + dbId
+  return rawClientId ?? null
+}
 
 function s(value, max = 500) {
   if (typeof value !== 'string') return ''
@@ -104,6 +119,12 @@ export default async function handler(req, res) {
         if (isTableMissing(r.error)) return res.status(503).json({ error: 'table_not_found' })
         return res.status(500).json({ error: r.error.message })
       }
+      await writeAuditLog(supabase, req, {
+        action: 'promo.create',
+        entity: 'promo',
+        entity_id: row.code,
+        summary: `Промокод ${row.code}: ${row.kind === 'percent' ? `${row.value}%` : `${row.value} ₽`}`,
+      })
       return res.status(201).json(r.data)
     }
 
@@ -114,23 +135,63 @@ export default async function handler(req, res) {
     const items = Array.isArray(body.items) ? body.items.slice(0, 100) : []
     if (items.length === 0) return res.status(400).json({ error: 'cart is empty' })
 
-    // Normalize items: only the safe fields go into DB
-    const safeItems = []
+    // Parse cart lines. Client sends offset ids (1_000_042) in `id`; optional
+    // `db_id` is the real admin_products row. Prices/titles are re-fetched below.
+    const parsed = []
     for (const it of items) {
       if (!it || typeof it !== 'object') continue
-      safeItems.push({
-        id: typeof it.id === 'number' ? it.id : null,
+      const rawId = typeof it.id === 'number' ? it.id : (typeof it.db_id === 'number' ? it.db_id : null)
+      const dbId = toDbProductId(rawId)
+      const qty = typeof it.quantity === 'number' && Number.isInteger(it.quantity) && it.quantity > 0 ? it.quantity : 1
+      if (!dbId) continue
+      parsed.push({
+        dbId,
+        cartId: clientCartProductId(dbId, rawId),
         title: s(it.title, 200),
-        price: typeof it.price === 'number' && Number.isFinite(it.price) ? it.price : 0,
-        quantity: typeof it.quantity === 'number' && Number.isInteger(it.quantity) && it.quantity > 0 ? it.quantity : 1,
+        quantity: qty,
       })
     }
+    if (parsed.length === 0) return res.status(400).json({ error: 'cart is empty' })
+
+    const dbIds = [...new Set(parsed.map((it) => it.dbId))]
+    const catalogById = new Map()
+    if (dbIds.length > 0) {
+      let pr = await supabase
+        .from('admin_products')
+        .select('id, price, title, brand, quantity')
+        .in('id', dbIds)
+      if (pr.error && /admin_products/i.test(pr.error.message)) {
+        pr = await supabase.from('products').select('id, price, title, brand, quantity').in('id', dbIds)
+      }
+      if (!pr.error && Array.isArray(pr.data)) {
+        for (const p of pr.data) catalogById.set(p.id, p)
+      }
+    }
+
+    const safeItems = []
+    const missing = []
+    for (const it of parsed) {
+      const row = catalogById.get(it.dbId)
+      if (!row) {
+        missing.push(it.dbId)
+        continue
+      }
+      const price = typeof row.price === 'number' && Number.isFinite(row.price) ? row.price : 0
+      const title = s(String(row.title || row.brand || it.title), 200)
+      safeItems.push({
+        id: it.dbId,
+        cartId: it.cartId,
+        title,
+        price,
+        quantity: it.quantity,
+      })
+    }
+    if (missing.length > 0) {
+      return res.status(400).json({ error: 'unknown_products', ids: missing })
+    }
+    if (safeItems.length === 0) return res.status(400).json({ error: 'cart is empty' })
+
     // ── Stock check ───────────────────────────────────────────────────
-    // Before saving the order we look up the current `quantity` for every
-    // product in the cart and reject if anyone is asking for more than is
-    // available. The product table may not have a quantity column on older
-    // deployments — we treat null/undefined as "unlimited" so legacy items
-    // keep checking out.
     const productIds = safeItems.map((it) => it.id).filter((id) => Number.isInteger(id))
     if (productIds.length > 0) {
       let pr = await supabase
@@ -152,7 +213,7 @@ export default async function handler(req, res) {
           if (typeof p.quantity !== 'number' || p.quantity < 0) continue
           if (it.quantity > p.quantity) {
             outOfStock.push({
-              product_id: it.id,
+              product_id: it.cartId ?? it.id,
               title: p.title || it.title,
               requested: it.quantity,
               available: p.quantity,
@@ -420,6 +481,12 @@ export default async function handler(req, res) {
     if (!/^[A-Z0-9_-]{2,32}$/.test(code)) return res.status(400).json({ error: 'invalid code' })
     const r = await supabase.from('promo_codes').delete().eq('code', code)
     if (r.error) return res.status(500).json({ error: r.error.message })
+    await writeAuditLog(supabase, req, {
+      action: 'promo.delete',
+      entity: 'promo',
+      entity_id: code,
+      summary: `Удалён промокод ${code}`,
+    })
     return res.status(200).json({ ok: true })
   }
 
@@ -653,6 +720,16 @@ export default async function handler(req, res) {
       error = retry.error
     }
     if (error) return res.status(500).json({ error: error.message })
+    const parts = []
+    if (patch.status) parts.push(`статус → ${patch.status}`)
+    if (patch.tracking_number) parts.push(`трек ${patch.tracking_number}`)
+    await writeAuditLog(supabase, req, {
+      action: 'order.update',
+      entity: 'order',
+      entity_id: String(id),
+      summary: `Заказ #${id}: ${parts.join(', ') || 'обновление'}`,
+      meta: patch,
+    })
     return res.status(200).json(data)
   }
 
@@ -662,6 +739,12 @@ export default async function handler(req, res) {
     if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' })
     const { error } = await supabase.from('orders').delete().eq('id', id)
     if (error) return res.status(500).json({ error: error.message })
+    await writeAuditLog(supabase, req, {
+      action: 'order.delete',
+      entity: 'order',
+      entity_id: String(id),
+      summary: `Удалён заказ #${id}`,
+    })
     return res.status(200).json({ ok: true })
   }
 

@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { isAdminAuthorized } from './_lib/auth.js'
 import { requestOwnsEmail } from './_lib/auth-users.js'
 import { isTableMissing } from './_lib/db.js'
+import { writeAuditLog } from './_lib/audit-log.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -203,6 +204,12 @@ export default async function handler(req, res) {
       .select()
       .single()
     if (error) return res.status(500).json({ error: error.message })
+    await writeAuditLog(supabase, req, {
+      action: 'inquiry.update',
+      entity: 'inquiry',
+      entity_id: String(id),
+      summary: `Заявка #${id}: статус → ${status}`,
+    })
     return res.status(200).json(data)
   }
 
@@ -211,6 +218,12 @@ export default async function handler(req, res) {
     if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' })
     const { error } = await supabase.from('inquiries').delete().eq('id', id)
     if (error) return res.status(500).json({ error: error.message })
+    await writeAuditLog(supabase, req, {
+      action: 'inquiry.delete',
+      entity: 'inquiry',
+      entity_id: String(id),
+      summary: `Удалена заявка #${id}`,
+    })
     return res.status(200).json({ ok: true })
   }
 

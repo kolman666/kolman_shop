@@ -1626,6 +1626,10 @@
   color: var(--color-text);
 }
 
+.catalog-filters-toggle {
+  display: none;
+}
+
 .catalog-layout {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
@@ -2577,6 +2581,31 @@
   .catalog-layout,
   .product-page__hero {
     grid-template-columns: 1fr;
+  }
+
+  .catalog-filters-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--color-border-strong);
+    background: var(--color-bg-soft);
+    color: var(--color-text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.18s ease, background 0.18s ease;
+  }
+
+  .catalog-filters-toggle:hover {
+    border-color: var(--color-main);
+    background: var(--color-bg-muted);
+  }
+
+  .catalog-filters:not(.catalog-filters--open) {
+    display: none;
   }
 
   .catalog-filters__panel {
@@ -11782,3 +11811,123 @@
   padding: 3px 5px;
 }
 .media-tab__ext-badge--small span { display: none; }
+
+/* ===== Cart share toast + block ===== */
+.cart-share-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 88px;
+  transform: translateX(-50%);
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(14, 14, 16, 0.94);
+  border: 1px solid var(--color-border-strong);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  max-width: min(92vw, 420px);
+}
+.cart-share-toast__close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-dim);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.cart-share-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cart-share-block__hint {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  text-align: center;
+}
+.cart-share-block__url {
+  font-size: 11px;
+}
+
+/* ===== Admin audit log tab ===== */
+.audit-log__toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.audit-log__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.audit-log__row {
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-soft);
+}
+.audit-log__row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.audit-log__action {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-main);
+}
+.audit-log__time {
+  font-size: 11px;
+  color: var(--color-text-dim);
+  white-space: nowrap;
+}
+.audit-log__summary {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-soft);
+  line-height: 1.45;
+}
+.audit-log__meta-line {
+  margin: 6px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+.audit-log__tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+}
+.audit-log__id {
+  font-size: 11px;
+}
+.audit-log__ip {
+  opacity: 0.7;
+}
+.audit-log__pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+  padding-bottom: 24px;
+}

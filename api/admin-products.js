@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { isAdminAuthorized, isSafeHttpUrl } from './_lib/auth.js'
+import { writeAuditLog } from './_lib/audit-log.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -199,6 +200,13 @@ export default async function handler(req, res) {
     }
 
     if (error) return res.status(500).json({ error: error.message })
+    await writeAuditLog(supabase, req, {
+      action: 'product.create',
+      entity: 'product',
+      entity_id: String(data?.id ?? ''),
+      summary: `Создан товар: ${data?.brand ?? ''} ${data?.title ?? ''}`.trim(),
+      meta: { price: data?.price, slug: data?.slug },
+    })
     return res.status(201).json(data)
   }
 
@@ -230,6 +238,13 @@ export default async function handler(req, res) {
       .single()
 
     if (error) return res.status(500).json({ error: error.message })
+    await writeAuditLog(supabase, req, {
+      action: 'product.update',
+      entity: 'product',
+      entity_id: String(id),
+      summary: `Изменён товар #${id}: ${data?.title ?? ''}`,
+      meta: { fields: Object.keys(safeUpdates) },
+    })
     return res.status(200).json(data)
   }
 
@@ -240,6 +255,12 @@ export default async function handler(req, res) {
 
     const { error } = await supabase.from('admin_products').delete().eq('id', id)
     if (error) return res.status(500).json({ error: error.message })
+    await writeAuditLog(supabase, req, {
+      action: 'product.delete',
+      entity: 'product',
+      entity_id: String(id),
+      summary: `Удалён товар #${id}`,
+    })
     return res.status(200).json({ ok: true })
   }
 

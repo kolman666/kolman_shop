@@ -19,6 +19,8 @@ import DashboardTab from './admin/DashboardTab'
 import CustomerModal from './admin/CustomerModal'
 import PromoTab from './admin/PromoTab'
 import MediaTab from './admin/MediaTab'
+import AuditLogTab from './admin/AuditLogTab'
+import { logAdminAction } from '../lib/adminAudit'
 import MediaPicker from '../components/admin/MediaPicker'
 import { toCsv, downloadCsv } from '../lib/csv'
 import {
@@ -235,6 +237,7 @@ export default function AdminPage() {
     if (ok) {
       saveAdminSecret(secret)
       setAuthStatus('authed')
+      logAdminAction({ action: 'admin.login', summary: 'Вход в панель управления' })
     }
     return ok
   }
@@ -251,15 +254,34 @@ export default function AdminPage() {
     return <AdminLogin onLogin={handleLogin} />
   }
 
-  return <AdminPanel onLogout={() => { clearAdminSecret(); setAuthStatus('guest') }} />
+  return (
+    <AdminPanel
+      onLogout={() => {
+        logAdminAction({ action: 'admin.logout', summary: 'Выход из панели управления' })
+        clearAdminSecret()
+        setAuthStatus('guest')
+      }}
+    />
+  )
 }
 
-type AdminTab = 'dashboard' | 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers' | 'promos' | 'media'
+type AdminTab = 'dashboard' | 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers' | 'promos' | 'media' | 'audit'
+
+const ADMIN_TAB_ORDER: AdminTab[] = ['dashboard', 'products', 'content', 'pages', 'brands', 'orders', 'inquiries', 'chat', 'bloggers', 'promos', 'media', 'audit']
+const ADMIN_TAB_STORAGE_KEY = 'kolman-admin-tab'
+
+function readStoredAdminTab(): AdminTab {
+  try {
+    const v = sessionStorage.getItem(ADMIN_TAB_STORAGE_KEY)
+    if (v && ADMIN_TAB_ORDER.includes(v as AdminTab)) return v as AdminTab
+  } catch { /* ignore */ }
+  return 'dashboard'
+}
 
 // ── Admin panel inner ─────────────────────────────────────────────────────────
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const { products: allProducts, loading: productsLoading, refresh } = useProducts()
-  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard')
+  const [activeTab, setActiveTab] = useState<AdminTab>(readStoredAdminTab)
   // Admin-level keyboard shortcuts:
   //   1..8  — jump to tab by index
   //   /     — focus the search/filter inside the active tab if there is one
@@ -269,7 +291,10 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   // by calling setOpenCustomer('<email>').
   const [openCustomer, setOpenCustomer] = useState<string | null>(null)
   useEffect(() => {
-    const ORDER: AdminTab[] = ['dashboard', 'products', 'content', 'pages', 'brands', 'orders', 'inquiries', 'chat', 'bloggers', 'promos', 'media']
+    try { sessionStorage.setItem(ADMIN_TAB_STORAGE_KEY, activeTab) } catch { /* ignore */ }
+  }, [activeTab])
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Don't hijack typing into inputs / textareas / contenteditable.
       const t = e.target as HTMLElement | null
@@ -297,15 +322,25 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       }
       if (/^[1-9]$/.test(e.key)) {
         const idx = Number(e.key) - 1
-        const next = ORDER[idx]
+        const next = ADMIN_TAB_ORDER[idx]
+        if (next) setActiveTab(next)
+      }
+      if (e.key === '0') {
+        const next = ADMIN_TAB_ORDER[9]
+        if (next) setActiveTab(next)
+      }
+      if (e.key === '-') {
+        const next = ADMIN_TAB_ORDER[10]
+        if (next) setActiveTab(next)
+      }
+      if (e.key === '=' || e.key === '+') {
+        const next = ADMIN_TAB_ORDER[11]
         if (next) setActiveTab(next)
       }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [])
-  // Persisted across sessions so an admin doesn't lose their last view on
-  // refresh. Localized in a tiny `useEffect` below.
   const [ordersStatusFilter, setOrdersStatusFilter] = useState<'' | 'new' | 'in_progress' | 'done' | 'cancelled'>('')
   // Total number of unread customer chat messages received while the admin is
   // outside the chat tab.
@@ -596,6 +631,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         <button type="button" className={`admin__tab-btn${activeTab === 'media' ? ' active' : ''}`} onClick={() => setActiveTab('media')}>
           Медиа
         </button>
+        <button type="button" className={`admin__tab-btn${activeTab === 'audit' ? ' active' : ''}`} onClick={() => setActiveTab('audit')}>
+          Журнал
+        </button>
       </div>
 
       <div className={`chat-site-toast chat-site-toast--admin ${chatToast ? 'chat-site-toast--visible' : ''}`}>
@@ -623,6 +661,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       {activeTab === 'bloggers' && <BloggersTab allProducts={allProducts} />}
       {activeTab === 'promos' && <PromoTab />}
       {activeTab === 'media' && <MediaTab />}
+      {activeTab === 'audit' && <AuditLogTab />}
 
       <CustomerModal email={openCustomer} onClose={() => setOpenCustomer(null)} />
 
@@ -636,7 +675,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           <div className="admin-shortcuts-help__panel" onClick={(e) => e.stopPropagation()}>
             <h3>Горячие клавиши</h3>
             <ul>
-              <li><kbd>1</kbd>–<kbd>9</kbd> — переключение вкладок</li>
+              <li><kbd>1</kbd>–<kbd>9</kbd> — вкладки 1–9</li>
+              <li><kbd>0</kbd> — промокоды, <kbd>-</kbd> — медиа, <kbd>=</kbd> — журнал</li>
               <li><kbd>/</kbd> — фокус на поиск/фильтр</li>
               <li><kbd>?</kbd> — этот список</li>
               <li><kbd>Esc</kbd> — закрыть</li>
@@ -1280,6 +1320,47 @@ CREATE TABLE IF NOT EXISTS reviews (
 CREATE INDEX IF NOT EXISTS reviews_product_idx ON reviews (product_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS reviews_author_idx ON reviews (author_email, created_at DESC);
 
+-- Admin audit log — every change in the control panel.
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+  id BIGSERIAL PRIMARY KEY,
+  action TEXT NOT NULL,
+  entity TEXT,
+  entity_id TEXT,
+  summary TEXT NOT NULL DEFAULT '',
+  meta JSONB NOT NULL DEFAULT '{}',
+  ip TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS admin_audit_log_created_idx ON admin_audit_log (created_at DESC);
+CREATE INDEX IF NOT EXISTS admin_audit_log_action_idx ON admin_audit_log (action, created_at DESC);
+
+-- Promo codes
+CREATE TABLE IF NOT EXISTS promo_codes (
+  code TEXT PRIMARY KEY,
+  kind TEXT NOT NULL CHECK (kind IN ('percent', 'fixed')),
+  value NUMERIC NOT NULL,
+  min_total NUMERIC NOT NULL DEFAULT 0,
+  valid_from TIMESTAMPTZ,
+  valid_to TIMESTAMPTZ,
+  max_uses INTEGER,
+  used_count INTEGER NOT NULL DEFAULT 0,
+  note TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Media library index (files live in Storage bucket public-media)
+CREATE TABLE IF NOT EXISTS media (
+  id BIGSERIAL PRIMARY KEY,
+  path TEXT NOT NULL UNIQUE,
+  url TEXT NOT NULL,
+  mime TEXT NOT NULL DEFAULT 'image/jpeg',
+  size BIGINT NOT NULL DEFAULT 0,
+  alt TEXT NOT NULL DEFAULT '',
+  external BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS media_created_idx ON media (created_at DESC);
+
 -- Used marketplace (Барахолка) — extend admin_products with second-hand fields.
 ALTER TABLE admin_products ADD COLUMN IF NOT EXISTS is_used BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE admin_products ADD COLUMN IF NOT EXISTS condition TEXT NOT NULL DEFAULT '';
@@ -1885,16 +1966,18 @@ function TrackingEditor({ order, onUpdate }: { order: AdminOrder; onUpdate: (nex
   const [carrier, setCarrier] = useState(order.tracking_carrier ?? 'cdek')
   const [num, setNum] = useState(order.tracking_number ?? '')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const dirty = carrier !== (order.tracking_carrier ?? 'cdek') || num !== (order.tracking_number ?? '')
 
   async function save() {
     if (!dirty) return
     setSaving(true)
+    setSaveError('')
     try {
       const updated = await updateOrderTracking(order.id, num.trim(), carrier)
       onUpdate(updated)
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'failed')
+      setSaveError(e instanceof Error ? e.message : 'не удалось сохранить')
     } finally {
       setSaving(false)
     }
@@ -1924,6 +2007,9 @@ function TrackingEditor({ order, onUpdate }: { order: AdminOrder; onUpdate: (nex
       >
         {saving ? 'Сохраняем…' : 'Сохранить'}
       </button>
+      {saveError && (
+        <span className="admin__label-hint" style={{ color: 'var(--color-main)', width: '100%' }}>{saveError}</span>
+      )}
     </div>
   )
 }

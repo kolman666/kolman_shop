@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { isAdminAuthorized, isSafeHttpUrl, isSafeLinkOrPath } from './_lib/auth.js'
+import { writeAuditLog } from './_lib/audit-log.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -365,6 +366,12 @@ export default async function handler(req, res) {
       .upsert({ key, value: result.value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
 
     if (error) return res.status(500).json({ error: error.message })
+    await writeAuditLog(supabase, req, {
+      action: 'content.update',
+      entity: 'site_content',
+      entity_id: key,
+      summary: `Сохранён контент: ${key}`,
+    })
     return res.status(200).json({ ok: true })
   }
 

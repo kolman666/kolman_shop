@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useReducer } from 'react'
+import { useDeferredValue, useEffect, useMemo, useReducer, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
@@ -100,7 +100,8 @@ export default function CatalogPage() {
   const products = useMemo(() => allProducts.filter((p) => !p.isUsed), [allProducts])
   const { activeCategory, selectedBrand, selectedPrice, sortBy, featuredOnly, inStockOnly, query, page } = filters
   const deferredQuery = useDeferredValue(query)
-  const pageSize = 6
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const pageSize = 12
   const searchParamsString = searchParams.toString()
 
   const categoryTabs = useMemo(
@@ -211,6 +212,15 @@ export default function CatalogPage() {
           />
         </label>
 
+        <button
+          type="button"
+          className="catalog-filters-toggle"
+          aria-expanded={filtersOpen}
+          onClick={() => setFiltersOpen((v) => !v)}
+        >
+          {filtersOpen ? t('ui.catalog.hideFilters') : t('ui.catalog.showFilters')}
+        </button>
+
         <div className="catalog-tabs" role="tablist" aria-label="catalog categories">
           {categoryTabs.map((category) => (
             <button
@@ -241,7 +251,7 @@ export default function CatalogPage() {
       )}
 
       <section className="catalog-layout container">
-        <aside className="catalog-filters">
+        <aside className={`catalog-filters${filtersOpen ? ' catalog-filters--open' : ''}`}>
           <div className="catalog-filters__panel">
             <div className="catalog-filters__head">
               <h2 className="catalog-filters__title">{t('ui.catalog.filtersTitle')}</h2>

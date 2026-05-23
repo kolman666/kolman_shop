@@ -1,5 +1,12 @@
 const CART_STORAGE_KEY = 'kolman-cart'
 
+export const CART_SHARE_IMPORTED_EVENT = 'cart:share-imported'
+
+export type CartImportResult = {
+  imported: boolean
+  count: number
+}
+
 type CartRecord = Record<string, number>
 
 function readCart(): CartRecord {
@@ -94,37 +101,40 @@ export function encodeCartForShare(cart: CartRecord): string {
 
 export function buildShareCartUrl(cart: CartRecord = readCart()): string {
   const encoded = encodeCartForShare(cart)
-  if (!encoded) return location.origin + '/'
-  const url = new URL('/', location.origin)
+  if (!encoded) return ''
+  const url = new URL('/', window.location.origin)
   url.searchParams.set('share-cart', encoded)
   return url.toString()
 }
 
-// Called once on app load. If `?share-cart=` is present, merge the encoded
-// items into the local cart (adding to existing quantities) and clean the URL.
-// Returns true when something was imported, so the UI can flash a toast.
-export function importCartFromUrl(): boolean {
-  if (typeof window === 'undefined') return false
-  const params = new URLSearchParams(location.search)
+// Called on load and on SPA navigations. If `?share-cart=` is present, merge
+// items into localStorage and strip the param so refresh won't double-import.
+export function importCartFromUrl(): CartImportResult {
+  if (typeof window === 'undefined') return { imported: false, count: 0 }
+  const params = new URLSearchParams(window.location.search)
   const raw = params.get('share-cart')
-  if (!raw) return false
+  if (!raw) return { imported: false, count: 0 }
   const incoming: CartRecord = {}
   for (const pair of raw.split(',')) {
-    const [idStr, qStr] = pair.split(':')
+    const trimmed = pair.trim()
+    if (!trimmed) continue
+    const colon = trimmed.indexOf(':')
+    const idStr = colon >= 0 ? trimmed.slice(0, colon) : trimmed
+    const qStr = colon >= 0 ? trimmed.slice(colon + 1) : '1'
     const id = Number(idStr)
     const q = Math.min(Math.max(Number(qStr) || 1, 1), 99)
     if (Number.isInteger(id) && id > 0) incoming[String(id)] = q
   }
-  if (Object.keys(incoming).length === 0) return false
+  const count = Object.keys(incoming).length
+  if (count === 0) return { imported: false, count: 0 }
   const merged = { ...readCart() }
   for (const [id, q] of Object.entries(incoming)) {
     merged[id] = (merged[id] ?? 0) + q
   }
   writeCart(merged)
-  // Strip the share param so a refresh doesn't double-import.
   params.delete('share-cart')
   const qs = params.toString()
-  const cleanUrl = location.pathname + (qs ? `?${qs}` : '') + location.hash
+  const cleanUrl = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash
   window.history.replaceState(null, '', cleanUrl)
-  return true
+  return { imported: true, count }
 }

@@ -151,6 +151,8 @@ const en = {
       title: 'extensive product catalog',
       note: 'Switch categories like tabs, refine the list with filters, and open any product card for the full page.',
       searchPlaceholder: 'search by name or brand',
+      showFilters: 'filters',
+      hideFilters: 'hide filters',
       allCategories: 'all',
       filtersTitle: 'filters',
       brandsLabel: 'brand',

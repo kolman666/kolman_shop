@@ -17,6 +17,7 @@ type View = 'cart' | 'checkout' | 'success'
 
 type CartEntry = {
   id: number
+  dbId: number | null
   title: string
   price: number
   image: string
@@ -98,6 +99,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const prevOpenRef = useRef(isOpen)
+  const drawerRef = useRef<HTMLDivElement>(null)
 
   const syncCart = useCallback(() => {
     const record = getCart()
@@ -110,6 +112,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         const stockMax = typeof product.quantity === 'number' && product.quantity >= 0 ? product.quantity : null
         entries.push({
           id: product.id,
+          dbId: product.dbId ?? null,
           title: product.titleDirect ?? t(product.titleKey),
           price: product.price,
           image: product.image,
@@ -151,6 +154,16 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     }
   }, [isOpen])
 
+  useEffect(() => {
+    if (!isOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    drawerRef.current?.focus()
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, onClose])
+
   const total = cartEntries.reduce((acc, e) => acc + e.price * e.quantity, 0)
 
   function handleQtyChange(id: number, delta: number, currentQty: number) {
@@ -177,7 +190,13 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            items: cartEntries.map((e) => ({ id: e.id, title: e.title, price: e.price, quantity: e.quantity })),
+            items: cartEntries.map((e) => ({
+              id: e.id,
+              db_id: e.dbId ?? undefined,
+              title: e.title,
+              price: e.price,
+              quantity: e.quantity,
+            })),
             total,
             name,
             contact,
@@ -287,11 +306,14 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       )}
 
       <div
+        ref={drawerRef}
         className="cart-drawer"
         style={drawerStyle}
         role="dialog"
         aria-modal="true"
         aria-label="корзина"
+        tabIndex={-1}
+        aria-hidden={!isOpen}
       >
         {view === 'cart' && (
           <CartView
@@ -799,28 +821,50 @@ function PromoCodeInput({ subtotal }: { subtotal: number }) {
 // "скопировано" hint.
 function ShareCartButton() {
   const [hint, setHint] = useState('')
+  const [sharedUrl, setSharedUrl] = useState('')
 
   async function onShare() {
     const url = buildShareCartUrl()
+    if (!url) {
+      setHint('добавьте товары в корзину')
+      window.setTimeout(() => setHint(''), 2200)
+      return
+    }
+    setSharedUrl('')
+    let copied = false
+    try {
+      await navigator.clipboard.writeText(url)
+      copied = true
+    } catch {
+      // clipboard blocked — show link inline
+    }
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'kolman.shop — корзина', url })
+        await navigator.share({
+          title: 'kolman.shop — корзина',
+          text: 'Состав корзины kolman.shop',
+          url,
+        })
+        if (!copied) {
+          setHint('ссылка отправлена')
+          window.setTimeout(() => setHint(''), 2200)
+        }
         return
       }
     } catch {
-      // user cancelled or denied — fall through to clipboard copy
+      // cancelled share sheet — still show copy result below
     }
-    try {
-      await navigator.clipboard.writeText(url)
-      setHint('ссылка скопирована')
-      window.setTimeout(() => setHint(''), 1800)
-    } catch {
-      setHint(url)
+    if (copied) {
+      setHint('ссылка скопирована — отправьте другу')
+      window.setTimeout(() => setHint(''), 2800)
+    } else {
+      setHint('скопируйте ссылку вручную:')
+      setSharedUrl(url)
     }
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div className="cart-share-block">
       <button
         type="button"
         className="ghost-btn"
@@ -829,8 +873,15 @@ function ShareCartButton() {
       >
         поделиться корзиной
       </button>
-      {hint && (
-        <span style={{ fontSize: 12, color: 'var(--color-text-dim)', textAlign: 'center' }}>{hint}</span>
+      {hint && <span className="cart-share-block__hint">{hint}</span>}
+      {sharedUrl && (
+        <input
+          type="text"
+          className="admin__input cart-share-block__url"
+          readOnly
+          value={sharedUrl}
+          onFocus={(e) => e.currentTarget.select()}
+        />
       )}
     </div>
   )

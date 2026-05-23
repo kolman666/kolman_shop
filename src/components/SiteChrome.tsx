@@ -13,6 +13,7 @@ import { fetchSiteContent } from '../lib/siteContent'
 import { useCustomerChatNotifications } from '../hooks/useCustomerChatNotifications'
 import { usePresenceHeartbeat } from '../hooks/usePresenceHeartbeat'
 import { markChatNotificationsRead, initializeChatNotificationAudio } from '../lib/chatNotifications'
+import { FOOTER_NAV_ROUTES, FOOTER_SERVICE_ROUTES } from '../lib/footerLinks'
 
 type SiteChromeContent = {
   address?: string
@@ -519,7 +520,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
                 <ul className="footer-list">
                   {footerNavigation.map((item, index) => (
                     <li key={item}>
-                      <Link to={index === 0 ? '/about' : '/'}>{item}</Link>
+                      <Link to={FOOTER_NAV_ROUTES[index] ?? '/'}>{item}</Link>
                     </li>
                   ))}
                 </ul>
@@ -528,9 +529,9 @@ export default function SiteChrome({ children }: SiteChromeProps) {
               <div className="footer-column">
                 <h3 className="footer-title">{t('ui.services')}</h3>
                 <ul className="footer-list">
-                  {footerServices.map((item) => (
+                  {footerServices.map((item, index) => (
                     <li key={item}>
-                      <Link to="/">{item}</Link>
+                      <Link to={FOOTER_SERVICE_ROUTES[index] ?? '/'}>{item}</Link>
                     </li>
                   ))}
                 </ul>

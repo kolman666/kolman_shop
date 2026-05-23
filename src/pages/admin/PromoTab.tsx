@@ -58,6 +58,21 @@ async function savePromo(row: Partial<PromoRow>) {
   return r.json()
 }
 
+function toDatetimeLocalValue(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function fromDatetimeLocalValue(value: string): string | null {
+  if (!value.trim()) return null
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString()
+}
+
 async function deletePromo(code: string) {
   const r = await fetch('/api/orders?promo=1', {
     method: 'DELETE',
@@ -96,7 +111,7 @@ export default function PromoTab() {
         ...draft,
         code: (draft.code ?? '').toString().toUpperCase().trim(),
       })
-      setDraft({ code: '', kind: 'percent', value: 10 })
+      setDraft({ code: '', kind: 'percent', value: 10, min_total: 0, max_uses: null, valid_from: null, valid_to: null, note: '' })
       await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'failed')
@@ -172,6 +187,22 @@ export default function PromoTab() {
             min={1}
             value={draft.max_uses ?? ''}
             onChange={(e) => setDraft({ ...draft, max_uses: e.target.value ? Number(e.target.value) : null })}
+          />
+        </label>
+        <label className="promo-admin-form__field">
+          <span className="promo-admin-form__label">Действует с</span>
+          <input
+            type="datetime-local"
+            value={toDatetimeLocalValue(draft.valid_from ?? null)}
+            onChange={(e) => setDraft({ ...draft, valid_from: fromDatetimeLocalValue(e.target.value) })}
+          />
+        </label>
+        <label className="promo-admin-form__field">
+          <span className="promo-admin-form__label">Действует до</span>
+          <input
+            type="datetime-local"
+            value={toDatetimeLocalValue(draft.valid_to ?? null)}
+            onChange={(e) => setDraft({ ...draft, valid_to: fromDatetimeLocalValue(e.target.value) })}
           />
         </label>
         <label className="promo-admin-form__field promo-admin-form__field--wide">

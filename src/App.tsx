@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BrowserRouter, Link, Route, Routes, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
 import { useProducts } from './hooks/useProducts'
 import { useCustomerChatNotifications } from './hooks/useCustomerChatNotifications'
@@ -11,6 +11,7 @@ import BrandSpotlight from './components/BrandSpotlight'
 import MobileBottomNav from './components/MobileBottomNav'
 import CompareBar from './components/CompareBar'
 import CookieConsent from './components/CookieConsent'
+import CartShareListener from './components/CartShareListener'
 import BloggersBlock from './components/BloggersBlock'
 import NewsBlock from './components/NewsBlock'
 import AuthModal from './components/AuthModal'
@@ -19,6 +20,7 @@ import { AUTH_EVENT, getUser, refreshUser, type User } from './lib/auth'
 import ProfilePage from './pages/ProfilePage'
 import { fetchSiteContent, fetchSiteContentLocalized } from './lib/siteContent'
 import { safeBackgroundImage } from './lib/safeUrl'
+import { FOOTER_NAV_ROUTES, FOOTER_SERVICE_ROUTES } from './lib/footerLinks'
 import { markChatNotificationsRead } from './lib/chatNotifications'
 import AboutPage from './pages/AboutPage'
 // Admin is a big chunk (~250kb) and only relevant for the shop owner. Code-split
@@ -920,7 +922,7 @@ function HomePage() {
                 <ul className="footer-list">
                   {footerNavigation.map((item, index) => (
                     <li key={item}>
-                      <Link to={index === 0 ? '/about' : '/'}>{item}</Link>
+                      <Link to={FOOTER_NAV_ROUTES[index] ?? '/'}>{item}</Link>
                     </li>
                   ))}
                 </ul>
@@ -929,9 +931,9 @@ function HomePage() {
               <div className="footer-column">
                 <h3 className="footer-title">{t('ui.services')}</h3>
                 <ul className="footer-list">
-                  {footerServices.map((item) => (
+                  {footerServices.map((item, index) => (
                     <li key={item}>
-                      <Link to="/">{item}</Link>
+                      <Link to={FOOTER_SERVICE_ROUTES[index] ?? '/'}>{item}</Link>
                     </li>
                   ))}
                 </ul>
@@ -965,9 +967,19 @@ function HomePage() {
   )
 }
 
+function ScrollToTop() {
+  const { pathname, search } = useLocation()
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [pathname, search])
+  return null
+}
+
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
+      <CartShareListener />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { isAdminAuthorized, isSafeHttpUrl } from './_lib/auth.js'
+import { writeAuditLog } from './_lib/audit-log.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -78,6 +79,12 @@ export default async function handler(req, res) {
       .select()
       .single()
     if (error) return res.status(500).json({ error: error.message })
+    await writeAuditLog(supabase, req, {
+      action: 'blogger.create',
+      entity: 'blogger',
+      entity_id: String(data?.id ?? ''),
+      summary: `Создан блогер: ${data?.name ?? name}`,
+    })
     return res.status(201).json(data)
   }
 
@@ -101,6 +108,13 @@ export default async function handler(req, res) {
       .select()
       .single()
     if (error) return res.status(500).json({ error: error.message })
+    await writeAuditLog(supabase, req, {
+      action: 'blogger.update',
+      entity: 'blogger',
+      entity_id: String(id),
+      summary: `Изменён блогер #${id}: ${data?.name ?? ''}`,
+      meta: { fields: Object.keys(safeUpdates) },
+    })
     return res.status(200).json(data)
   }
 
@@ -110,6 +124,12 @@ export default async function handler(req, res) {
     if (!id || typeof id !== 'number') return res.status(400).json({ error: 'missing or invalid id' })
     const { error } = await supabase.from('bloggers').delete().eq('id', id)
     if (error) return res.status(500).json({ error: error.message })
+    await writeAuditLog(supabase, req, {
+      action: 'blogger.delete',
+      entity: 'blogger',
+      entity_id: String(id),
+      summary: `Удалён блогер #${id}`,
+    })
     return res.status(200).json({ ok: true })
   }
 
