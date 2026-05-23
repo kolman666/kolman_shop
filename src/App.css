@@ -2793,9 +2793,6 @@
     grid-template-columns: 1fr;
   }
 
-  .catalog-grid {
-    grid-template-columns: 1fr;
-  }
 
   .recommendations {
     padding: 28px 0 46px;
