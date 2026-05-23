@@ -813,6 +813,7 @@
   justify-content: flex-end;
   background: var(--color-main);
   color: var(--color-text);
+  height: 100%;
 }
 
 .promo-card__shape {

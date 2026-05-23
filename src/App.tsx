@@ -603,26 +603,6 @@ function HomePage() {
               </div>
             </div>
 
-            {/*
-              Big full-height CTA panel on the right edge of the hero. Replaces
-              the old inline button row + the "учше каталог" secondary link.
-              The whole panel is one clickable target; the inner shimmer and
-              arrow animate on idle + hover.
-            */}
-            <Link to="/catalog" className="hero-card__cta-panel" aria-label={t('ui.shopNow')}>
-              <span className="hero-card__cta-shimmer" aria-hidden="true" />
-              <span className="hero-card__cta-grid" aria-hidden="true" />
-              <span className="hero-card__cta-inner">
-                <span className="hero-card__cta-label">{t('ui.shopNow')}</span>
-                <span className="hero-card__cta-arrow" aria-hidden="true">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                    <polyline points="12 5 19 12 12 19" />
-                  </svg>
-                </span>
-              </span>
-            </Link>
-
             <div className="hero-arrows">
               <button
                 type="button"
@@ -660,14 +640,6 @@ function HomePage() {
                   <path d="M9 18l6-6-6-6" />
                 </svg>
               </span>
-            </Link>
-
-            <Link to="/catalog" className="promo-card promo-card--catalog">
-              <div className="catalog-status">
-                <span className="catalog-status__dot" />
-                <span>{t('ui.fullCatalog')}</span>
-              </div>
-              <p className="catalog-text">{t('ui.catalogText')}</p>
             </Link>
           </aside>
         </section>
