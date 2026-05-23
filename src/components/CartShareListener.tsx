@@ -26,13 +26,13 @@ export default function CartShareListener() {
     }
 
     window.addEventListener(CART_SHARE_IMPORTED_EVENT, handleShareImported as EventListener)
+    if (location.search.includes('share-cart=')) {
+      importCartFromUrl()
+    }
+
     return () => {
       window.removeEventListener(CART_SHARE_IMPORTED_EVENT, handleShareImported as EventListener)
     }
-  }, [])
-
-  useEffect(() => {
-    importCartFromUrl()
   }, [location.search])
 
   useEffect(() => {
