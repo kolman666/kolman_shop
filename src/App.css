@@ -12872,7 +12872,7 @@ h1, h2, h3, h4 {
 
   /* Body */
   .product-card__body {
-    padding: 10px 10px 0 !important;
+    padding: 0 !important;
     gap: 4px !important;
   }
   .product-card__meta {
