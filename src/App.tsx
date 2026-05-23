@@ -9,6 +9,7 @@ import SiteChrome from './components/SiteChrome'
 import CartDrawer from './components/CartDrawer'
 import BrandSpotlight from './components/BrandSpotlight'
 import MobileBottomNav from './components/MobileBottomNav'
+import CompareBar from './components/CompareBar'
 import BloggersBlock from './components/BloggersBlock'
 import NewsBlock from './components/NewsBlock'
 import AuthModal from './components/AuthModal'
@@ -33,6 +34,7 @@ import NewsArticlePage from './pages/NewsArticlePage'
 import NewsArchivePage from './pages/NewsArchivePage'
 import BrandPage from './pages/BrandPage'
 import UsedMarketPage from './pages/UsedMarketPage'
+import ComparePage from './pages/ComparePage'
 import NotFoundPage from './pages/NotFoundPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import { getCartCount } from './lib/cart'
@@ -878,6 +880,7 @@ function HomePage() {
         onCartClick={() => setIsCartOpen(true)}
         onProfileClick={handleAccountClick}
       />
+      <CompareBar />
 
       <div className={`chat-site-toast ${chatNotifications.toast ? 'chat-site-toast--visible' : ''}`}>
         <strong>{chatNotifications.toast?.title}</strong>
@@ -1028,6 +1031,10 @@ export default function App() {
         <Route
           path="/used"
           element={<SiteChrome><UsedMarketPage /></SiteChrome>}
+        />
+        <Route
+          path="/compare"
+          element={<SiteChrome><ComparePage /></SiteChrome>}
         />
         <Route
           path="/admin"

@@ -5,6 +5,7 @@ import { useProducts } from '../hooks/useProducts'
 import { getCartCount } from '../lib/cart'
 import CartDrawer from './CartDrawer'
 import MobileBottomNav from './MobileBottomNav'
+import CompareBar from './CompareBar'
 import SearchDropdown, { type SearchSection } from './SearchDropdown'
 import AuthModal from './AuthModal'
 import { fetchSiteContent } from '../lib/siteContent'
@@ -483,6 +484,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
         onCartClick={() => setIsCartOpen(true)}
         onProfileClick={handleAccountClick}
       />
+      <CompareBar />
 
       <footer className="site-footer">
         <div className="container footer-grid">

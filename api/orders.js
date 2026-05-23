@@ -101,7 +101,39 @@ export default async function handler(req, res) {
     // `body.total` is intentionally ignored — otherwise an attacker could
     // submit a $100 cart with `total: 1` and the DB would store the cheap
     // value. Telegram already rebuilds the message from server state below.
-    const total = safeItems.reduce((acc, it) => acc + it.price * it.quantity, 0)
+    const subtotal = safeItems.reduce((acc, it) => acc + it.price * it.quantity, 0)
+    let total = subtotal
+    let promoApplied = null
+    // Optional promo code applied at checkout. We validate + apply server-side
+    // so a tampered client can't smuggle a bigger discount.
+    if (typeof body.promo_code === 'string' && body.promo_code.trim()) {
+      const code = body.promo_code.trim().toUpperCase().slice(0, 32)
+      if (/^[A-Z0-9_-]{2,32}$/.test(code)) {
+        const pr = await supabase.from('promo_codes').select('*').eq('code', code).maybeSingle()
+        if (!pr.error && pr.data) {
+          const c = pr.data
+          const now = Date.now()
+          const fromOk = !c.valid_from || new Date(c.valid_from).getTime() <= now
+          const toOk = !c.valid_to || new Date(c.valid_to).getTime() >= now
+          const usesOk = !c.max_uses || (c.used_count ?? 0) < c.max_uses
+          const minOk = !c.min_total || subtotal >= c.min_total
+          if (fromOk && toOk && usesOk && minOk) {
+            const discount = c.kind === 'percent'
+              ? Math.round(subtotal * (Number(c.value) || 0) / 100)
+              : Math.min(subtotal, Math.round(Number(c.value) || 0))
+            total = Math.max(0, subtotal - discount)
+            promoApplied = { code: c.code, kind: c.kind, value: c.value, discount }
+            // Best-effort bump of used_count. Race-safe via RPC would be nicer;
+            // for low-volume this is fine.
+            await supabase
+              .from('promo_codes')
+              .update({ used_count: (c.used_count ?? 0) + 1 })
+              .eq('code', code)
+              .then(() => undefined, () => undefined)
+          }
+        }
+      }
+    }
 
     const name = s(body.name, 200)
     const contact = s(body.contact, 200)
@@ -123,6 +155,7 @@ export default async function handler(req, res) {
       total,
       items: safeItems,
       ...(emailLooksValid ? { customer_email: userEmail } : {}),
+      ...(promoApplied ? { promo_code: promoApplied.code, promo_discount: promoApplied.discount } : {}),
     }
 
     let { data, error } = await supabase
@@ -131,11 +164,14 @@ export default async function handler(req, res) {
       .select()
       .single()
 
-    // If the customer_email column doesn't exist yet (pre-migration), retry
-    // without it so existing deployments keep working.
-    if (error && emailLooksValid && /customer_email/i.test(error.message)) {
+    // If new columns don't exist yet (pre-migration), retry without them
+    // so existing deployments keep working. We strip both `customer_email`
+    // and the optional promo columns in turn until something sticks.
+    if (error && /(customer_email|promo_code|promo_discount)/i.test(error.message)) {
       const fallback = { ...insertRow }
       delete fallback.customer_email
+      delete fallback.promo_code
+      delete fallback.promo_discount
       const retry = await supabase.from('orders').insert([fallback]).select().single()
       data = retry.data
       error = retry.error
@@ -153,6 +189,12 @@ export default async function handler(req, res) {
       '📦 <b>состав:</b>',
       ...safeItems.map((it) => `• ${escapeHtml(it.title)} × ${it.quantity} — ${(it.price * it.quantity).toLocaleString('ru-RU')} ₽`),
       '',
+      ...(promoApplied
+        ? [
+            `💵 <b>сумма:</b> ${subtotal.toLocaleString('ru-RU')} ₽`,
+            `🎟️ <b>промо:</b> <code>${escapeHtml(promoApplied.code)}</code> · −${promoApplied.discount.toLocaleString('ru-RU')} ₽`,
+          ]
+        : []),
       `💰 <b>итого:</b> ${total.toLocaleString('ru-RU')} ₽`,
       `👤 <b>имя:</b> ${escapeHtml(name) || '—'}`,
       `📞 <b>контакт:</b> ${escapeHtml(contact)}`,
@@ -208,6 +250,112 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: error.message })
     }
     return res.status(200).json(data ?? [])
+  }
+
+  // ── Promo codes ────────────────────────────────────────────────────────
+  // Codes live in a separate `promo_codes` table — see SQL block at the top
+  // of this branch. The shape is:
+  //   code TEXT PRIMARY KEY,
+  //   kind TEXT NOT NULL ('percent' | 'fixed'),
+  //   value NUMERIC NOT NULL,        -- 10 means 10%; for fixed = ₽ off
+  //   min_total NUMERIC DEFAULT 0,   -- minimum cart total to apply
+  //   valid_from TIMESTAMPTZ,
+  //   valid_to TIMESTAMPTZ,
+  //   max_uses INTEGER,              -- null = unlimited
+  //   used_count INTEGER DEFAULT 0,
+  //   note TEXT
+  //
+  //   GET  /api/orders?promo=<code>&total=<n>   public — validate + return discount
+  //   GET  /api/orders?promos=1                 admin — list all codes
+  //   POST /api/orders?promo=1   { code, kind, value, ... }   admin — create/update
+  //   DELETE /api/orders?promo=1 { code }       admin — remove
+  if (req.method === 'GET' && req.query.promos === '1') {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: 'unauthorized' })
+    const r = await supabase
+      .from('promo_codes')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200)
+    if (r.error) {
+      if (isTableMissing(r.error)) return res.status(200).json([])
+      return res.status(500).json({ error: r.error.message })
+    }
+    return res.status(200).json(r.data ?? [])
+  }
+
+  if (req.method === 'GET' && typeof req.query.promo === 'string' && req.query.promo) {
+    const code = String(req.query.promo).trim().toUpperCase().slice(0, 32)
+    if (!/^[A-Z0-9_-]{2,32}$/.test(code)) return res.status(400).json({ error: 'invalid code' })
+    const totalRaw = Number(req.query.total)
+    const total = Number.isFinite(totalRaw) && totalRaw > 0 ? Math.min(totalRaw, 10_000_000) : 0
+    const r = await supabase.from('promo_codes').select('*').eq('code', code).maybeSingle()
+    if (r.error) {
+      if (isTableMissing(r.error)) return res.status(404).json({ error: 'unknown_code' })
+      return res.status(500).json({ error: r.error.message })
+    }
+    if (!r.data) return res.status(404).json({ error: 'unknown_code' })
+    const c = r.data
+    const now = Date.now()
+    if (c.valid_from && new Date(c.valid_from).getTime() > now) {
+      return res.status(409).json({ error: 'not_yet_valid' })
+    }
+    if (c.valid_to && new Date(c.valid_to).getTime() < now) {
+      return res.status(410).json({ error: 'expired' })
+    }
+    if (typeof c.max_uses === 'number' && c.max_uses > 0 && (c.used_count ?? 0) >= c.max_uses) {
+      return res.status(410).json({ error: 'exhausted' })
+    }
+    if (typeof c.min_total === 'number' && c.min_total > 0 && total > 0 && total < c.min_total) {
+      return res.status(409).json({ error: 'min_total_not_met', min_total: c.min_total })
+    }
+    const discount = c.kind === 'percent'
+      ? Math.round(total * (Number(c.value) || 0) / 100)
+      : Math.min(total, Math.round(Number(c.value) || 0))
+    return res.status(200).json({
+      code: c.code,
+      kind: c.kind,
+      value: c.value,
+      min_total: c.min_total ?? 0,
+      discount,
+      note: c.note ?? '',
+    })
+  }
+
+  if (req.method === 'POST' && req.query.promo === '1') {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: 'unauthorized' })
+    const b = req.body ?? {}
+    const code = s(String(b.code ?? ''), 32).toUpperCase().replace(/[^A-Z0-9_-]/g, '')
+    if (!code || code.length < 2) return res.status(400).json({ error: 'invalid code' })
+    const kind = b.kind === 'percent' || b.kind === 'fixed' ? b.kind : null
+    if (!kind) return res.status(400).json({ error: 'invalid kind' })
+    const value = Number(b.value)
+    if (!Number.isFinite(value) || value <= 0) return res.status(400).json({ error: 'invalid value' })
+    if (kind === 'percent' && value > 99) return res.status(400).json({ error: 'percent must be 1..99' })
+    const row = {
+      code,
+      kind,
+      value,
+      min_total: Number.isFinite(Number(b.min_total)) ? Math.max(0, Number(b.min_total)) : 0,
+      valid_from: typeof b.valid_from === 'string' && b.valid_from ? b.valid_from : null,
+      valid_to: typeof b.valid_to === 'string' && b.valid_to ? b.valid_to : null,
+      max_uses: Number.isInteger(b.max_uses) && b.max_uses > 0 ? b.max_uses : null,
+      note: typeof b.note === 'string' ? s(b.note, 200) : '',
+    }
+    const r = await supabase.from('promo_codes').upsert(row, { onConflict: 'code' }).select().single()
+    if (r.error) {
+      if (isTableMissing(r.error)) return res.status(503).json({ error: 'table_not_found' })
+      return res.status(500).json({ error: r.error.message })
+    }
+    return res.status(201).json(r.data)
+  }
+
+  if (req.method === 'DELETE' && req.query.promo === '1') {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: 'unauthorized' })
+    const code = String(req.body?.code ?? '').toUpperCase().slice(0, 32)
+    if (!/^[A-Z0-9_-]{2,32}$/.test(code)) return res.status(400).json({ error: 'invalid code' })
+    const r = await supabase.from('promo_codes').delete().eq('code', code)
+    if (r.error) return res.status(500).json({ error: r.error.message })
+    return res.status(200).json({ ok: true })
   }
 
   // ── Admin dashboard stats ─────────────────────────────────────────────

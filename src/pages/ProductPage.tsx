@@ -252,8 +252,28 @@ export default function ProductPage() {
             <div className="product-page__meta-card">
               <span className="product-page__meta-label">{t('ui.productPage.statusLabel')}</span>
               <strong className="product-page__meta-value">{statusLabel}</strong>
+              {/* Stock badge: shows the precise count when it's low enough to
+                * matter ("осталось 2 шт") and a hint that the product is
+                * sold out otherwise. */}
+              {typeof product.quantity === 'number' && product.quantity > 0 && product.quantity <= 5 && (
+                <span className="product-page__stock-badge product-page__stock-badge--low">
+                  осталось {product.quantity} шт
+                </span>
+              )}
+              {typeof product.quantity === 'number' && product.quantity === 0 && product.availability !== 'preorder' && (
+                <span className="product-page__stock-badge product-page__stock-badge--out">
+                  нет в наличии
+                </span>
+              )}
             </div>
           </div>
+
+          {/* Notify-me CTA: visible when the item is preorder OR out of stock.
+            * Pre-fills the support form via /api/inquiries (category: product)
+            * so the admin sees the request in their normal inbox. */}
+          {(product.availability === 'preorder' || product.quantity === 0) && user && (
+            <NotifyMeButton productTitle={product.titleDirect ?? t(product.titleKey)} email={user.email} />
+          )}
 
           {product.specs && product.specs.length > 0 && (
             <div className="product-page__specs-block">
@@ -641,5 +661,57 @@ export default function ProductPage() {
         onChange={setLightbox}
       />
     </main>
+  )
+}
+
+// Notify-me button: when a product is out of stock or preorder, lets a
+// logged-in user file a "ping me when it's back" request. The request is
+// stored as a normal inquiry (category: 'product') so the admin sees it in
+// the existing inbox without any new schema.
+function NotifyMeButton({ productTitle, email }: { productTitle: string; email: string }) {
+  const [state, setState] = useState<'idle' | 'sending' | 'done'>('idle')
+  const [err, setErr] = useState('')
+
+  async function ping() {
+    setState('sending')
+    setErr('')
+    try {
+      const r = await fetch('/api/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: 'product',
+          name: '',
+          contact: email,
+          message: `Сообщите когда появится: «${productTitle}» (запрос с карточки товара)`,
+        }),
+      })
+      if (!r.ok) throw new Error(`${r.status}`)
+      setState('done')
+    } catch (e) {
+      setState('idle')
+      setErr(e instanceof Error ? e.message : 'failed')
+    }
+  }
+
+  if (state === 'done') {
+    return (
+      <p className="notify-me-done">
+        ✓ Уведомим на {email}, как только товар появится.
+      </p>
+    )
+  }
+  return (
+    <div className="notify-me">
+      <button
+        type="button"
+        className="ghost-btn"
+        onClick={() => void ping()}
+        disabled={state === 'sending'}
+      >
+        {state === 'sending' ? 'отправляем…' : '🔔 сообщить когда появится'}
+      </button>
+      {err && <span className="notify-me__err">{err}</span>}
+    </div>
   )
 }

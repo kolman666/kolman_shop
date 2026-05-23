@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useProducts } from '../hooks/useProducts'
 import { getCart, updateQuantity, removeFromCart, clearCart, buildShareCartUrl } from '../lib/cart'
+import { getPromo, setPromo, getPromoAdjustedTotal, validatePromo, PROMO_EVENT, type PromoState } from '../lib/promo'
 import { sendTelegramMessage, TelegramSendError } from '../lib/telegram'
 import { getUser } from '../lib/auth'
 import { addOrder } from '../lib/userData'
@@ -179,6 +180,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             // Include the logged-in user's email so the order appears in their
             // profile (server filters by `customer_email`).
             user_email: submitterAtSend?.email,
+            // Promo code, if any. Server validates + applies — client value
+            // is informational only.
+            promo_code: getPromo()?.code,
             telegram_text: msg,
           }),
         })
@@ -215,6 +219,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         })
       }
       clearCart()
+      // Promo is single-use per checkout — clear so it isn't re-applied.
+      setPromo(null)
       setView('success')
       setName('')
       setContact('')
@@ -454,9 +460,10 @@ function CartView({ entries, total, onClose, onQtyChange, onRemove, onCheckout }
             flexShrink: 0,
           }}
         >
+          <PromoCodeInput subtotal={total} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--color-text-dim)', fontSize: 14 }}>итого</span>
-            <span style={{ fontWeight: 700, fontSize: 20 }}>{total.toLocaleString('ru-RU')} ₽</span>
+            <span style={{ fontWeight: 700, fontSize: 20 }}>{getPromoAdjustedTotal(total).toLocaleString('ru-RU')} ₽</span>
           </div>
           <button type="button" className="cta-btn" onClick={onCheckout} style={{ width: '100%', justifyContent: 'center' }}>
             оформить заказ
@@ -672,6 +679,96 @@ function SuccessView({ onClose }: { onClose: () => void }) {
       <button type="button" className="cta-btn" onClick={onClose} style={{ marginTop: 8 }}>
         закрыть
       </button>
+    </div>
+  )
+}
+
+// Promo code input + applied-state. Lives next to the cart total; persists
+// in localStorage via lib/promo so navigating to checkout doesn't lose it.
+function PromoCodeInput({ subtotal }: { subtotal: number }) {
+  const [draft, setDraft] = useState('')
+  const [promo, setPromoState] = useState<PromoState | null>(() => getPromo())
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  // Sync state across components reading the same key.
+  useEffect(() => {
+    const sync = () => setPromoState(getPromo())
+    window.addEventListener(PROMO_EVENT, sync)
+    window.addEventListener('storage', sync)
+    return () => {
+      window.removeEventListener(PROMO_EVENT, sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
+
+  async function apply() {
+    setErr('')
+    setBusy(true)
+    try {
+      const r = await validatePromo(draft, subtotal)
+      if (!r.ok) {
+        const msg: Record<string, string> = {
+          unknown_code: 'код не найден',
+          expired: 'срок действия истёк',
+          not_yet_valid: 'код ещё не активирован',
+          exhausted: 'код исчерпан',
+          min_total_not_met: 'минимальная сумма не достигнута',
+          invalid_code: 'неверный формат',
+        }
+        setErr(msg[r.error] ?? 'не удалось применить код')
+      } else {
+        setPromo(r.promo)
+        setDraft('')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function remove() {
+    setPromo(null)
+    setErr('')
+  }
+
+  if (promo) {
+    return (
+      <div className="promo-applied">
+        <div>
+          🎟️ <strong>{promo.code}</strong>
+          <span className="promo-applied__note">
+            {promo.kind === 'percent'
+              ? ` −${promo.value}%`
+              : ` −${promo.value.toLocaleString('ru-RU')} ₽`}
+          </span>
+        </div>
+        <button type="button" className="promo-applied__remove" onClick={remove}>убрать</button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="promo-input-row">
+      <input
+        type="text"
+        className="promo-input"
+        placeholder="промокод"
+        value={draft}
+        maxLength={32}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void apply() } }}
+        disabled={busy}
+      />
+      <button
+        type="button"
+        className="ghost-btn"
+        onClick={() => void apply()}
+        disabled={busy || !draft.trim()}
+        style={{ padding: '6px 14px' }}
+      >
+        {busy ? '...' : 'применить'}
+      </button>
+      {err && <span className="promo-error">{err}</span>}
     </div>
   )
 }

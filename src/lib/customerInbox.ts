@@ -263,6 +263,47 @@ export async function adminLookupUsers(emails: string[]): Promise<Record<string,
   }
 }
 
+export type Customer360 = {
+  email: string
+  profile: null | {
+    id: number
+    email: string
+    name?: string | null
+    first_name?: string | null
+    last_name?: string | null
+    phone?: string | null
+    telegram?: string | null
+    photo?: string | null
+    last_seen_at?: string | null
+    created_at?: string
+    updated_at?: string
+  }
+  orders: Array<{
+    id: number
+    status: string
+    total: number
+    items: Array<{ id?: number | null; title: string; price: number; quantity: number }>
+    delivery: string
+    comment: string
+    created_at: string
+    tracking_number?: string | null
+    tracking_carrier?: string | null
+  }>
+  inquiries: Array<{ id: number; status: string; category: string; message: string; created_at: string }>
+  reviews: Array<{ id: number; product_id: number; rating: number; text: string; photos: string[]; created_at: string }>
+  threads: Array<{ id: number; title: string; status: string; created_at: string; last_message_at: string }>
+  stats: { ordersCount: number; revenue: number; inquiriesOpen: number }
+}
+
+// Admin-only: pulls a 360° view of one customer (profile + orders + inquiries
+// + reviews + chat threads) in a single round-trip. Backed by
+// /api/auth?action=customer.
+export async function adminFetchCustomer(email: string): Promise<Customer360> {
+  return handle<Customer360>(
+    await fetch(`/api/auth?action=customer&email=${encodeURIComponent(email)}`, { headers: adminHeaders() }),
+  )
+}
+
 export async function adminReply(threadEmail: string, body: string, threadId?: number): Promise<ChatMessage> {
   return handle<ChatMessage>(
     await fetch('/api/messages', {

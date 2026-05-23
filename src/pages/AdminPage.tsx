@@ -16,6 +16,8 @@ import { ContentTabV2 } from './admin/ContentTabV2'
 import { BrandPagesTab } from './admin/BrandPagesTab'
 import { PagesTabV2 } from './admin/PagesTabV2'
 import DashboardTab from './admin/DashboardTab'
+import CustomerModal from './admin/CustomerModal'
+import PromoTab from './admin/PromoTab'
 import { toCsv, downloadCsv } from '../lib/csv'
 import {
   fetchBloggersAdmin,
@@ -250,7 +252,7 @@ export default function AdminPage() {
   return <AdminPanel onLogout={() => { clearAdminSecret(); setAuthStatus('guest') }} />
 }
 
-type AdminTab = 'dashboard' | 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers'
+type AdminTab = 'dashboard' | 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers' | 'promos'
 
 // ── Admin panel inner ─────────────────────────────────────────────────────────
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
@@ -261,6 +263,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   //   /     — focus the search/filter inside the active tab if there is one
   //   ?     — toggle a tiny help overlay
   const [shortcutsHelp, setShortcutsHelp] = useState(false)
+  // Customer 360° modal. Any tab (orders / inquiries / chat) can open it
+  // by calling setOpenCustomer('<email>').
+  const [openCustomer, setOpenCustomer] = useState<string | null>(null)
   useEffect(() => {
     const ORDER: AdminTab[] = ['dashboard', 'products', 'content', 'pages', 'brands', 'orders', 'inquiries', 'chat', 'bloggers']
     const onKey = (e: KeyboardEvent) => {
@@ -583,6 +588,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         <button type="button" className={`admin__tab-btn${activeTab === 'bloggers' ? ' active' : ''}`} onClick={() => setActiveTab('bloggers')}>
           Блогеры
         </button>
+        <button type="button" className={`admin__tab-btn${activeTab === 'promos' ? ' active' : ''}`} onClick={() => setActiveTab('promos')}>
+          Промокоды
+        </button>
       </div>
 
       <div className={`chat-site-toast chat-site-toast--admin ${chatToast ? 'chat-site-toast--visible' : ''}`}>
@@ -601,10 +609,15 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       {activeTab === 'content' && <ContentTabV2 />}
       {activeTab === 'pages' && <PagesTabV2 />}
       {activeTab === 'brands' && <BrandPagesTab />}
-      {activeTab === 'orders' && <OrdersTab initialStatus={ordersStatusFilter} />}
+      {activeTab === 'orders' && (
+        <OrdersTab initialStatus={ordersStatusFilter} onOpenCustomer={setOpenCustomer} />
+      )}
       {activeTab === 'inquiries' && <InquiriesTab />}
-      {activeTab === 'chat' && <ChatTab />}
+      {activeTab === 'chat' && <ChatTab onOpenCustomer={setOpenCustomer} />}
       {activeTab === 'bloggers' && <BloggersTab allProducts={allProducts} />}
+      {activeTab === 'promos' && <PromoTab />}
+
+      <CustomerModal email={openCustomer} onClose={() => setOpenCustomer(null)} />
 
       {shortcutsHelp && (
         <div
@@ -1716,7 +1729,13 @@ function exportOrdersCsv(orders: AdminOrder[]) {
   downloadCsv(`kolman-orders-${stamp}.csv`, csv)
 }
 
-function OrdersTab({ initialStatus = '' }: { initialStatus?: OrderStatus | '' } = {}) {
+function OrdersTab({
+  initialStatus = '',
+  onOpenCustomer,
+}: {
+  initialStatus?: OrderStatus | ''
+  onOpenCustomer?: (email: string) => void
+} = {}) {
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [filter, setFilter] = useState<OrderStatus | ''>(initialStatus)
   const [loading, setLoading] = useState(true)
@@ -1809,7 +1828,19 @@ function OrdersTab({ initialStatus = '' }: { initialStatus?: OrderStatus | '' } 
                 <span className="admin__inbox-date">{new Date(o.created_at).toLocaleString('ru-RU')}</span>
               </div>
               <div className="admin__inbox-meta">
-                <div><b>Имя:</b> {o.customer_name || '—'}</div>
+                <div>
+                  <b>Имя:</b>{' '}
+                  {o.customer_email && onOpenCustomer ? (
+                    <button
+                      type="button"
+                      className="customer-modal__link"
+                      onClick={() => onOpenCustomer(o.customer_email!)}
+                      title="Открыть карточку клиента"
+                    >
+                      {o.customer_name || o.customer_email}
+                    </button>
+                  ) : (o.customer_name || '—')}
+                </div>
                 <div><b>Контакт:</b> {o.customer_contact || '—'}</div>
                 <div><b>Доставка:</b> {o.delivery || '—'}</div>
               </div>
@@ -2201,7 +2232,7 @@ function ChatTemplates({ customerName, onInsert }: { customerName: string; onIns
   )
 }
 
-function ChatTab() {
+function ChatTab({ onOpenCustomer }: { onOpenCustomer?: (email: string) => void } = {}) {
   const [threads, setThreads] = useState<ChatThread[]>([])
   // Map email → profile snapshot so we can label threads with the customer's
   // real name (and telegram) instead of just the email address.
@@ -2521,7 +2552,17 @@ function ChatTab() {
                     <div style={{ minWidth: 0 }}>
                       <h3 className="admin__chat-head-name">
                         <span className={`presence-dot ${online ? 'presence-dot--online' : ''}`.trim()} aria-hidden="true" />
-                        {displayNameFor(activeThread.user_email)}
+                        {onOpenCustomer ? (
+                          <button
+                            type="button"
+                            className="customer-modal__link"
+                            style={{ fontSize: 'inherit', fontWeight: 'inherit' }}
+                            onClick={() => onOpenCustomer(activeThread.user_email)}
+                            title="Открыть карточку клиента"
+                          >
+                            {displayNameFor(activeThread.user_email)}
+                          </button>
+                        ) : displayNameFor(activeThread.user_email)}
                         <span className={`presence-label ${online ? 'presence-label--online' : ''}`.trim()}>
                           {online ? 'в сети' : formatLastSeen(lookup?.lastSeenAt)}
                         </span>
