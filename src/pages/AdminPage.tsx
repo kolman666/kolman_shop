@@ -2632,23 +2632,49 @@ function ChatTab({ onOpenCustomer }: { onOpenCustomer?: (email: string) => void 
     // Inline photos via `[[photo:DATAURL]]` markers — same encoding as the
     // customer side, decoded by ChatBubbleContent on render.
     const fullBody = [text, ...pendingPhotos].filter(Boolean).join('\n')
+    const snapshotDraft = draft
+    const snapshotPhotos = pendingPhotos
+    // Optimistically clear the form so the admin can move on. If the request
+    // fails AND the message clearly didn't reach the DB, we restore.
+    setDraft('')
+    setPendingPhotos([])
     setSending(true)
     setError('')
     try {
       const sent = await adminReply(activeThread.user_email, fullBody, activeThread.id)
       setMessages((prev) => [...prev, sent])
-      setDraft('')
-      setPendingPhotos([])
       void loadThreads(true)
     } catch (e) {
       const raw = e instanceof Error ? e.message : 'failed'
-      if (/table_not_found|schema cache|public\.messages/.test(raw)) {
-        setError('Таблица messages не создана. Откройте «Заявки» в админке, скопируйте SQL и запустите в Supabase.')
-      } else if (/thread_closed/.test(raw)) {
-        setError('Чат уже закрыт. Откройте его снова, чтобы ответить.')
+      // Some 500s come from side-effects (Telegram notify, stats refresh)
+      // AFTER the message was actually inserted. To check: re-fetch the
+      // thread's messages and see whether ours is there. If yes — leave the
+      // form clear. If no — restore the draft so the admin can retry.
+      let actuallySent = false
+      try {
+        const fresh = await adminFetchThreadMessages(activeThread.id)
+        actuallySent = fresh.some(
+          (m) => m.sender === 'admin' && m.body === fullBody &&
+                 Date.now() - new Date(m.created_at).getTime() < 60_000,
+        )
+        if (actuallySent) setMessages(fresh)
+      } catch { /* network — assume not sent */ }
+
+      if (actuallySent) {
+        // Success despite the 500 — silently swallow and refresh threads.
         void loadThreads(true)
       } else {
-        setError(raw)
+        // Real failure — restore the input + surface a clear message.
+        setDraft(snapshotDraft)
+        setPendingPhotos(snapshotPhotos)
+        if (/table_not_found|schema cache|public\.messages/.test(raw)) {
+          setError('Таблица messages не создана. Откройте «Заявки» в админке, скопируйте SQL и запустите в Supabase.')
+        } else if (/thread_closed/.test(raw)) {
+          setError('Чат уже закрыт. Откройте его снова, чтобы ответить.')
+          void loadThreads(true)
+        } else {
+          setError(`Не удалось отправить: ${raw}`)
+        }
       }
     } finally {
       setSending(false)

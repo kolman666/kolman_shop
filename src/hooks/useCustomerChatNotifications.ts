@@ -54,7 +54,13 @@ export function useCustomerChatNotifications(email?: string | null) {
       })
       const nextToast = {
         title: 'Новое сообщение поддержки',
-        body: (row.body ?? '').slice(0, 120) || 'Вам ответили в чате.',
+        // Strip `[[photo:DATAURL]]` markers so the toast shows
+        // "[изображение]" instead of a giant base64 blob or filename ref.
+        body: ((row.body ?? '')
+          .replace(/\[\[photo:[^\]]+\]\]/g, '[изображение]')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 120)) || 'Вам ответили в чате.',
       }
       setToast(nextToast)
       window.dispatchEvent(new CustomEvent(CUSTOMER_CHAT_NOTIFICATION_EVENT, { detail: { threadKey } }))

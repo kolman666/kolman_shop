@@ -7,6 +7,7 @@ import CartDrawer from './CartDrawer'
 import MobileBottomNav from './MobileBottomNav'
 import CompareBar from './CompareBar'
 import CookieConsent from './CookieConsent'
+import ShareCartImportToast from './ShareCartImportToast'
 import SearchDropdown, { type SearchSection } from './SearchDropdown'
 import AuthModal from './AuthModal'
 import { fetchSiteContent } from '../lib/siteContent'
@@ -488,6 +489,7 @@ export default function SiteChrome({ children }: SiteChromeProps) {
       />
       <CompareBar />
       <CookieConsent />
+      <ShareCartImportToast />
 
       <footer className="site-footer">
         <div className="container footer-grid">

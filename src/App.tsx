@@ -11,6 +11,7 @@ import BrandSpotlight from './components/BrandSpotlight'
 import MobileBottomNav from './components/MobileBottomNav'
 import CompareBar from './components/CompareBar'
 import BrandTicker from './components/BrandTicker'
+import ShareCartImportToast from './components/ShareCartImportToast'
 import CookieConsent from './components/CookieConsent'
 import CartShareListener from './components/CartShareListener'
 import BloggersBlock from './components/BloggersBlock'
@@ -259,6 +260,12 @@ function HomePage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const [current, setCurrent] = useState(0)
+  // Pauses the auto-advance while the cursor is over the hero. Combined
+  // with the `current` dep in the auto-advance effect, this also gives us
+  // the "reset countdown on manual nav" behaviour for free — any click on
+  // a dot or arrow bumps `current`, the effect re-runs, the old timer is
+  // cleared and a fresh 4.5s starts.
+  const [heroHovered, setHeroHovered] = useState(false)
   const [cartCount, setCartCount] = useState(0)
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [searchValue, setSearchValue] = useState('')
@@ -373,12 +380,12 @@ function HomePage() {
 
   useEffect(() => {
     if (slides.length <= 1) return
-    const timer = window.setInterval(() => {
+    if (heroHovered) return
+    const timer = window.setTimeout(() => {
       setCurrent((prev) => (prev + 1) % slides.length)
     }, 4500)
-
-    return () => window.clearInterval(timer)
-  }, [slides.length])
+    return () => window.clearTimeout(timer)
+  }, [slides.length, current, heroHovered])
 
   useEffect(() => {
     const syncCart = () => setCartCount(getCartCount())
@@ -566,7 +573,11 @@ function HomePage() {
 
       <main className="container page-content">
         <section className="hero-grid">
-          <div className="hero-card">
+          <div
+            className="hero-card"
+            onMouseEnter={() => setHeroHovered(true)}
+            onMouseLeave={() => setHeroHovered(false)}
+          >
             <div className="hero-card__image" style={(() => { const u = safeBackgroundImage(slide.img); return u ? { backgroundImage: `url("${u}")` } : undefined })()} />
             <div className="hero-card__overlay" />
             <div className="hero-card__accent" />
@@ -875,6 +886,7 @@ function HomePage() {
       />
       <CompareBar />
       <CookieConsent />
+      <ShareCartImportToast />
 
       <div className={`chat-site-toast ${chatNotifications.toast ? 'chat-site-toast--visible' : ''}`}>
         <strong>{chatNotifications.toast?.title}</strong>

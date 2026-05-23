@@ -96,6 +96,18 @@
   text-transform: lowercase !important;
 }
 
+/* Carve-out: chat bubbles + chat input + chat templates should keep the
+ * user's original casing — they're typed by real humans (not site copy)
+ * and forcing lowercase makes "Иван" look like "иван", names like
+ * "WLMOUSE" become "wlmouse", etc. */
+.profile-chat__bubble,
+.profile-chat__bubble *,
+.profile-chat__input,
+.profile-chat__list,
+.profile-chat__list * {
+  text-transform: none !important;
+}
+
 .container {
   width: min(var(--container-width), calc(100% - var(--container-padding)));
   margin: 0 auto;
@@ -11507,6 +11519,22 @@
  *   - Explicit `will-change: transform, border-radius` and `translateZ(0)`
  *     on `.cookie-btn` force the button into its own compositor layer so
  *     Chrome stops trying to re-render the pseudo via the parent's blur. */
+/* Wave-rise fill — built on height animation (NOT transform).
+ *
+ * Why this approach finally works in Chrome on Windows:
+ *   - Chrome's backdrop-filter on the parent `.cookie-consent__panel`
+ *     creates a compositor isolation that prevented `transform`-animated
+ *     pseudo-elements from repainting on hover (this was the original
+ *     bug — the wave just popped to its end state).
+ *   - Animating `height` is a paint-layer property, not compositor —
+ *     it's rendered every frame by the layout engine regardless of the
+ *     ancestor backdrop-filter. Slightly less smooth than transforms,
+ *     but bullet-proof across Chrome / Edge / Firefox / Safari / Opera.
+ *   - The wavy top edge is a `clip-path` polygon with little zig-zag
+ *     teeth — at rest the polygon clips the entire pseudo to height 0;
+ *     as the height grows, the wavy crest moves up.
+ *   - The "ripple" animation runs in parallel and animates clip-path
+ *     between two waveforms so the surface looks like water moving. */
 .cookie-btn {
   position: relative;
   overflow: hidden;
@@ -11522,10 +11550,6 @@
   cursor: pointer;
   transition: border-color 0.35s ease;
   z-index: 0;
-  /* Forces own compositor layer — fixes Chrome on Windows where the wave
-   * inherited the parent's backdrop-filter and never repainted on hover. */
-  transform: translateZ(0);
-  will-change: transform;
 }
 .cookie-btn--accept { color: var(--color-main); }
 .cookie-btn--decline { color: var(--color-text-soft); }
@@ -11533,34 +11557,36 @@
 .cookie-btn::before {
   content: "";
   position: absolute;
+  left: 0;
+  right: 0;
   bottom: 0;
-  left: -10%;
-  right: -10%;
-  height: 110%;
-  z-index: 0;
+  height: 0;
   background: currentColor;
-  /* Curved top edge = the "waterline". Bottom corners are square so it
-   * snugly fits the button bottom. */
-  border-radius: 45% 45% 0 0 / 60% 60% 0 0;
-  transform: translateY(100%);
-  transition: transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1);
-  will-change: transform, border-radius;
+  border-radius: inherit;
+  transition: height 0.65s cubic-bezier(0.22, 0.61, 0.36, 1);
   pointer-events: none;
+  z-index: 0;
 }
 .cookie-btn:hover::before,
 .cookie-btn:active::before,
 .cookie-btn:focus-visible::before {
-  transform: translateY(0);
-  /* Once the wave has risen, ripple the curve gently so it looks like
-   * water surface, not a static fill. */
-  animation: cookie-wave-ripple 2.4s ease-in-out 0.55s infinite;
+  height: 110%;
+  animation: cookie-wave-ripple 1.8s ease-in-out 0.65s infinite;
 }
 
 @keyframes cookie-wave-ripple {
-  0%, 100% { border-radius: 45% 55% 0 0 / 55% 45% 0 0; }
-  25%      { border-radius: 60% 40% 0 0 / 70% 30% 0 0; }
-  50%      { border-radius: 50% 50% 0 0 / 40% 60% 0 0; }
-  75%      { border-radius: 35% 65% 0 0 / 65% 35% 0 0; }
+  0%, 100% {
+    clip-path: polygon(
+      0 16%, 8% 8%, 16% 16%, 24% 8%, 32% 16%, 40% 8%,
+      48% 16%, 56% 8%, 64% 16%, 72% 8%, 80% 16%, 88% 8%,
+      96% 16%, 100% 16%, 100% 100%, 0 100%);
+  }
+  50% {
+    clip-path: polygon(
+      0 8%, 8% 16%, 16% 8%, 24% 16%, 32% 8%, 40% 16%,
+      48% 8%, 56% 16%, 64% 8%, 72% 16%, 80% 8%, 88% 16%,
+      96% 8%, 100% 8%, 100% 100%, 0 100%);
+  }
 }
 
 .cookie-btn__label {
@@ -11584,8 +11610,7 @@
     transition: none;
     animation: none !important;
   }
-  /* Without animation the wave should still rise on hover, just instantly. */
-  .cookie-btn:hover::before { transform: translateY(0); }
+  .cookie-btn:hover::before { height: 110%; clip-path: none; }
 }
 
 /* ===== Media picker + library ===== */
@@ -12211,7 +12236,12 @@
  * or outside it. */
 
 /* ============================================================
- * BrandTicker — dual-track infinite scroll (replaces .marquee-*)
+ * BrandTicker — JS-driven infinite scroll.
+ *
+ * The CSS here is layout-only — the animation is driven by
+ * `requestAnimationFrame` inside BrandTicker.tsx so we never rely on
+ * `width: max-content` / `@keyframes` measuring up identically across
+ * browsers (which is what kept breaking).
  * ============================================================ */
 .brand-ticker {
   overflow: hidden;
@@ -12220,22 +12250,11 @@
 }
 .brand-ticker__lane {
   display: flex;
-  width: max-content;
-  animation: brand-ticker-scroll 36s linear infinite;
   will-change: transform;
+  /* `width` is set inline by the React component to exactly 2× the
+   * measured copy width — bullet-proof loop point. */
 }
-.brand-ticker:hover .brand-ticker__lane {
-  animation-play-state: paused;
-}
-@keyframes brand-ticker-scroll {
-  from { transform: translate3d(0, 0, 0); }
-  /* Exactly one track width → second track is now in the first's spot. */
-  to   { transform: translate3d(-50%, 0, 0); }
-}
-.brand-ticker__track {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.brand-ticker__copy {
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -12936,4 +12955,203 @@ h1, h2, h3, h4 {
     -webkit-line-clamp: unset;
     display: block;
   }
+}
+
+/* ===== Share-cart import toast =========================================
+ * Slides in from top-right with a soft spring, items inside fade up one
+ * by one with a tiny stagger. Designed so it doesn't block the page —
+ * backdrop is just a click-catcher, the page underneath remains usable. */
+.share-cart-toast {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+.share-cart-toast__backdrop {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: default;
+  pointer-events: auto;
+}
+.share-cart-toast__panel {
+  position: relative;
+  pointer-events: auto;
+  margin: 24px;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 16px;
+  padding: 22px 22px 18px;
+  display: grid;
+  gap: 14px;
+  box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6), 0 0 0 1px rgba(225,29,29,0.18);
+}
+.share-cart-toast--open .share-cart-toast__panel {
+  animation: share-cart-in 0.45s cubic-bezier(0.34, 1.36, 0.64, 1);
+}
+.share-cart-toast--closing .share-cart-toast__panel {
+  animation: share-cart-out 0.28s ease-in forwards;
+}
+@keyframes share-cart-in {
+  0%   { transform: translate3d(40px, -16px, 0) scale(0.94); opacity: 0; }
+  100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+}
+@keyframes share-cart-out {
+  to { transform: translate3d(40px, -16px, 0) scale(0.94); opacity: 0; }
+}
+
+.share-cart-toast__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--color-bg-soft);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.share-cart-toast__close:hover { color: var(--color-text); }
+
+.share-cart-toast__header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding-right: 32px;
+}
+.share-cart-toast__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-main) 16%, transparent);
+  color: var(--color-main);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.share-cart-toast__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.share-cart-toast__sub {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--color-text-dim);
+  line-height: 1.4;
+}
+
+.share-cart-toast__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.share-cart-toast__line {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--color-bg-soft);
+  opacity: 0;
+  transform: translateY(8px);
+  animation: share-cart-line 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+@keyframes share-cart-line {
+  to { opacity: 1; transform: translateY(0); }
+}
+.share-cart-toast__thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--color-bg);
+}
+.share-cart-toast__thumb--empty {
+  background: var(--color-bg-muted);
+}
+.share-cart-toast__line-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.share-cart-toast__line-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.share-cart-toast__line-meta {
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+.share-cart-toast__line-link {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-main);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.share-cart-toast__line-link:hover { text-decoration: underline; }
+
+.share-cart-toast__total {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border);
+  font-size: 13px;
+}
+.share-cart-toast__total strong {
+  color: var(--color-text);
+  font-weight: 700;
+}
+.share-cart-toast__cta {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (max-width: 600px) {
+  .share-cart-toast {
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .share-cart-toast__panel {
+    width: 100%;
+    margin: 0 12px 14px;
+    border-radius: 18px 18px 12px 12px;
+  }
+  @keyframes share-cart-in {
+    0%   { transform: translate3d(0, 100%, 0); opacity: 0; }
+    100% { transform: translate3d(0, 0, 0); opacity: 1; }
+  }
+  @keyframes share-cart-out {
+    to { transform: translate3d(0, 100%, 0); opacity: 0; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .share-cart-toast--open .share-cart-toast__panel,
+  .share-cart-toast__line { animation: none; opacity: 1; transform: none; }
 }
