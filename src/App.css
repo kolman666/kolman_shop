@@ -11491,6 +11491,26 @@
 }
 
 /* ── The actual button ────────────────────────────────────────────────── */
+/* Wave-rising fill.
+ *
+ * Wave anatomy:
+ *   - ::before is a wider-than-button pill that lives below the button and
+ *     translates UP on hover. Its top edge has a tilted border-radius so the
+ *     waterline is curved — creates the "rising water" look.
+ *   - During hover an additional border-radius animation slowly morphs the
+ *     curve from 60/40 → 40/60 → 60/40 → giving a continuous gentle wave.
+ *   - GPU promotion via `translate3d(0,0,0)` is set explicitly to fix the
+ *     Windows Chrome bug where transforms on a pseudo-element inside a
+ *     backdrop-filtered parent never repainted.
+ *
+ * Why this works in Chrome where the old `scaleY` version didn't:
+ *   - `transform: translateY(100%)` instead of `scaleY(0)`. ScaleY at 0
+ *     produces a zero-area composited layer that Chrome may skip painting
+ *     when its parent has backdrop-filter applied (the .cookie-consent__panel).
+ *     translateY keeps the layer at full size; only its position changes.
+ *   - Explicit `will-change: transform, border-radius` and `translateZ(0)`
+ *     on `.cookie-btn` force the button into its own compositor layer so
+ *     Chrome stops trying to re-render the pseudo via the parent's blur. */
 .cookie-btn {
   position: relative;
   overflow: hidden;
@@ -11505,54 +11525,71 @@
   letter-spacing: 0.03em;
   cursor: pointer;
   transition: border-color 0.35s ease;
-  /* New stacking context without isolation: simpler and works in Chrome where
-   * `isolation: isolate` + `z-index: -1` sometimes hides the pseudo behind
-   * the backdrop-filtered parent. */
   z-index: 0;
+  /* Forces own compositor layer — fixes Chrome on Windows where the wave
+   * inherited the parent's backdrop-filter and never repainted on hover. */
+  transform: translateZ(0);
+  will-change: transform;
 }
 .cookie-btn--accept { color: var(--color-main); }
 .cookie-btn--decline { color: var(--color-text-soft); }
 
-/* The wave: pseudo element that scales from the bottom on hover.
- * Lives at z-index 0 (above the button's own bg, below the label). */
 .cookie-btn::before {
   content: "";
   position: absolute;
-  inset: 0;
+  bottom: 0;
+  left: -10%;
+  right: -10%;
+  height: 110%;
   z-index: 0;
   background: currentColor;
-  transform: scaleY(0);
-  transform-origin: bottom center;
-  transition: transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
-  border-radius: inherit;
-  will-change: transform;
+  /* Curved top edge = the "waterline". Bottom corners are square so it
+   * snugly fits the button bottom. */
+  border-radius: 45% 45% 0 0 / 60% 60% 0 0;
+  transform: translateY(100%);
+  transition: transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform, border-radius;
   pointer-events: none;
 }
 .cookie-btn:hover::before,
 .cookie-btn:active::before,
 .cookie-btn:focus-visible::before {
-  transform: scaleY(1);
+  transform: translateY(0);
+  /* Once the wave has risen, ripple the curve gently so it looks like
+   * water surface, not a static fill. */
+  animation: cookie-wave-ripple 2.4s ease-in-out 0.55s infinite;
 }
+
+@keyframes cookie-wave-ripple {
+  0%, 100% { border-radius: 45% 55% 0 0 / 55% 45% 0 0; }
+  25%      { border-radius: 60% 40% 0 0 / 70% 30% 0 0; }
+  50%      { border-radius: 50% 50% 0 0 / 40% 60% 0 0; }
+  75%      { border-radius: 35% 65% 0 0 / 65% 35% 0 0; }
+}
+
 .cookie-btn__label {
   position: relative;
   z-index: 1;
   transition: color 0.35s ease;
   display: inline-block;
 }
-/* On hover invert the label colour so it reads over the filled wave. */
 .cookie-btn:hover .cookie-btn__label,
 .cookie-btn:focus-visible .cookie-btn__label {
   color: #fff;
 }
 .cookie-btn--decline:hover .cookie-btn__label,
 .cookie-btn--decline:focus-visible .cookie-btn__label {
-  /* dark fill — pick a colour that contrasts with the panel background */
   color: var(--color-bg);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .cookie-consent { animation: none; }
-  .cookie-btn::before { transition: none; }
+  .cookie-btn::before {
+    transition: none;
+    animation: none !important;
+  }
+  /* Without animation the wave should still rise on hover, just instantly. */
+  .cookie-btn:hover::before { transform: translateY(0); }
 }
 
 /* ===== Media picker + library ===== */
@@ -12006,33 +12043,93 @@
   min-width: 110px;
   max-width: none;
 }
-.marquee-wrap {
-  /* Pixel-based mask: the fade is always a fixed 12px on each edge regardless
-   * of viewport width. With the old `%`-based mask, 4% on a 1200px viewport
-   * was ~48px — that ate ~half the leftmost logo (see screenshot). 12px
-   * gives a subtle fade-in feel without ever clipping a recognisable logo. */
-  mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+/* The old `.marquee-wrap` mask is intentionally NOT defined here — the new
+ * BrandTicker component uses a dual-track translate-50% loop that doesn't
+ * need an edge mask. Logos either are inside the viewport (fully visible)
+ * or outside it. */
+
+/* ============================================================
+ * BrandTicker — dual-track infinite scroll (replaces .marquee-*)
+ * ============================================================ */
+.brand-ticker {
+  overflow: hidden;
+  width: 100%;
+  position: relative;
 }
+.brand-ticker__lane {
+  display: flex;
+  width: max-content;
+  animation: brand-ticker-scroll 36s linear infinite;
+  will-change: transform;
+}
+.brand-ticker:hover .brand-ticker__lane {
+  animation-play-state: paused;
+}
+@keyframes brand-ticker-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  /* Exactly one track width → second track is now in the first's spot. */
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+.brand-ticker__track {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.brand-ticker__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.5);
+  transition: color 0.22s ease;
+  min-width: 110px;
+}
+.brand-ticker__item:hover {
+  color: rgba(255, 255, 255, 0.92);
+}
+.brand-ticker__item svg {
+  display: block;
+  height: 36px;
+  width: auto;
+  min-width: 110px;
+}
+.brand-ticker__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: inherit;
+}
+.brand-ticker__link img {
+  height: 36px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+  display: block;
+  filter: grayscale(1) brightness(1.5);
+  transition: filter 0.2s ease;
+}
+.brand-ticker__link:hover img { filter: none; }
+.brand-ticker__link span {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
 @media (max-width: 720px) {
-  .marquee-wrap {
-    /* Even smaller fade on phones — 8px is enough to imply motion. */
-    mask-image: linear-gradient(to right, transparent 0, #000 8px, #000 calc(100% - 8px), transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 8px, #000 calc(100% - 8px), transparent 100%);
-  }
-  .marquee-item {
-    /* Tighter padding on phones so 5–6 logos fit on screen at once and the
-     * animation doesn't sit on a single (clipped) item. */
-    padding: 0 18px !important;
-  }
-  .marquee-item svg {
-    min-width: 90px;
-    height: 26px !important;
-  }
-  .marquee-track {
-    /* Slightly slower so the user can read the names. */
-    animation-duration: 36s !important;
-  }
+  .brand-ticker__lane { animation-duration: 32s; }
+  .brand-ticker__item svg { height: 26px; min-width: 90px; }
+  .brand-ticker__link img { height: 28px; max-width: 140px; }
+  .brand-ticker__link span { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand-ticker__lane { animation: none; }
 }
 
 /* ============================================================
@@ -12539,4 +12636,143 @@
 .page-container,
 h1, h2, h3, h4 {
   overflow-wrap: anywhere;
+}
+
+/* ============================================================
+ * Mobile catalog cards — full redesign for narrow phones.
+ *
+ * Old behaviour at 375px:
+ *   - 2 cards/row = ~170px each
+ *   - status badge (top-left) overlapped the brand name
+ *   - heart + compare + menu icons cluttered top-right
+ *   - title + specs + price all stacked with default desktop padding
+ * Cards looked "уродски" because everything was scaled down without
+ * adjustment.
+ *
+ * Fix below (≤480px):
+ *   - keep 2 cards/row but with tighter, mobile-tuned padding
+ *   - move status badge to a non-overlapping spot (only top-left,
+ *     compress to 9px font + 4px padding)
+ *   - hide the compare button on mobile — the user already has fav +
+ *     menu; compare is a power-user feature, reachable from desktop
+ *   - shrink image height, reduce all paddings
+ *   - meta + title sized down with proper line-height
+ *   - "rub" not "₽" looks awkward — currency stays as-is, but price
+ *     gets tighter font + no line break
+ *   - footer (price + cart-add button) compressed
+ *
+ * Below 380px, switch to 1 card/row for true breathing room.
+ * ============================================================ */
+@media (max-width: 480px) {
+  .catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  /* Card outer + visual */
+  .product-card { border-radius: 14px !important; }
+  .product-card__visual {
+    aspect-ratio: 1 / 1;
+    height: auto;
+    min-height: 0;
+  }
+  .product-card__image {
+    padding: 14px;
+  }
+
+  /* Status badge top-left — smaller, no overlap */
+  .product-card__badges {
+    top: 8px;
+    left: 8px;
+    gap: 4px;
+  }
+  .product-card__tag,
+  .product-card__status {
+    font-size: 9.5px;
+    padding: 3px 8px;
+    letter-spacing: 0.02em;
+  }
+
+  /* Hide compare button on mobile — reduces visual noise; fav + menu remain */
+  .product-card__compare {
+    display: none !important;
+  }
+  .product-card__fav {
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+  }
+
+  /* Body */
+  .product-card__body {
+    padding: 10px 10px 12px !important;
+    gap: 4px !important;
+  }
+  .product-card__meta {
+    font-size: 10px;
+    letter-spacing: 0.05em;
+  }
+  .product-card__title {
+    font-size: 13px !important;
+    line-height: 1.25 !important;
+    /* clamp to 2 lines so cards stay even-height */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: calc(2 * 1.25 * 13px);
+  }
+  .product-card__specs {
+    gap: 4px;
+  }
+  .product-card__spec {
+    font-size: 9.5px !important;
+    padding: 2px 6px !important;
+  }
+
+  /* Price row + cart button */
+  .product-card__footer {
+    padding: 8px 10px 10px !important;
+    gap: 6px;
+  }
+  .product-card__price {
+    font-size: 15px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap;
+  }
+  .product-card__price-label {
+    font-size: 9.5px;
+  }
+  .product-card__footer .icon-button {
+    width: 30px;
+    height: 30px;
+  }
+  .product-card__footer .icon-button svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* Used-card extras: tighter */
+  .product-card__condition {
+    font-size: 9.5px;
+    padding: 3px 7px;
+  }
+}
+
+/* On very tiny phones (≤380px) — 1 card per row for legibility */
+@media (max-width: 380px) {
+  .catalog-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .product-card__visual {
+    aspect-ratio: 16 / 10;
+  }
+  .product-card__title {
+    font-size: 15px !important;
+    min-height: 0;
+    -webkit-line-clamp: unset;
+    display: block;
+  }
 }

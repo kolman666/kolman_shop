@@ -10,6 +10,7 @@ import CartDrawer from './components/CartDrawer'
 import BrandSpotlight from './components/BrandSpotlight'
 import MobileBottomNav from './components/MobileBottomNav'
 import CompareBar from './components/CompareBar'
+import BrandTicker from './components/BrandTicker'
 import CookieConsent from './components/CookieConsent'
 import CartShareListener from './components/CartShareListener'
 import BloggersBlock from './components/BloggersBlock'
@@ -218,10 +219,8 @@ const brandLogos = [
   },
 ]
 
-const marqueeBrandLogos = [
-  ...brandLogos.map((brand) => ({ ...brand, marqueeKey: `${brand.name}-first` })),
-  ...brandLogos.map((brand) => ({ ...brand, marqueeKey: `${brand.name}-second` })),
-]
+// The old `marqueeBrandLogos` (manual duplication for seamless loop) is no
+// longer needed — BrandTicker renders the brands twice internally.
 
 type BrandLogoProps = {
   className?: string
@@ -765,43 +764,29 @@ function HomePage() {
           <p className="brands-section__note">{t('ui.brandsNote')}</p>
         </div>
         <div className="brands-strip brands-strip--fullbleed">
-          <div className="marquee-wrap">
-            <div className="marquee-track">
-              {dbBrandLogos && dbBrandLogos.length > 0 ? (
-                // Admin-managed brand logos: photos editable from /admin →
-                // Контент → Бренды. We duplicate the list inline so the CSS
-                // marquee animation loops seamlessly.
-                [...dbBrandLogos, ...dbBrandLogos].map((brand, i) => {
-                  const slug = brand.slug?.trim()
-                  const target = (brand.url?.trim())
-                    || (slug ? `/brand/${slug}` : `/catalog?brand=${encodeURIComponent(brand.name)}`)
-                  const isExternal = /^https?:\/\//i.test(target)
-                  return (
-                    <Link
-                      key={`${brand.name}-${i}`}
-                      to={target}
-                      className="marquee-item marquee-item--photo"
-                      target={isExternal ? '_blank' : undefined}
-                      rel={isExternal ? 'noopener noreferrer' : undefined}
-                      aria-label={brand.name}
-                    >
-                      {brand.image ? (
-                        <img src={brand.image} alt={brand.name} loading="lazy" />
-                      ) : (
-                        <span>{brand.name}</span>
-                      )}
-                    </Link>
-                  )
-                })
-              ) : (
-                marqueeBrandLogos.map((brand) => (
-                  <div key={brand.marqueeKey} className="marquee-item">
-                    {brand.svg}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          <BrandTicker
+            ariaLabel={t('ui.brandsTitle')}
+            items={
+              dbBrandLogos && dbBrandLogos.length > 0
+                ? dbBrandLogos.map((brand) => {
+                    const slug = brand.slug?.trim()
+                    const target = (brand.url?.trim())
+                      || (slug ? `/brand/${slug}` : `/catalog?brand=${encodeURIComponent(brand.name)}`)
+                    return {
+                      kind: 'image' as const,
+                      name: brand.name,
+                      image: brand.image || '',
+                      url: target,
+                      external: /^https?:\/\//i.test(target),
+                    }
+                  })
+                : brandLogos.map((b) => ({
+                    kind: 'svg' as const,
+                    key: b.name,
+                    node: b.svg,
+                  }))
+            }
+          />
         </div>
       </section>
 
