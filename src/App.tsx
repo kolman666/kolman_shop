@@ -382,12 +382,15 @@ function HomePage() {
 
   useEffect(() => {
     const syncCart = () => setCartCount(getCartCount())
+    const openCart = () => setIsCartOpen(true)
     syncCart()
     window.addEventListener('cart:update', syncCart)
     window.addEventListener('storage', syncCart)
+    window.addEventListener('cart:open', openCart)
     return () => {
       window.removeEventListener('cart:update', syncCart)
       window.removeEventListener('storage', syncCart)
+      window.removeEventListener('cart:open', openCart)
     }
   }, [])
 

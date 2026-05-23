@@ -107,8 +107,15 @@ export function buildShareCartUrl(cart: CartRecord = readCart()): string {
   return url.toString()
 }
 
+// Event fired by `importCartFromUrl()` after a successful merge. Listened to
+// by the `<ShareCartImportToast>` modal so we can show the receiver what
+// landed in their cart instead of doing it silently.
+export const SHARE_CART_IMPORTED_EVENT = 'cart:share-imported'
+
 // Called on load and on SPA navigations. If `?share-cart=` is present, merge
 // items into localStorage and strip the param so refresh won't double-import.
+// Also dispatches a CustomEvent with the imported `{ id → qty }` map so the
+// UI can pop the modal once products are loaded.
 export function importCartFromUrl(): CartImportResult {
   if (typeof window === 'undefined') return { imported: false, count: 0 }
   const params = new URLSearchParams(window.location.search)
@@ -136,5 +143,8 @@ export function importCartFromUrl(): CartImportResult {
   const qs = params.toString()
   const cleanUrl = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash
   window.history.replaceState(null, '', cleanUrl)
+  // Notify the UI — the modal listens for this event and looks up product
+  // details once `useProducts` has hydrated.
+  window.dispatchEvent(new CustomEvent(SHARE_CART_IMPORTED_EVENT, { detail: { items: incoming } }))
   return { imported: true, count }
 }
