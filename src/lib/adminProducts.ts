@@ -77,7 +77,7 @@ export async function deleteProduct(id: number): Promise<void> {
 }
 
 export async function verifyAdminSecret(secret: string): Promise<boolean> {
-  const res = await fetch('/api/admin-auth', {
+  const res = await fetch('/api/auth?action=admin-auth', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ secret }),
