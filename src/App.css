@@ -12333,6 +12333,10 @@
 .admin-sidebar--collapsed .admin-sidebar__badge {
   display: none;
 }
+.admin-sidebar--collapsed .admin-sidebar__brand-mark {
+  width: 40px;
+  height: 40px;
+}
 .admin-sidebar--collapsed .admin-sidebar__item,
 .admin-sidebar--collapsed .admin-sidebar__link {
   justify-content: center;
@@ -12349,13 +12353,14 @@
   position: relative;
 }
 .admin-sidebar__brand-mark {
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
   border-radius: 9px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: width 0.22s ease, height 0.22s ease;
 }
 .admin-sidebar__brand-text {
   display: flex;
