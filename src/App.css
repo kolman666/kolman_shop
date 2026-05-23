@@ -13342,6 +13342,10 @@
     min-width: 90px;
   }
 
+  .brand-ticker__link img {
+    height: 50px;
+    max-width: 140px;
+  }
 
   .brand-ticker__link span {
     font-size: 12px;
