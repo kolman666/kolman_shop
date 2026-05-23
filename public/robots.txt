@@ -1,0 +1,8 @@
+# https://www.robotstxt.org/
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /profile
+Disallow: /api/
+
+Sitemap: https://kolmanshop.vercel.app/sitemap.xml

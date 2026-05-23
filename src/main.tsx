@@ -16,6 +16,18 @@ initTheme()
 // dispatched by writeCart is what makes the cart badge re-count.
 importCartFromUrl()
 
+// Register the service worker (PWA install + offline caching of static
+// assets). Registration is best-effort — failures are logged once but never
+// block the app.
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      // eslint-disable-next-line no-console
+      console.warn('[sw] register failed', err)
+    })
+  })
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

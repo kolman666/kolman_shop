@@ -10457,3 +10457,81 @@
   color: var(--color-text-dim);
   margin: 0;
 }
+
+/* ===== Admin keyboard shortcuts help overlay ===== */
+.admin-shortcuts-help {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+}
+.admin-shortcuts-help__panel {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  max-width: 360px;
+  width: 100%;
+  display: grid;
+  gap: 12px;
+}
+.admin-shortcuts-help__panel h3 { margin: 0; font-size: 16px; }
+.admin-shortcuts-help__panel ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13px; color: var(--color-text-soft); }
+.admin-shortcuts-help__panel kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--color-bg-soft);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  text-align: center;
+}
+
+/* ===== Skeleton loaders ============================================
+ * Reusable shimmer placeholders. Use as:
+ *   <span class="sk sk--text" />          // 1em-tall text line
+ *   <div class="sk sk--block" style="height: 120px" />
+ * The shimmer is a tiny gradient sliding left→right. Respects reduced
+ * motion via a static fallback. */
+@keyframes sk-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.sk {
+  display: inline-block;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-soft) 0%,
+    var(--color-bg-muted) 50%,
+    var(--color-bg-soft) 100%
+  );
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.4s ease-in-out infinite;
+  color: transparent;
+  user-select: none;
+}
+.sk--text { width: 100%; height: 1em; }
+.sk--block { width: 100%; min-height: 80px; }
+.sk--circle { border-radius: 999px; }
+@media (prefers-reduced-motion: reduce) {
+  .sk { animation: none; background: var(--color-bg-soft); }
+}
+
+/* Common card-skeleton layout used in catalog grid + profile lists. */
+.sk-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+}
+.sk-card__img { width: 100%; aspect-ratio: 4 / 3; border-radius: 8px; }

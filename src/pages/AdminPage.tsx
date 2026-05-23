@@ -256,6 +256,47 @@ type AdminTab = 'dashboard' | 'products' | 'content' | 'pages' | 'brands' | 'ord
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const { products: allProducts, loading: productsLoading, refresh } = useProducts()
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard')
+  // Admin-level keyboard shortcuts:
+  //   1..8  — jump to tab by index
+  //   /     — focus the search/filter inside the active tab if there is one
+  //   ?     — toggle a tiny help overlay
+  const [shortcutsHelp, setShortcutsHelp] = useState(false)
+  useEffect(() => {
+    const ORDER: AdminTab[] = ['dashboard', 'products', 'content', 'pages', 'brands', 'orders', 'inquiries', 'chat', 'bloggers']
+    const onKey = (e: KeyboardEvent) => {
+      // Don't hijack typing into inputs / textareas / contenteditable.
+      const t = e.target as HTMLElement | null
+      if (t) {
+        const tag = t.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable) return
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key === '?') {
+        setShortcutsHelp((v) => !v)
+        return
+      }
+      if (e.key === 'Escape') {
+        setShortcutsHelp(false)
+        return
+      }
+      if (e.key === '/') {
+        const inp = document.querySelector<HTMLInputElement>('.admin__content-tab input[type="text"], .admin__content-tab input[type="search"], .admin__sidebar input[type="search"]')
+        if (inp) {
+          e.preventDefault()
+          inp.focus()
+          inp.select?.()
+        }
+        return
+      }
+      if (/^[1-9]$/.test(e.key)) {
+        const idx = Number(e.key) - 1
+        const next = ORDER[idx]
+        if (next) setActiveTab(next)
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
   // Persisted across sessions so an admin doesn't lose their last view on
   // refresh. Localized in a tiny `useEffect` below.
   const [ordersStatusFilter, setOrdersStatusFilter] = useState<'' | 'new' | 'in_progress' | 'done' | 'cancelled'>('')
@@ -564,6 +605,28 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       {activeTab === 'inquiries' && <InquiriesTab />}
       {activeTab === 'chat' && <ChatTab />}
       {activeTab === 'bloggers' && <BloggersTab allProducts={allProducts} />}
+
+      {shortcutsHelp && (
+        <div
+          className="admin-shortcuts-help"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setShortcutsHelp(false)}
+        >
+          <div className="admin-shortcuts-help__panel" onClick={(e) => e.stopPropagation()}>
+            <h3>Горячие клавиши</h3>
+            <ul>
+              <li><kbd>1</kbd>–<kbd>9</kbd> — переключение вкладок</li>
+              <li><kbd>/</kbd> — фокус на поиск/фильтр</li>
+              <li><kbd>?</kbd> — этот список</li>
+              <li><kbd>Esc</kbd> — закрыть</li>
+            </ul>
+            <button type="button" className="ghost-btn" onClick={() => setShortcutsHelp(false)}>
+              понятно
+            </button>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'products' && (
       <div className="admin__body">
@@ -1558,6 +1621,72 @@ function BloggersTab({ allProducts }: { allProducts: Product[] }) {
 }
 
 // ── Orders tab ────────────────────────────────────────────────────────────────
+// Open a clean printable view of a single order in a new tab. Uses the
+// browser's native print dialog (Cmd/Ctrl + P → "сохранить как PDF" works
+// out of the box, no PDF library required).
+function printOrder(o: AdminOrder) {
+  const esc = (s: string) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const items = (o.items ?? [])
+    .map((it) => `
+      <tr>
+        <td>${esc(it.title)}</td>
+        <td style="text-align:right">${it.quantity}</td>
+        <td style="text-align:right">${it.price.toLocaleString('ru-RU')} ₽</td>
+        <td style="text-align:right">${(it.price * it.quantity).toLocaleString('ru-RU')} ₽</td>
+      </tr>
+    `).join('')
+  const tracking = o.tracking_number
+    ? `<p><strong>Трек:</strong> ${esc(o.tracking_carrier || '')} ${esc(o.tracking_number)}</p>`
+    : ''
+  const html = `<!doctype html>
+<html lang="ru"><head>
+<meta charset="UTF-8" />
+<title>Заказ #${o.id} — kolman.shop</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif; color: #111; margin: 24px; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  .meta { color: #555; font-size: 13px; margin-bottom: 18px; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid #ddd; font-size: 13px; text-align: left; }
+  th { background: #f3f3f3; font-weight: 600; }
+  .total { text-align: right; font-size: 16px; margin-top: 10px; }
+  .info { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: 13px; }
+  .info strong { white-space: nowrap; }
+  .footer { margin-top: 36px; font-size: 11px; color: #888; text-align: center; }
+  @media print {
+    body { margin: 12mm; }
+    button { display: none; }
+  }
+</style>
+</head><body>
+<h1>Заказ #${o.id}</h1>
+<p class="meta">${new Date(o.created_at).toLocaleString('ru-RU')} · статус: ${esc(ORDER_STATUS_LABELS[o.status])}</p>
+
+<div class="info">
+  <strong>Клиент:</strong><span>${esc(o.customer_name || '—')}</span>
+  <strong>Контакт:</strong><span>${esc(o.customer_contact || '—')}</span>
+  ${o.customer_email ? `<strong>Email:</strong><span>${esc(o.customer_email)}</span>` : ''}
+  <strong>Доставка:</strong><span>${esc(o.delivery || '—')}</span>
+  ${o.comment ? `<strong>Комментарий:</strong><span>${esc(o.comment)}</span>` : ''}
+</div>
+
+<table>
+  <thead><tr><th>Товар</th><th style="text-align:right">Кол-во</th><th style="text-align:right">Цена</th><th style="text-align:right">Сумма</th></tr></thead>
+  <tbody>${items}</tbody>
+</table>
+<p class="total"><strong>Итого: ${o.total.toLocaleString('ru-RU')} ₽</strong></p>
+${tracking}
+
+<p class="footer">kolman.shop — спасибо за покупку!</p>
+<script>window.addEventListener('load', () => window.print());</script>
+</body></html>`
+  const w = window.open('', '_blank', 'width=720,height=900')
+  if (!w) return
+  w.document.write(html)
+  w.document.close()
+}
+
 function exportOrdersCsv(orders: AdminOrder[]) {
   // Flatten one row per order. The `items` JSON is collapsed into a single
   // semicolon-separated string — fine for Avito / accountant copy-paste.
@@ -1712,6 +1841,14 @@ function OrdersTab({ initialStatus = '' }: { initialStatus?: OrderStatus | '' } 
                     </button>
                   ))}
                 </div>
+                <button
+                  type="button"
+                  className="accordion__btn"
+                  onClick={() => printOrder(o)}
+                  title="Открыть лист для печати / PDF (Cmd+P → сохранить как PDF)"
+                >
+                  ⎙ печать
+                </button>
                 <button type="button" className="admin__inbox-delete" onClick={() => void remove(o.id)} disabled={busyId === o.id}>
                   удалить
                 </button>
