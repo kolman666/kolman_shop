@@ -9729,7 +9729,7 @@
   color: var(--color-text-soft);
   font-size: 16px;
   line-height: 1.7;
-  max-width: 80ch;
+  max-width: 100ch;
 }
 
 .brand-page__about p {
