@@ -19,7 +19,6 @@ import DashboardTab from './admin/DashboardTab'
 import CustomerModal from './admin/CustomerModal'
 import PromoTab from './admin/PromoTab'
 import MediaTab from './admin/MediaTab'
-import AuditLogTab from './admin/AuditLogTab'
 import { logAdminAction } from '../lib/adminAudit'
 import MediaPicker from '../components/admin/MediaPicker'
 import { toCsv, downloadCsv } from '../lib/csv'
@@ -265,9 +264,9 @@ export default function AdminPage() {
   )
 }
 
-type AdminTab = 'dashboard' | 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers' | 'promos' | 'media' | 'audit'
+type AdminTab = 'dashboard' | 'products' | 'content' | 'pages' | 'brands' | 'orders' | 'inquiries' | 'chat' | 'bloggers' | 'promos' | 'media'
 
-const ADMIN_TAB_ORDER: AdminTab[] = ['dashboard', 'products', 'content', 'pages', 'brands', 'orders', 'inquiries', 'chat', 'bloggers', 'promos', 'media', 'audit']
+const ADMIN_TAB_ORDER: AdminTab[] = ['dashboard', 'products', 'content', 'pages', 'brands', 'orders', 'inquiries', 'chat', 'bloggers', 'promos', 'media']
 const ADMIN_TAB_STORAGE_KEY = 'kolman-admin-tab'
 
 function readStoredAdminTab(): AdminTab {
@@ -631,9 +630,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         <button type="button" className={`admin__tab-btn${activeTab === 'media' ? ' active' : ''}`} onClick={() => setActiveTab('media')}>
           Медиа
         </button>
-        <button type="button" className={`admin__tab-btn${activeTab === 'audit' ? ' active' : ''}`} onClick={() => setActiveTab('audit')}>
-          Журнал
-        </button>
       </div>
 
       <div className={`chat-site-toast chat-site-toast--admin ${chatToast ? 'chat-site-toast--visible' : ''}`}>
@@ -661,7 +657,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       {activeTab === 'bloggers' && <BloggersTab allProducts={allProducts} />}
       {activeTab === 'promos' && <PromoTab />}
       {activeTab === 'media' && <MediaTab />}
-      {activeTab === 'audit' && <AuditLogTab />}
 
       <CustomerModal email={openCustomer} onClose={() => setOpenCustomer(null)} />
 
@@ -676,7 +671,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
             <h3>Горячие клавиши</h3>
             <ul>
               <li><kbd>1</kbd>–<kbd>9</kbd> — вкладки 1–9</li>
-              <li><kbd>0</kbd> — промокоды, <kbd>-</kbd> — медиа, <kbd>=</kbd> — журнал</li>
+              <li><kbd>0</kbd> — промокоды, <kbd>-</kbd> — медиа</li>
               <li><kbd>/</kbd> — фокус на поиск/фильтр</li>
               <li><kbd>?</kbd> — этот список</li>
               <li><kbd>Esc</kbd> — закрыть</li>
