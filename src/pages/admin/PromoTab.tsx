@@ -233,6 +233,7 @@ export default function PromoTab() {
           <p className="admin__empty-text">Нет промокодов.</p>
         </div>
       ) : (
+        <div className="promo-admin-table-wrap">
         <table className="promo-admin-table">
           <thead>
             <tr>
@@ -273,6 +274,7 @@ export default function PromoTab() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
     </div>

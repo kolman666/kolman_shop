@@ -10382,9 +10382,9 @@
   color: var(--color-text-soft);
   flex-shrink: 0;
 }
-.dash-action__icon--ship { background: rgba(74, 139, 255, 0.14); }
-.dash-action__icon--inq  { background: rgba(240, 176, 32, 0.14); }
-.dash-action__icon--chat { background: rgba(225, 29, 29, 0.14); }
+.dash-action__icon--ship { background: rgba(74, 139, 255, 0.14); color: #6ba2ff; }
+.dash-action__icon--inq  { background: rgba(240, 176, 32, 0.14); color: #f0b020; }
+.dash-action__icon--chat { background: rgba(225, 29, 29, 0.14); color: var(--color-main); }
 .dash-action__text {
   flex: 1;
   font-size: 13px;
@@ -11957,20 +11957,21 @@
 }
 
 /* ===== Cart drawer mobile reachability =====
- * On phones the sticky bottom nav covers the bottom 64px. The drawer's
- * sticky footer (with "оформить заказ" + "поделиться корзиной" + promo
- * input) needs extra bottom-padding so all the buttons stay tappable
- * above the nav. */
+ * On phones the fixed bottom-nav covers the bottom ~64px. The cart drawer
+ * is full-height (position: fixed, inset: 0 on phones) with a non-sticky
+ * footer at the end of its flex column. We give the WHOLE drawer enough
+ * bottom-padding so the footer ends ABOVE the bottom-nav and all CTAs
+ * (промокод, поделиться, оформить заказ) are tappable.
+ *
+ * Targeting the wrapper (.cart-drawer) is more reliable than targeting
+ * the inline-styled footer div, which has no stable class. */
 @media (max-width: 720px) {
-  .cart-drawer__footer,
-  .cart-drawer__success {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px) !important;
-  }
-  /* Generic safety: if the drawer's footer doesn't have its own class but
-   * is the last <div> in the panel, still give it space. Captured by
-   * inline-style flex containers — see CartDrawer.tsx line ~444. */
-  .cart-drawer-shell > [style*="border-top"] {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px) !important;
+  .cart-drawer {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 76px) !important;
+    /* Allow the content area to shrink so the footer is reachable inside the
+     * fixed drawer height. */
+    max-height: 100vh;
+    box-sizing: border-box;
   }
 }
 
@@ -11985,21 +11986,50 @@
   overflow-wrap: anywhere;
 }
 
-/* ===== Brand carousel mobile clipping =====
- * The brand marquee row uses CSS animations + flex. On phones the wrap
- * sometimes clips logos because the row height is smaller than the SVG.
- * Pin a min-height and stop logos from shrinking under flex. */
+/* ===== Brand marquee fixes (desktop + mobile) =================
+ * The infinite-scroll brand row uses `.marquee-wrap > .marquee-track >
+ * .marquee-item × N`. Two bugs we keep hitting:
+ *   1. Items shrink under flex when the duplicated list is too narrow on
+ *      large screens — pin `flex: 0 0 auto`.
+ *   2. The `mask-image` gradient fades 8% from each edge — on phones with a
+ *      narrow viewport that swallows an entire logo. Reduce the mask
+ *      bleed so logos are still visible while sliding in/out.
+ *   3. SVGs without `min-width` collapse when the text label hasn't
+ *      finished loading (Unbounded font race).
+ * Targeted at the real classes that App.tsx renders, not the
+ * `.brand-strip` / `.brand-marquee` placeholders that don't exist. */
+.marquee-item {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+.marquee-item svg {
+  min-width: 110px;
+  max-width: none;
+}
+.marquee-wrap {
+  /* Wider clear zone in the middle so logos remain visible while moving. */
+  mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+}
 @media (max-width: 720px) {
-  .brand-marquee,
-  .brand-strip {
-    min-height: 72px;
+  .marquee-wrap {
+    /* Even smaller bleed on mobile (2%) — a 5px fade is plenty to suggest
+     * motion without erasing the first/last visible logo. */
+    mask-image: linear-gradient(to right, transparent, #000 2%, #000 98%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 2%, #000 98%, transparent);
   }
-  .brand-marquee__item,
-  .brand-strip__item,
-  .brand-marquee__svg,
-  .brand-strip__svg {
-    flex: 0 0 auto !important;
-    min-width: 110px;
+  .marquee-item {
+    /* Tighter padding on phones so 5–6 logos fit on screen at once and the
+     * animation doesn't sit on a single (clipped) item. */
+    padding: 0 18px !important;
+  }
+  .marquee-item svg {
+    min-width: 90px;
+    height: 26px !important;
+  }
+  .marquee-track {
+    /* Slightly slower so the user can read the names. */
+    animation-duration: 36s !important;
   }
 }
 
@@ -12227,17 +12257,33 @@
 .admin__main-content {
   padding: 28px 32px 60px;
   min-width: 0;
+  width: 100%;
+  max-width: none;
   /* Drop the old `.admin__content-tab` framing — content goes edge-to-edge
    * inside the main column, individual sections set their own padding. */
 }
-.admin--shell .admin__content-tab {
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  border: 0;
+/* Inside the new shell, the legacy `.admin__content-tab` wrapper has its
+ * legacy max-width / centering / height / padding stripped. Content goes
+ * edge-to-edge inside the main column; padding lives on `.admin__main-content`. */
+.admin--shell .admin__content-tab,
+.admin--shell .admin__body {
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  max-width: none !important;
+  width: 100% !important;
+  height: auto !important;
+  overflow: visible !important;
+  display: block !important;
 }
 .admin--shell .admin__content-tab-head {
   margin-bottom: 24px;
+}
+/* Old centered/limited Products grid — remove the 980px cap inside the shell. */
+.admin--shell .admin__sidebar,
+.admin--shell .admin__main {
+  max-width: none !important;
 }
 
 /* Mobile: sidebar becomes a slide-in drawer ──────────────────────────── */
@@ -12283,4 +12329,205 @@
     justify-content: center;
   }
   .admin__main-content { padding: 64px 16px 60px; }
+}
+
+/* ===== Audit log: field-level diff ===== */
+.audit-log__changes {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+.audit-log__change {
+  display: grid;
+  grid-template-columns: minmax(80px, 140px) 1fr 12px 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+@media (max-width: 600px) {
+  .audit-log__change {
+    grid-template-columns: 1fr;
+    gap: 2px;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--color-border);
+  }
+  .audit-log__change-arrow { display: none; }
+}
+.audit-log__change-field {
+  color: var(--color-text-dim);
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+.audit-log__change-before {
+  color: var(--color-text-soft);
+  text-decoration: line-through;
+  text-decoration-color: rgba(225, 29, 29, 0.4);
+  text-decoration-thickness: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.audit-log__change-arrow {
+  color: var(--color-text-dim);
+  text-align: center;
+}
+.audit-log__change-after {
+  color: var(--color-text);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== Admin toolbar (Orders / Inquiries headers): wrap on mobile ===== */
+.admin__toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.admin__toolbar-select { width: 200px; }
+@media (max-width: 720px) {
+  .admin__toolbar {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .admin__toolbar > * { width: 100%; }
+  .admin__toolbar-select { width: 100%; }
+  .admin__toolbar .accordion__btn,
+  .admin__toolbar .admin__save-btn { width: 100%; justify-content: center; }
+}
+
+/* Promo admin table: wrap in horizontally scrollable container so wide
+ * tables don't blow out the page on mobile. The table itself keeps its
+ * natural min-width — the wrapper just scrolls inside the admin column. */
+.promo-admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-elevated);
+  -webkit-overflow-scrolling: touch;
+}
+.promo-admin-table-wrap .promo-admin-table {
+  min-width: 720px;
+}
+.promo-admin-table-wrap::-webkit-scrollbar { height: 6px; }
+.promo-admin-table-wrap::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 999px; }
+
+/* ============================================================
+ * RESPONSIVE BATCH FIX — narrow phones (≤480px) + tablets
+ * ============================================================ */
+
+/* ── Cart drawer: shrink to viewport on narrow phones ───────── */
+@media (max-width: 440px) {
+  .cart-drawer {
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+}
+
+/* ── Auth modal: never wider than the viewport ─────────────── */
+@media (max-width: 480px) {
+  .auth-modal__body {
+    max-width: calc(100vw - 16px) !important;
+    padding: 20px 16px !important;
+    border-radius: 14px !important;
+  }
+  .auth-modal__body input,
+  .auth-modal__body button {
+    width: 100% !important;
+    min-width: 0;
+  }
+}
+
+/* ── Footer: collapse 360px sidebar to single column ──────── */
+@media (max-width: 600px) {
+  .footer-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .footer-card::before,
+  .footer-card::after {
+    display: none !important;
+  }
+  .footer-card {
+    padding: 22px 18px !important;
+  }
+}
+
+/* ── Header search: shrink earlier so language switch + burger fit ── */
+@media (max-width: 600px) {
+  .search-wrap { max-width: 220px !important; }
+  .header-actions { gap: 8px !important; }
+}
+
+/* ── Catalog grid: 3 cols too narrow on small phones ──────── */
+@media (max-width: 500px) {
+  .catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+}
+
+/* ── Product page main: collapse 280px sidebar at 640px ──── */
+@media (max-width: 640px) {
+  .product-page__main {
+    grid-template-columns: 1fr !important;
+  }
+  .product-page__sidebar {
+    order: 2;
+    margin-top: 18px;
+  }
+}
+
+/* ── Burger panel: respect safe-area + go full-width on tiny phones ── */
+.burger-panel {
+  padding-right: env(safe-area-inset-right, 0);
+}
+@media (max-width: 380px) {
+  .burger-panel {
+    width: 100vw !important;
+    max-width: none !important;
+  }
+}
+
+/* ── Hero card content: tighter padding on narrow phones ─── */
+@media (max-width: 400px) {
+  .hero-card__content {
+    padding: 20px 16px 100px !important;
+  }
+  .hero-title {
+    font-size: clamp(24px, 7vw, 32px) !important;
+  }
+}
+
+/* ── Category card text: ellipsis instead of wrapping ─────── */
+@media (max-width: 500px) {
+  .category-card__title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* ── Drawer extra padding for tiny phones (deeper safe-area issues) ── */
+@media (max-width: 375px) {
+  .cart-drawer {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 100px) !important;
+  }
+}
+
+/* ── Long Russian words break anywhere if they don't fit ─── */
+.page-shell,
+.page-container,
+h1, h2, h3, h4 {
+  overflow-wrap: anywhere;
 }

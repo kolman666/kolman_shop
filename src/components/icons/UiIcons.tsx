@@ -5,10 +5,12 @@ type IconProps = {
   className?: string
 }
 
+// Stroke width tuned to match the sidebar nav icons (1.7) — gives all admin
+// surfaces a consistent visual rhythm.
 const base = {
   fill: 'none' as const,
   stroke: 'currentColor',
-  strokeWidth: 2,
+  strokeWidth: 1.7,
   strokeLinecap: 'round' as const,
   strokeLinejoin: 'round' as const,
 }

@@ -102,6 +102,8 @@ export default function BrandSpotlight({ products, brandSlug, brandLabel, banner
                     className="bsp__card-img"
                     src={product.image}
                     alt={product.titleDirect ?? product.brand}
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
                 <div className="bsp__card-body">

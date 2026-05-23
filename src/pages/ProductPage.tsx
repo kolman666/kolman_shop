@@ -186,7 +186,7 @@ export default function ProductPage() {
     <main className="product-page">
       <section className="product-page__hero container">
         <div className="product-page__media">
-          <img className="product-page__image" src={gallery[activeImageIndex]} alt={productTitle} />
+          <img className="product-page__image" src={gallery[activeImageIndex]} alt={productTitle} loading="eager" decoding="async" />
           <div className="product-page__glow" />
           {gallery.length > 1 && (
             <>
@@ -205,7 +205,7 @@ export default function ProductPage() {
                     onClick={() => setActiveImageIndex(index)}
                     aria-label={`open image ${index + 1}`}
                   >
-                    <img src={image} alt="" />
+                    <img src={image} alt="" loading="lazy" decoding="async" />
                   </button>
                 ))}
               </div>
@@ -491,7 +491,7 @@ export default function ProductPage() {
                   <div className="product-reviews__photos">
                     {reviewPhotos.map((src, i) => (
                       <div key={i} className="product-reviews__photo">
-                        <img src={src} alt="" />
+                        <img src={src} alt="" loading="lazy" decoding="async" />
                         <button
                           type="button"
                           className="product-reviews__photo-remove"

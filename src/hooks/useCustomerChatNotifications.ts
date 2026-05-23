@@ -97,7 +97,7 @@ export function useCustomerChatNotifications(email?: string | null) {
           handleMessage(latest)
         }
         lastMessageAtRef.current = latest.created_at
-      }, 5_000)
+      }, 30_000) // realtime is the primary channel; this is just a safety net
 
       return () => {
         void sb.removeChannel(channel)

@@ -197,6 +197,7 @@ export default async function handler(req, res) {
     const { id, status } = req.body ?? {}
     if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' })
     if (!ALLOWED_STATUSES.includes(status)) return res.status(400).json({ error: 'invalid status' })
+    const before = (await supabase.from('inquiries').select('status, customer_name').eq('id', id).maybeSingle()).data ?? {}
     const { data, error } = await supabase
       .from('inquiries')
       .update({ status })
@@ -204,11 +205,13 @@ export default async function handler(req, res) {
       .select()
       .single()
     if (error) return res.status(500).json({ error: error.message })
+    const INQ_STATUS_RU = { new: 'новая', in_progress: 'в работе', done: 'закрыта' }
     await writeAuditLog(supabase, req, {
       action: 'inquiry.update',
       entity: 'inquiry',
       entity_id: String(id),
-      summary: `Заявка #${id}: статус → ${status}`,
+      summary: `Заявка #${id}${before.customer_name ? ` (${before.customer_name})` : ''}`,
+      changes: [{ field: 'статус', before: INQ_STATUS_RU[before.status] ?? before.status, after: INQ_STATUS_RU[status] ?? status }],
     })
     return res.status(200).json(data)
   }
@@ -216,13 +219,16 @@ export default async function handler(req, res) {
   if (req.method === 'DELETE') {
     const { id } = req.body ?? {}
     if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' })
+    const snap = await supabase.from('inquiries').select('customer_name, category').eq('id', id).maybeSingle()
     const { error } = await supabase.from('inquiries').delete().eq('id', id)
     if (error) return res.status(500).json({ error: error.message })
+    const tail = snap.data ? ` (${snap.data.customer_name || '—'}${snap.data.category ? ', ' + snap.data.category : ''})` : ''
     await writeAuditLog(supabase, req, {
       action: 'inquiry.delete',
       entity: 'inquiry',
       entity_id: String(id),
-      summary: `Удалена заявка #${id}`,
+      summary: `Удалена заявка #${id}${tail}`,
+      meta: snap.data ?? {},
     })
     return res.status(200).json({ ok: true })
   }

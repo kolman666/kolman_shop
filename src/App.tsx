@@ -17,7 +17,9 @@ import NewsBlock from './components/NewsBlock'
 import AuthModal from './components/AuthModal'
 import ProductRecommendations from './components/ProductRecommendations'
 import { AUTH_EVENT, getUser, refreshUser, type User } from './lib/auth'
-import ProfilePage from './pages/ProfilePage'
+// Heavy routes are code-split so the home page doesn't ship them on first paint.
+// Each sits behind <Suspense> in the Routes block below.
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 import { fetchSiteContent, fetchSiteContentLocalized } from './lib/siteContent'
 import { safeBackgroundImage } from './lib/safeUrl'
 import { FOOTER_NAV_ROUTES, FOOTER_SERVICE_ROUTES } from './lib/footerLinks'
@@ -26,8 +28,8 @@ import AboutPage from './pages/AboutPage'
 // Admin is a big chunk (~250kb) and only relevant for the shop owner. Code-split
 // it so first-paint for shoppers doesn't pull it in.
 const AdminPage = lazy(() => import('./pages/AdminPage'))
-import CatalogPage from './pages/CatalogPage'
-import ProductPage from './pages/ProductPage'
+const CatalogPage = lazy(() => import('./pages/CatalogPage'))
+const ProductPage = lazy(() => import('./pages/ProductPage'))
 import SupportPage from './pages/SupportPage'
 import PartnershipPage from './pages/PartnershipPage'
 import HelpChoosePage from './pages/HelpChoosePage'
@@ -36,8 +38,8 @@ import ModdingPage from './pages/ModdingPage'
 import NewsArticlePage from './pages/NewsArticlePage'
 import NewsArchivePage from './pages/NewsArchivePage'
 import BrandPage from './pages/BrandPage'
-import UsedMarketPage from './pages/UsedMarketPage'
-import ComparePage from './pages/ComparePage'
+const UsedMarketPage = lazy(() => import('./pages/UsedMarketPage'))
+const ComparePage = lazy(() => import('./pages/ComparePage'))
 import NotFoundPage from './pages/NotFoundPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import { getCartCount } from './lib/cart'
@@ -980,6 +982,13 @@ export default function App() {
     <BrowserRouter>
       <ScrollToTop />
       <CartShareListener />
+      {/* All non-home routes are lazy-loaded; share a single Suspense boundary
+        * so we don't ship multiple loading spinners. */}
+      <Suspense fallback={
+        <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-dim)', fontSize: 13 }}>
+          загрузка…
+        </div>
+      }>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route
@@ -1083,6 +1092,7 @@ export default function App() {
           }
         />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

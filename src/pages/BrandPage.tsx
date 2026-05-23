@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { fetchSiteContent } from '../lib/siteContent'
@@ -20,14 +20,32 @@ type BrandPageData = {
   highlights?: Array<{ title: string; text: string }>
 }
 
+// Lets the admin preview modal pass unsaved edits directly into BrandPage
+// without going through the server. When this context is set, BrandPage
+// uses it instead of `fetchSiteContent` so the admin sees what they're
+// currently editing, not what's already saved.
+const BrandPagePreviewContext = createContext<BrandPageData | null>(null)
+
+export function BrandPagePreviewProvider({ data, children }: { data: BrandPageData; children: ReactNode }) {
+  return <BrandPagePreviewContext.Provider value={data}>{children}</BrandPagePreviewContext.Provider>
+}
+
 export default function BrandPage() {
   const { slug } = useParams()
   const { t, i18n } = useTranslation()
-  const [data, setData] = useState<BrandPageData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const previewData = useContext(BrandPagePreviewContext)
+  const [data, setData] = useState<BrandPageData | null>(previewData ?? null)
+  const [loading, setLoading] = useState(!previewData)
   const { products } = useProducts()
 
   useEffect(() => {
+    // When the admin preview modal supplies data via context, bypass the
+    // server entirely so unsaved edits are reflected immediately.
+    if (previewData) {
+      setData(previewData)
+      setLoading(false)
+      return
+    }
     if (!slug) return
     let cancelled = false
     setLoading(true)
@@ -54,7 +72,7 @@ export default function BrandPage() {
       }
     })()
     return () => { cancelled = true }
-  }, [slug, i18n.language])
+  }, [slug, i18n.language, previewData])
 
   // Resolve products that belong to this brand. Admins can override the
   // filter string in `brandFilter`; default to the slug.
@@ -84,7 +102,7 @@ export default function BrandPage() {
         >
           <div className="brand-page__hero-inner">
             <Link to="/" className="brand-page__back">← {t('ui.toHome')}</Link>
-            {data?.logo && <img className="brand-page__logo" src={data.logo} alt={data?.name ?? slug} />}
+            {data?.logo && <img className="brand-page__logo" src={data.logo} alt={data?.name ?? slug} loading="lazy" decoding="async" />}
             <h1 className="brand-page__title">{data?.name || slug}</h1>
             {data?.tagline && <p className="brand-page__tagline">{data.tagline}</p>}
             {websiteUrl && isExternalSite && (

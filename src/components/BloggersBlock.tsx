@@ -142,6 +142,8 @@ export default function BloggersBlock({ products }: Props) {
                           className="bloggers-gear__item-img"
                           src={p.image}
                           alt={p.titleDirect ?? p.brand}
+                          loading="lazy"
+                          decoding="async"
                         />
                       </div>
                       <div className="bloggers-gear__item-info">

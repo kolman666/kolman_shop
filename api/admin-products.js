@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { isAdminAuthorized, isSafeHttpUrl } from './_lib/auth.js'
-import { writeAuditLog } from './_lib/audit-log.js'
+import { writeAuditLog, diffRecords } from './_lib/audit-log.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -230,6 +230,11 @@ export default async function handler(req, res) {
       safeUpdates.variant_groups = normalizeVariantGroups(safeUpdates.variant_groups)
     }
 
+    // Snapshot the row before update so we can compute a real field-level
+    // diff for the audit log ("цена: 1 200 → 1 490; quantity: 5 → 3").
+    const beforeRes = await supabase.from('admin_products').select('*').eq('id', id).maybeSingle()
+    const before = beforeRes.data ?? {}
+
     const { data, error } = await supabase
       .from('admin_products')
       .update(safeUpdates)
@@ -238,12 +243,41 @@ export default async function handler(req, res) {
       .single()
 
     if (error) return res.status(500).json({ error: error.message })
+
+    // Russian aliases so the audit timeline reads like a human wrote it,
+    // not like a column dump.
+    const PRODUCT_ALIASES = {
+      brand: 'бренд',
+      title: 'название',
+      description: 'описание',
+      price: 'цена',
+      image: 'главное фото',
+      gallery: 'галерея',
+      availability: 'статус',
+      category_key: 'категория',
+      specs: 'характеристики',
+      variant_groups: 'вариативности',
+      is_featured: 'рекомендуемый',
+      quantity: 'кол-во в наличии',
+      is_used: 'б/у',
+      condition: 'состояние',
+      defects: 'дефекты',
+      original_price: 'цена нового',
+    }
+    const changes = diffRecords(before, data, {
+      fields: Object.keys(safeUpdates),
+      aliases: PRODUCT_ALIASES,
+    })
     await writeAuditLog(supabase, req, {
       action: 'product.update',
       entity: 'product',
       entity_id: String(id),
-      summary: `Изменён товар #${id}: ${data?.title ?? ''}`,
-      meta: { fields: Object.keys(safeUpdates) },
+      // Let the helper build the summary from `changes`.
+      summary: changes.length === 0
+        ? `Товар #${id} сохранён без изменений`
+        : `Изменён товар #${id} «${data?.title ?? ''}»`,
+      meta: { product_title: data?.title, product_brand: data?.brand },
+      changes,
     })
     return res.status(200).json(data)
   }
@@ -253,13 +287,20 @@ export default async function handler(req, res) {
     const { id } = req.body ?? {}
     if (!id || typeof id !== 'number') return res.status(400).json({ error: 'missing or invalid id' })
 
+    // Capture the row before we drop it so the audit summary shows what was
+    // killed: brand + title + price. Otherwise admin sees an opaque "#42".
+    const snap = await supabase.from('admin_products').select('brand, title, price').eq('id', id).maybeSingle()
     const { error } = await supabase.from('admin_products').delete().eq('id', id)
     if (error) return res.status(500).json({ error: error.message })
+    const label = snap.data
+      ? `${snap.data.brand ?? ''} ${snap.data.title ?? ''}`.trim() || `#${id}`
+      : `#${id}`
     await writeAuditLog(supabase, req, {
       action: 'product.delete',
       entity: 'product',
       entity_id: String(id),
-      summary: `Удалён товар #${id}`,
+      summary: `Удалён товар: ${label}${snap.data?.price ? ` (${snap.data.price} ₽)` : ''}`,
+      meta: snap.data ?? {},
     })
     return res.status(200).json({ ok: true })
   }

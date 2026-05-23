@@ -109,7 +109,7 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
         <div className="product-card__badges">
           <span className={`product-card__status product-card__status--${statusClass}`}>{statusLabel}</span>
         </div>
-        <img className="product-card__image" src={product.image} alt={title} />
+        <img className="product-card__image" src={product.image} alt={title} loading="lazy" decoding="async" />
       </div>
 
       <div className="product-card__body">

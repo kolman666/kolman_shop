@@ -552,7 +552,7 @@ function FavoritesTab() {
       {favoriteProducts.map((product) => (
         <article key={product.id} className="profile-favorite">
           <Link to={productPath(product)} className="profile-favorite__cover" aria-label={product.titleDirect ?? ''} />
-          <img className="profile-favorite__image" src={product.image} alt="" />
+          <img className="profile-favorite__image" src={product.image} alt="" loading="lazy" decoding="async" />
           <div className="profile-favorite__body">
             <p className="profile-favorite__brand">{product.brand}</p>
             <h3 className="profile-favorite__title">{product.titleDirect ?? product.titleKey}</h3>

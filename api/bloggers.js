@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { isAdminAuthorized, isSafeHttpUrl } from './_lib/auth.js'
-import { writeAuditLog } from './_lib/audit-log.js'
+import { writeAuditLog, diffRecords } from './_lib/audit-log.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -101,6 +101,7 @@ export default async function handler(req, res) {
     const validationError = validateBlogger(safeUpdates)
     if (validationError) return res.status(400).json({ error: validationError })
 
+    const before = (await supabase.from('bloggers').select('*').eq('id', id).maybeSingle()).data ?? {}
     const { data, error } = await supabase
       .from('bloggers')
       .update(safeUpdates)
@@ -108,12 +109,24 @@ export default async function handler(req, res) {
       .select()
       .single()
     if (error) return res.status(500).json({ error: error.message })
+    const BLOGGER_ALIASES = {
+      name: 'имя', description: 'описание', image: 'фото',
+      social_url: 'ссылка', gear_product_ids: 'товары сетапа',
+      is_active: 'активен', sort_order: 'порядок',
+    }
+    const changes = diffRecords(before, data, {
+      fields: Object.keys(safeUpdates),
+      aliases: BLOGGER_ALIASES,
+    })
     await writeAuditLog(supabase, req, {
       action: 'blogger.update',
       entity: 'blogger',
       entity_id: String(id),
-      summary: `Изменён блогер #${id}: ${data?.name ?? ''}`,
-      meta: { fields: Object.keys(safeUpdates) },
+      summary: changes.length === 0
+        ? `Блогер #${id} сохранён без изменений`
+        : `Изменён блогер #${id} «${data?.name ?? ''}»`,
+      meta: { blogger_name: data?.name },
+      changes,
     })
     return res.status(200).json(data)
   }
@@ -122,13 +135,15 @@ export default async function handler(req, res) {
   if (req.method === 'DELETE') {
     const { id } = req.body ?? {}
     if (!id || typeof id !== 'number') return res.status(400).json({ error: 'missing or invalid id' })
+    const snap = await supabase.from('bloggers').select('name').eq('id', id).maybeSingle()
     const { error } = await supabase.from('bloggers').delete().eq('id', id)
     if (error) return res.status(500).json({ error: error.message })
     await writeAuditLog(supabase, req, {
       action: 'blogger.delete',
       entity: 'blogger',
       entity_id: String(id),
-      summary: `Удалён блогер #${id}`,
+      summary: `Удалён блогер: ${snap.data?.name ?? `#${id}`}`,
+      meta: snap.data ?? {},
     })
     return res.status(200).json({ ok: true })
   }

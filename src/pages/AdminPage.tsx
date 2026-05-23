@@ -1997,9 +1997,9 @@ function OrdersTab({
     <div className="admin__content-tab">
       <div className="admin__content-header">
         <h2 className="admin__content-title">Заказы</h2>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div className="admin__toolbar">
           {error && <span style={{ color: 'var(--color-main)', fontSize: 13 }}>{error}</span>}
-          <select className="admin__input" value={filter} onChange={(e) => setFilter(e.target.value as OrderStatus | '')} style={{ width: 200 }}>
+          <select className="admin__input admin__toolbar-select" value={filter} onChange={(e) => setFilter(e.target.value as OrderStatus | '')}>
             <option value="">Все статусы</option>
             {ORDER_STATUSES.map((s) => <option key={s} value={s}>{ORDER_STATUS_LABELS[s]}</option>)}
           </select>
@@ -2233,13 +2233,13 @@ function InquiriesTab() {
     <div className="admin__content-tab">
       <div className="admin__content-header">
         <h2 className="admin__content-title">Заявки в поддержку</h2>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div className="admin__toolbar">
           {error && <span style={{ color: 'var(--color-main)', fontSize: 13 }}>{error}</span>}
-          <select className="admin__input" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as InquiryCategory | '')} style={{ width: 180 }}>
+          <select className="admin__input admin__toolbar-select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as InquiryCategory | '')}>
             <option value="">Все категории</option>
             {INQUIRY_CATEGORIES.map((c) => <option key={c} value={c}>{INQUIRY_CATEGORY_LABELS[c]}</option>)}
           </select>
-          <select className="admin__input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as InquiryStatus | '')} style={{ width: 160 }}>
+          <select className="admin__input admin__toolbar-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as InquiryStatus | '')}>
             <option value="">Все статусы</option>
             {INQUIRY_STATUSES.map((s) => <option key={s} value={s}>{INQUIRY_STATUS_LABELS[s]}</option>)}
           </select>

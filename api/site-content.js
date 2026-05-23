@@ -361,16 +361,62 @@ export default async function handler(req, res) {
     const result = validator(value)
     if (!result.ok) return res.status(400).json({ error: result.error })
 
+    // Capture the previous JSON so the audit log can record array
+    // additions/removals ("Hero-слайды: было 3 → стало 4") and string
+    // edits ("text: «старая» → «новая»").
+    const beforeSnap = await supabase.from('site_content').select('value').eq('key', key).maybeSingle()
+    const beforeValue = beforeSnap.data?.value ?? null
+
     const { error } = await supabase
       .from('site_content')
       .upsert({ key, value: result.value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
 
     if (error) return res.status(500).json({ error: error.message })
+
+    // Build a sensible diff. For array-valued keys (hero_slides, news,
+    // brand_logos, etc.) we report length changes. For top-level objects
+    // (homepage_brand_spotlight, site_chrome) we diff individual fields.
+    const beforeArr = Array.isArray(beforeValue) ? beforeValue : null
+    const afterArr = Array.isArray(result.value) ? result.value : null
+    let changes = []
+    if (beforeArr || afterArr) {
+      const beforeCount = beforeArr?.length ?? 0
+      const afterCount = afterArr?.length ?? 0
+      if (beforeCount !== afterCount) {
+        changes.push({ field: 'количество элементов', before: beforeCount, after: afterCount })
+      } else {
+        // Same length — diff item-by-item indices to surface "элемент N изменён".
+        const max = Math.max(beforeCount, afterCount)
+        let touched = 0
+        for (let i = 0; i < max && touched < 5; i++) {
+          const a = beforeArr?.[i]
+          const b = afterArr?.[i]
+          try {
+            if (JSON.stringify(a) !== JSON.stringify(b)) {
+              const label = (b && typeof b === 'object' && 'title' in b && b.title)
+                ? `«${String((b).title).slice(0, 40)}»`
+                : `#${i + 1}`
+              changes.push({ field: `элемент ${label}`, before: a, after: b })
+              touched++
+            }
+          } catch { /* ignore */ }
+        }
+        if (touched === 0) {
+          changes.push({ field: 'данные', before: 'без изменений', after: 'без изменений' })
+        }
+      }
+    } else if (beforeValue && typeof beforeValue === 'object' && result.value && typeof result.value === 'object') {
+      const { diffRecords } = await import('./_lib/audit-log.js')
+      changes = diffRecords(beforeValue, result.value)
+    }
+
     await writeAuditLog(supabase, req, {
       action: 'content.update',
       entity: 'site_content',
       entity_id: key,
-      summary: `Сохранён контент: ${key}`,
+      summary: `Контент «${key}» сохранён`,
+      meta: { key },
+      changes,
     })
     return res.status(200).json({ ok: true })
   }

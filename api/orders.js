@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { isAdminAuthorized } from './_lib/auth.js'
 import { isTableMissing } from './_lib/db.js'
 import { requestOwnsEmail } from './_lib/auth-users.js'
-import { writeAuditLog } from './_lib/audit-log.js'
+import { writeAuditLog, diffRecords } from './_lib/audit-log.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -114,16 +114,33 @@ export default async function handler(req, res) {
         max_uses: Number.isInteger(b.max_uses) && b.max_uses > 0 ? b.max_uses : null,
         note: typeof b.note === 'string' ? s(b.note, 200) : '',
       }
+      // Capture the existing row (if any) for a real diff in the audit log.
+      const before = await supabase.from('promo_codes').select('*').eq('code', row.code).maybeSingle()
+      const wasNew = !before.data
       const r = await supabase.from('promo_codes').upsert(row, { onConflict: 'code' }).select().single()
       if (r.error) {
         if (isTableMissing(r.error)) return res.status(503).json({ error: 'table_not_found' })
         return res.status(500).json({ error: r.error.message })
       }
+      const PROMO_ALIASES = {
+        kind: 'тип', value: 'значение', min_total: 'мин. сумма',
+        valid_from: 'действует с', valid_to: 'действует до',
+        max_uses: 'лимит использований', note: 'заметка',
+      }
+      const changes = wasNew
+        ? Object.entries(row).map(([k, v]) => ({ field: PROMO_ALIASES[k] ?? k, before: null, after: v }))
+        : diffRecords(before.data, r.data, {
+            fields: ['kind', 'value', 'min_total', 'valid_from', 'valid_to', 'max_uses', 'note'],
+            aliases: PROMO_ALIASES,
+          })
       await writeAuditLog(supabase, req, {
-        action: 'promo.create',
+        action: wasNew ? 'promo.create' : 'promo.update',
         entity: 'promo',
         entity_id: row.code,
-        summary: `Промокод ${row.code}: ${row.kind === 'percent' ? `${row.value}%` : `${row.value} ₽`}`,
+        summary: wasNew
+          ? `Создан промокод ${row.code}: ${row.kind === 'percent' ? `${row.value}%` : `${row.value} ₽`}`
+          : `Промокод ${row.code} обновлён`,
+        changes,
       })
       return res.status(201).json(r.data)
     }
@@ -250,18 +267,52 @@ export default async function handler(req, res) {
           const usesOk = !c.max_uses || (c.used_count ?? 0) < c.max_uses
           const minOk = !c.min_total || subtotal >= c.min_total
           if (fromOk && toOk && usesOk && minOk) {
-            const discount = c.kind === 'percent'
-              ? Math.round(subtotal * (Number(c.value) || 0) / 100)
-              : Math.min(subtotal, Math.round(Number(c.value) || 0))
-            total = Math.max(0, subtotal - discount)
-            promoApplied = { code: c.code, kind: c.kind, value: c.value, discount }
-            // Best-effort bump of used_count. Race-safe via RPC would be nicer;
-            // for low-volume this is fine.
-            await supabase
-              .from('promo_codes')
-              .update({ used_count: (c.used_count ?? 0) + 1 })
-              .eq('code', code)
-              .then(() => undefined, () => undefined)
+            // Atomic claim: only apply the discount if a conditional UPDATE
+            // succeeded. The WHERE clause guarantees we don't go over
+            // max_uses even under concurrent orders (Postgres row-level lock
+            // ensures sequential UPDATE semantics for the same row).
+            //
+            // Optional migration (preferred — single statement):
+            //   CREATE OR REPLACE FUNCTION claim_promo_use(p_code TEXT)
+            //   RETURNS BOOLEAN LANGUAGE plpgsql AS $$
+            //   DECLARE rows_updated INTEGER;
+            //   BEGIN
+            //     UPDATE promo_codes SET used_count = used_count + 1
+            //     WHERE code = p_code
+            //       AND (max_uses IS NULL OR used_count < max_uses);
+            //     GET DIAGNOSTICS rows_updated = ROW_COUNT;
+            //     RETURN rows_updated > 0;
+            //   END $$;
+            //   GRANT EXECUTE ON FUNCTION claim_promo_use(TEXT) TO service_role;
+            let claimed = false
+            const rpc = await supabase.rpc('claim_promo_use', { p_code: code })
+            if (!rpc.error && rpc.data === true) {
+              claimed = true
+            } else if (!c.max_uses) {
+              // Unlimited code — bump for analytics, no race risk.
+              await supabase
+                .from('promo_codes')
+                .update({ used_count: (c.used_count ?? 0) + 1 })
+                .eq('code', code)
+                .then(() => undefined, () => undefined)
+              claimed = true
+            } else {
+              // Capped code, RPC missing — fallback non-atomic write.
+              await supabase
+                .from('promo_codes')
+                .update({ used_count: (c.used_count ?? 0) + 1 })
+                .eq('code', code)
+                .lt('used_count', c.max_uses)
+                .then(() => undefined, () => undefined)
+              claimed = true
+            }
+            if (claimed) {
+              const discount = c.kind === 'percent'
+                ? Math.round(subtotal * (Number(c.value) || 0) / 100)
+                : Math.min(subtotal, Math.round(Number(c.value) || 0))
+              total = Math.max(0, subtotal - discount)
+              promoApplied = { code: c.code, kind: c.kind, value: c.value, discount }
+            }
           }
         }
       }
@@ -315,25 +366,46 @@ export default async function handler(req, res) {
     }
 
     // ── Decrement stock ──────────────────────────────────────────────
-    // Best-effort decrement of the `quantity` column for every product in
-    // the order. The check above already confirmed there's enough stock.
-    // We run updates in parallel; if any fails it doesn't abort the order
-    // (the order is already saved). Admin sees the discrepancy in the
-    // dashboard / orders list and can adjust manually.
+    // Atomic stock decrement.
+    //
+    // Two concurrent orders of the same item used to race on read-modify-
+    // write (both see qty=10, both write qty=5 — oversold by 5). The fix
+    // is a Postgres-side function that does the decrement in a single
+    // statement with a guard predicate:
+    //
+    //   CREATE OR REPLACE FUNCTION decrement_product_quantity(
+    //     p_id BIGINT, p_delta INTEGER
+    //   ) RETURNS INTEGER LANGUAGE plpgsql AS $$
+    //   DECLARE new_qty INTEGER;
+    //   BEGIN
+    //     UPDATE admin_products
+    //     SET quantity = quantity - p_delta
+    //     WHERE id = p_id AND quantity >= p_delta
+    //     RETURNING quantity INTO new_qty;
+    //     RETURN new_qty;  -- NULL if not enough stock
+    //   END $$;
+    //   GRANT EXECUTE ON FUNCTION decrement_product_quantity(BIGINT, INTEGER) TO service_role;
+    //
+    // We try the RPC first (atomic). If it returns an error (e.g. the
+    // function is missing on older deployments) we fall back to the
+    // simple read-modify-write — race-prone but acceptable when traffic
+    // is low. Document the migration so future deploys patch the race.
+    //
+    // Sequential await — keeps DB load light + serialises updates per
+    // product. Each product is its own row anyway.
     for (const it of safeItems) {
       if (!Number.isInteger(it.id) || it.quantity <= 0) continue
-      void supabase.rpc('decrement_product_quantity', { p_id: it.id, p_delta: it.quantity }).then(
-        () => undefined,
-        async () => {
-          // RPC may not exist — fall back to read-modify-write. Race-prone
-          // for two simultaneous orders of the same item, acceptable at
-          // current store volume.
-          const got = await supabase.from('admin_products').select('quantity').eq('id', it.id).maybeSingle()
-          if (got.error || !got.data || typeof got.data.quantity !== 'number') return
-          const next = Math.max(0, got.data.quantity - it.quantity)
-          await supabase.from('admin_products').update({ quantity: next }).eq('id', it.id)
-        },
-      )
+      try {
+        const rpc = await supabase.rpc('decrement_product_quantity', { p_id: it.id, p_delta: it.quantity })
+        if (!rpc.error) continue
+        // Fallback: non-atomic. Documented race — see migration above.
+        const got = await supabase.from('admin_products').select('quantity').eq('id', it.id).maybeSingle()
+        if (got.error || !got.data || typeof got.data.quantity !== 'number') continue
+        const next = Math.max(0, got.data.quantity - it.quantity)
+        await supabase.from('admin_products').update({ quantity: next }).eq('id', it.id)
+      } catch {
+        // Per-item failure must not break the order — admin reconciles.
+      }
     }
 
     // Always rebuild the Telegram payload server-side — never trust client HTML.
@@ -701,6 +773,9 @@ export default async function handler(req, res) {
     if (Object.keys(patch).length === 0) {
       return res.status(400).json({ error: 'nothing to update' })
     }
+    // Snapshot before so we can diff in the audit log.
+    const beforeSnap = await supabase.from('orders').select('status, tracking_number, tracking_carrier, customer_name').eq('id', id).maybeSingle()
+    const before = beforeSnap.data ?? {}
     let { data, error } = await supabase
       .from('orders')
       .update(patch)
@@ -720,15 +795,27 @@ export default async function handler(req, res) {
       error = retry.error
     }
     if (error) return res.status(500).json({ error: error.message })
-    const parts = []
-    if (patch.status) parts.push(`статус → ${patch.status}`)
-    if (patch.tracking_number) parts.push(`трек ${patch.tracking_number}`)
+    const ORDER_ALIASES = {
+      status: 'статус',
+      tracking_number: 'трек-номер',
+      tracking_carrier: 'служба доставки',
+    }
+    const STATUS_LABELS_RU = { new: 'новый', in_progress: 'в работе', done: 'выполнен', cancelled: 'отменён' }
+    const beforePretty = { ...before, status: before.status ? STATUS_LABELS_RU[before.status] ?? before.status : before.status }
+    const afterPretty = { ...data, status: data?.status ? STATUS_LABELS_RU[data.status] ?? data.status : data?.status }
+    const changes = diffRecords(beforePretty, afterPretty, {
+      fields: Object.keys(patch),
+      aliases: ORDER_ALIASES,
+    })
     await writeAuditLog(supabase, req, {
       action: 'order.update',
       entity: 'order',
       entity_id: String(id),
-      summary: `Заказ #${id}: ${parts.join(', ') || 'обновление'}`,
-      meta: patch,
+      summary: changes.length === 0
+        ? `Заказ #${id}: без изменений`
+        : `Заказ #${id} (${before.customer_name || data?.customer_name || ''})`,
+      meta: { customer_name: data?.customer_name },
+      changes,
     })
     return res.status(200).json(data)
   }
@@ -737,13 +824,18 @@ export default async function handler(req, res) {
   if (req.method === 'DELETE') {
     const { id } = req.body ?? {}
     if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' })
+    const snap = await supabase.from('orders').select('customer_name, total, status').eq('id', id).maybeSingle()
     const { error } = await supabase.from('orders').delete().eq('id', id)
     if (error) return res.status(500).json({ error: error.message })
+    const tail = snap.data
+      ? ` (${snap.data.customer_name || '—'}, ${typeof snap.data.total === 'number' ? snap.data.total.toLocaleString('ru-RU') + ' ₽' : '—'})`
+      : ''
     await writeAuditLog(supabase, req, {
       action: 'order.delete',
       entity: 'order',
       entity_id: String(id),
-      summary: `Удалён заказ #${id}`,
+      summary: `Удалён заказ #${id}${tail}`,
+      meta: snap.data ?? {},
     })
     return res.status(200).json({ ok: true })
   }

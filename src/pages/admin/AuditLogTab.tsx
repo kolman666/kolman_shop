@@ -125,6 +125,7 @@ export default function AuditLogTab() {
                 <time className="audit-log__time" dateTime={row.created_at}>{fmtTime(row.created_at)}</time>
               </div>
               <p className="audit-log__summary">{row.summary}</p>
+              <ChangesDiff meta={row.meta} />
               {(row.entity || row.entity_id) && (
                 <p className="audit-log__meta-line">
                   {row.entity && <span className="audit-log__tag">{row.entity}</span>}
@@ -137,6 +138,7 @@ export default function AuditLogTab() {
         </ul>
       )}
 
+      {/* see ChangesDiff component below */}
       {totalPages > 1 && (
         <div className="audit-log__pager">
           <button
@@ -160,4 +162,44 @@ export default function AuditLogTab() {
       )}
     </div>
   )
+}
+
+// Renders a "field: before → after" diff list from `meta.changes`. Each
+// change comes from writeAuditLog(... { changes: [...] }). Hidden when
+// the meta blob has no changes (older rows or actions without diffs).
+type ChangeEntry = { field?: string; before?: unknown; after?: unknown }
+
+function ChangesDiff({ meta }: { meta?: Record<string, unknown> }) {
+  const changes = Array.isArray((meta ?? {}).changes) ? ((meta as { changes: ChangeEntry[] }).changes) : []
+  if (changes.length === 0) return null
+  return (
+    <ul className="audit-log__changes">
+      {changes.map((c, i) => (
+        <li key={`${c.field}-${i}`} className="audit-log__change">
+          <span className="audit-log__change-field">{c.field ?? '—'}</span>
+          <span className="audit-log__change-before" title={JSON.stringify(c.before)}>
+            {fmtVal(c.before)}
+          </span>
+          <span className="audit-log__change-arrow" aria-hidden>→</span>
+          <span className="audit-log__change-after" title={JSON.stringify(c.after)}>
+            {fmtVal(c.after)}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function fmtVal(v: unknown): string {
+  if (v === null || v === undefined) return '∅'
+  if (typeof v === 'string') return v === '' ? '(пусто)' : v.length > 60 ? `«${v.slice(0, 60)}…»` : `«${v}»`
+  if (typeof v === 'number') return v.toLocaleString('ru-RU')
+  if (typeof v === 'boolean') return v ? 'да' : 'нет'
+  if (Array.isArray(v)) return `${v.length} эл.`
+  try {
+    const s = JSON.stringify(v)
+    return s.length > 60 ? `${s.slice(0, 60)}…` : s
+  } catch {
+    return String(v).slice(0, 60)
+  }
 }

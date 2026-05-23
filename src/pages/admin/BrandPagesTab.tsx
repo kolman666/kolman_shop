@@ -5,7 +5,7 @@ import { AccordionSection } from './AccordionSection'
 import { ArrayEditor } from './ArrayEditor'
 import MediaPicker from '../../components/admin/MediaPicker'
 import { PreviewModal } from './PreviewModal'
-import BrandPage from '../BrandPage'
+import BrandPage, { BrandPagePreviewProvider } from '../BrandPage'
 
 type BrandLogo = {
   name: string
@@ -307,11 +307,13 @@ export function BrandPagesTab() {
         title={`${data.name || activeSlug} - превью`}
         onClose={() => setPreviewOpen(false)}
       >
-        <MemoryRouter initialEntries={[`/brand/${activeSlug}`]}>
-          <Routes>
-            <Route path="/brand/:slug" element={<BrandPage />} />
-          </Routes>
-        </MemoryRouter>
+        <BrandPagePreviewProvider data={data}>
+          <MemoryRouter initialEntries={[`/brand/${activeSlug}`]}>
+            <Routes>
+              <Route path="/brand/:slug" element={<BrandPage />} />
+            </Routes>
+          </MemoryRouter>
+        </BrandPagePreviewProvider>
       </PreviewModal>
     </div>
   )
