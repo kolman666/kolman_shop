@@ -12872,7 +12872,7 @@ h1, h2, h3, h4 {
 
   /* Body */
   .product-card__body {
-    padding: 10px 10px 12px !important;
+    padding: 10px 10px 0 !important;
     gap: 4px !important;
   }
   .product-card__meta {
@@ -12899,7 +12899,7 @@ h1, h2, h3, h4 {
 
   /* Price row + cart button */
   .product-card__footer {
-    padding: 8px 10px 10px !important;
+    padding: 8px 10px 0 !important;
     gap: 6px;
   }
   .product-card__price {
