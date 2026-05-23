@@ -11,6 +11,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { listMedia, uploadMedia, type MediaItem } from '../../lib/media'
+import { IconFolder, IconGlobe, IconUpload } from '../icons/UiIcons'
 
 type Props = {
   value: string
@@ -55,7 +56,7 @@ export default function MediaPicker({ value, onChange, label, hint, accept = 'im
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />
-        <label className={`media-picker__upload ${uploading ? 'media-picker__upload--busy' : ''}`.trim()}>
+        <label className={`media-picker__upload ui-icon-btn ${uploading ? 'media-picker__upload--busy' : ''}`.trim()}>
           <input
             ref={inputRef}
             type="file"
@@ -63,14 +64,16 @@ export default function MediaPicker({ value, onChange, label, hint, accept = 'im
             onChange={(e) => void handleFiles(e.target.files)}
             disabled={uploading}
           />
-          {uploading ? '…' : '⤓ файл'}
+          <IconUpload size={16} />
+          <span>{uploading ? '…' : 'файл'}</span>
         </label>
         <button
           type="button"
-          className="ghost-btn media-picker__lib-btn"
+          className="ghost-btn media-picker__lib-btn ui-icon-btn"
           onClick={() => setShowLibrary(true)}
         >
-          📁 из библиотеки
+          <IconFolder size={16} />
+          <span>из библиотеки</span>
         </button>
       </div>
       {value && (
@@ -187,7 +190,11 @@ function MediaLibraryModal({
                   ) : (
                     <img src={it.url} alt={it.alt ?? ''} className="media-library__thumb" loading="lazy" />
                   )}
-                  {it.external && <span className="media-tab__ext-badge media-tab__ext-badge--small">🌐</span>}
+                  {it.external && (
+                    <span className="media-tab__ext-badge media-tab__ext-badge--small" title="внешний файл">
+                      <IconGlobe size={11} />
+                    </span>
+                  )}
                 </div>
                 <span className="media-library__cell-alt">{it.alt || it.path.split('/').pop()}</span>
               </button>

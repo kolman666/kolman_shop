@@ -13,6 +13,16 @@
 // Refreshes every 30s. All counts come from /api/orders?stats=1.
 
 import { useEffect, useState } from 'react'
+import {
+  IconCart,
+  IconChat,
+  IconCheck,
+  IconChevronRight,
+  IconDocument,
+  IconPackage,
+  IconPlus,
+  IconTicket,
+} from '../../components/icons/UiIcons'
 
 type Stats = {
   revenue: { today: number; yesterday: number; week: number; weekPrev: number; month: number; monthPrev: number }
@@ -182,39 +192,42 @@ export default function DashboardTab({ onJumpToOrders, onJumpToTab }: Props) {
             {totalPending > 0 && <span className="dash-panel__badge">{totalPending}</span>}
           </header>
           {totalPending === 0 ? (
-            <p className="dash-panel__empty">✓ Всё закрыто. Можно выдохнуть.</p>
+            <p className="dash-panel__empty dash-panel__empty--ok">
+              <IconCheck size={16} />
+              <span>Всё закрыто. Можно выдохнуть.</span>
+            </p>
           ) : (
             <ul className="dash-actions">
               {stats.pending.needTracking > 0 && (
                 <li>
                   <button type="button" className="dash-action" onClick={() => onJumpToOrders?.('in_progress')}>
-                    <span className="dash-action__icon dash-action__icon--ship">📦</span>
+                    <span className="dash-action__icon dash-action__icon--ship"><IconPackage size={18} /></span>
                     <span className="dash-action__text">
                       <strong>{stats.pending.needTracking}</strong> заказ{plural(stats.pending.needTracking, ['','а','ов'])} без трек-номера
                     </span>
-                    <span className="dash-action__arrow">→</span>
+                    <span className="dash-action__arrow"><IconChevronRight size={16} /></span>
                   </button>
                 </li>
               )}
               {stats.pending.openInquiries > 0 && (
                 <li>
                   <button type="button" className="dash-action" onClick={() => onJumpToTab?.('inquiries')}>
-                    <span className="dash-action__icon dash-action__icon--inq">📝</span>
+                    <span className="dash-action__icon dash-action__icon--inq"><IconDocument size={18} /></span>
                     <span className="dash-action__text">
                       <strong>{stats.pending.openInquiries}</strong> открыт{plural(stats.pending.openInquiries, ['ая заявка', 'ые заявки', 'ых заявок'])}
                     </span>
-                    <span className="dash-action__arrow">→</span>
+                    <span className="dash-action__arrow"><IconChevronRight size={16} /></span>
                   </button>
                 </li>
               )}
               {stats.pending.openChats > 0 && (
                 <li>
                   <button type="button" className="dash-action" onClick={() => onJumpToTab?.('chat')}>
-                    <span className="dash-action__icon dash-action__icon--chat">💬</span>
+                    <span className="dash-action__icon dash-action__icon--chat"><IconChat size={18} /></span>
                     <span className="dash-action__text">
                       <strong>{stats.pending.openChats}</strong> открыт{plural(stats.pending.openChats, ['ый чат', 'ых чата', 'ых чатов'])}
                     </span>
-                    <span className="dash-action__arrow">→</span>
+                    <span className="dash-action__arrow"><IconChevronRight size={16} /></span>
                   </button>
                 </li>
               )}
@@ -228,19 +241,19 @@ export default function DashboardTab({ onJumpToOrders, onJumpToTab }: Props) {
           </header>
           <div className="dash-quick">
             <button type="button" className="dash-quick__btn" onClick={() => onJumpToTab?.('products')}>
-              <span className="dash-quick__icon">＋</span>
+              <span className="dash-quick__icon"><IconPlus size={18} /></span>
               <span>Новый товар</span>
             </button>
             <button type="button" className="dash-quick__btn" onClick={() => onJumpToTab?.('promos')}>
-              <span className="dash-quick__icon">🎟️</span>
+              <span className="dash-quick__icon"><IconTicket size={18} /></span>
               <span>Создать промокод</span>
             </button>
             <button type="button" className="dash-quick__btn" onClick={() => onJumpToTab?.('orders')}>
-              <span className="dash-quick__icon">🛒</span>
+              <span className="dash-quick__icon"><IconCart size={18} /></span>
               <span>Все заказы</span>
             </button>
             <button type="button" className="dash-quick__btn" onClick={() => onJumpToTab?.('chat')}>
-              <span className="dash-quick__icon">💬</span>
+              <span className="dash-quick__icon"><IconChat size={18} /></span>
               <span>Открыть чаты</span>
             </button>
           </div>

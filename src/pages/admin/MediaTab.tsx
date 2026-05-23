@@ -4,6 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { listMedia, uploadMedia, deleteMedia, importExistingMedia, type MediaItem, type ImportResult } from '../../lib/media'
+import { IconCopy, IconFolder, IconGlobe, IconImport, IconUpload, IconX } from '../../components/icons/UiIcons'
 
 function fmtSize(n: number): string {
   if (n < 1024) return `${n} B`
@@ -57,10 +58,6 @@ export default function MediaTab() {
     }
   }
 
-  // One-shot scan of every place in the DB that already stores an image URL
-  // (site_content, products, bloggers, auth_users, reviews) — registers each
-  // unique URL in the media table as external=true. Files don't move; only
-  // the index grows so the library can display + reuse them.
   async function runImport() {
     if (!confirm('Найти все картинки, которые сейчас уже используются на сайте, и добавить их в библиотеку?\n\nФайлы при этом не двигаются — они продолжают грузиться с прежних адресов. Это просто индексация.')) return
     setImporting(true)
@@ -96,16 +93,23 @@ export default function MediaTab() {
   }
 
   return (
-    <div className="admin__content-tab">
+    <div className="admin__content-tab admin__content-tab--media">
       <header className="admin__content-tab-head">
         <h2 className="admin__content-title">Медиа</h2>
         <p className="admin__content-subtitle">
-          Все загруженные файлы хранятся здесь — их можно вставлять в любую секцию через «📁 из библиотеки» в полях редактирования.
+          Все загруженные файлы хранятся здесь — их можно вставлять в любую секцию через
+          {' '}
+          <span className="media-tab__hint-inline">
+            <IconFolder size={14} />
+            из библиотеки
+          </span>
+          {' '}
+          в полях редактирования.
         </p>
       </header>
 
       <div className="media-tab__controls">
-        <label className={`media-picker__upload ${uploading ? 'media-picker__upload--busy' : ''}`.trim()}>
+        <label className={`media-picker__upload ui-icon-btn ${uploading ? 'media-picker__upload--busy' : ''}`.trim()}>
           <input
             ref={inputRef}
             type="file"
@@ -114,16 +118,18 @@ export default function MediaTab() {
             onChange={(e) => void handleFiles(e.target.files)}
             disabled={uploading}
           />
-          {uploading ? 'загружаем…' : '⤓ загрузить файлы'}
+          <IconUpload size={16} />
+          <span>{uploading ? 'загружаем…' : 'загрузить файлы'}</span>
         </label>
         <button
           type="button"
-          className="ghost-btn"
+          className="ghost-btn ui-icon-btn"
           onClick={() => void runImport()}
           disabled={importing}
           title="Найти все уже используемые на сайте URL-картинки и добавить их в библиотеку"
         >
-          {importing ? 'сканируем…' : '📥 импортировать существующие'}
+          <IconImport size={16} />
+          <span>{importing ? 'сканируем…' : 'импортировать существующие'}</span>
         </button>
         <input
           type="search"
@@ -162,30 +168,39 @@ export default function MediaTab() {
           </p>
         </div>
       ) : (
-        <div className="media-library__grid" style={{ padding: 0, marginTop: 16 }}>
+        <div className="media-tab__grid">
           {items.map((it) => (
             <div key={it.id ?? it.path} className="media-tab__cell">
               <div className="media-tab__cell-media">
                 {it.mime.startsWith('video/') ? (
-                  <video src={it.url} className="media-library__thumb" muted preload="metadata" />
+                  <video src={it.url} className="media-tab__thumb" muted preload="metadata" />
                 ) : (
-                  <img src={it.url} alt={it.alt ?? ''} className="media-library__thumb" loading="lazy" />
+                  <img src={it.url} alt={it.alt ?? ''} className="media-tab__thumb" loading="lazy" />
                 )}
-                {it.external && <span className="media-tab__ext-badge" title="внешний файл (хостится не у нас)">🌐 внешний</span>}
+                {it.external && (
+                  <span className="media-tab__ext-badge" title="внешний файл (хостится не у нас)">
+                    <IconGlobe size={11} />
+                    <span>внешний</span>
+                  </span>
+                )}
               </div>
               <div className="media-tab__cell-meta">
                 <span className="media-tab__cell-name">{it.path.split('/').pop()}</span>
                 <span className="media-tab__cell-sub">{it.mime} · {fmtSize(it.size)}</span>
               </div>
               <div className="media-tab__cell-actions">
-                <button type="button" className="ghost-btn media-tab__btn" onClick={() => void copy(it.url)} title="скопировать URL">⎘ url</button>
-                <button type="button" className="admin__inbox-delete media-tab__btn" onClick={() => void remove(it.id)} disabled={it.id === null}>✕</button>
+                <button type="button" className="ghost-btn media-tab__btn ui-icon-btn" onClick={() => void copy(it.url)} title="скопировать URL">
+                  <IconCopy size={13} />
+                  <span>url</span>
+                </button>
+                <button type="button" className="admin__inbox-delete media-tab__btn" onClick={() => void remove(it.id)} disabled={it.id === null} title="удалить" aria-label="удалить">
+                  <IconX size={14} />
+                </button>
               </div>
             </div>
           ))}
         </div>
       )}
-
     </div>
   )
 }
