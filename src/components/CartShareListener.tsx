@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useLayoutEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
 import { useProducts } from '../hooks/useProducts'
@@ -12,7 +12,7 @@ export default function CartShareListener() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const handleShareImported = (event: Event) => {
       const detail = (event as CustomEvent<{ items: Record<string, number> }>)?.detail
       const items = detail?.items
@@ -74,7 +74,7 @@ export default function CartShareListener() {
       )}
 
       {isModalOpen && (
-        <div className="cart-share-modal" role="dialog" aria-modal="true" aria-label="Вам поделились корзиной">
+        <div className="cart-share-modal" role="dialog" aria-modal="true" aria-label="С вами поделились корзиной">
           <div className="cart-share-modal__overlay" onClick={() => setIsModalOpen(false)} />
           <div className="cart-share-modal__card">
             <button type="button" className="cart-share-modal__close" onClick={() => setIsModalOpen(false)} aria-label="закрыть">
@@ -82,7 +82,7 @@ export default function CartShareListener() {
             </button>
             <div className="cart-share-modal__head">
               <span className="cart-share-modal__label">Новая корзина</span>
-              <h2 className="cart-share-modal__title">Вам поделились корзиной</h2>
+              <h2 className="cart-share-modal__title">С вами поделились корзиной</h2>
               <p className="cart-share-modal__text">
                 В вашу корзину добавлено {totalQuantity} {totalQuantity === 1 ? 'товар' : 'товара'}.
               </p>
@@ -116,9 +116,6 @@ export default function CartShareListener() {
                 }}
               >
                 Открыть корзину
-              </button>
-              <button type="button" className="cart-share-modal__secondary" onClick={() => setIsModalOpen(false)}>
-                Закрыть
               </button>
             </div>
           </div>
