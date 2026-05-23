@@ -785,8 +785,12 @@ function ChatTab({ email, userName: _userName }: { email: string; userName: stri
       const raw = err instanceof Error ? err.message : String(err)
       if (/table_not_found|schema cache/.test(raw)) {
         setError(t('ui.profile.chatUnavailable'))
+      } else if (/^(unauthorized|401|403)$/i.test(raw.trim()) || /token_missing_or_invalid/.test(raw)) {
+        // Session lost — push user back to login. Auto-clear stale token
+        // so the next page-load shows the auth modal cleanly.
+        setError('Сессия истекла, войдите снова чтобы создать чат.')
       } else {
-        setError(raw)
+        setError(`Не удалось создать чат: ${raw}`)
       }
     }
   }

@@ -131,7 +131,7 @@ export default function SearchDropdown({ open, onClose, hitProducts, allProducts
                     onClick={onClose}
                   >
                     <div className="search-drop__hit-img-wrap">
-                      <img src={p.image} alt={p.titleDirect ?? p.brand} className="search-drop__hit-img" />
+                      <img src={p.image} alt={p.titleDirect ?? p.brand} className="search-drop__hit-img" loading="lazy" decoding="async" />
                     </div>
                     <div className="search-drop__hit-body">
                       <span className="search-drop__hit-brand">{p.brand}</span>
@@ -159,7 +159,7 @@ export default function SearchDropdown({ open, onClose, hitProducts, allProducts
                     onClick={onClose}
                   >
                     <div className="search-drop__hit-img-wrap">
-                      <img src={p.image} alt={p.titleDirect ?? p.brand} className="search-drop__hit-img" />
+                      <img src={p.image} alt={p.titleDirect ?? p.brand} className="search-drop__hit-img" loading="lazy" decoding="async" />
                     </div>
                     <div className="search-drop__hit-body">
                       <span className="search-drop__hit-brand">{p.brand}</span>

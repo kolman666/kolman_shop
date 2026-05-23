@@ -29,6 +29,34 @@
 
     <!-- PWA manifest -->
     <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!--
+      Fonts: discovered at parse time (instead of after App.css fetches and
+      blocks on `@import`). Preconnect warms up the TLS+DNS so the actual
+      font CSS arrives sooner; `display=swap` is already in the URL so we
+      don't FOIT. We also preload the CSS as a stylesheet via `media=print`
+      flip so it never blocks the first paint — the fallback `<noscript>`
+      keeps things working with JS disabled.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Unbounded:wght@700;800&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Unbounded:wght@700;800&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Unbounded:wght@700;800&display=swap"
+      />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>

@@ -430,6 +430,8 @@ function CartView({ entries, total, onClose, onQtyChange, onRemove, onCheckout }
                   src={entry.image}
                   alt={entry.title}
                   className="cart-item__img"
+                  loading="lazy"
+                  decoding="async"
                 />
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <span

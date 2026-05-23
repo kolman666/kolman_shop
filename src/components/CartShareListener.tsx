@@ -92,7 +92,7 @@ export default function CartShareListener() {
               {items.map((item) => (
                 <li key={item.id} className="cart-share-modal__item">
                   {item.product?.image ? (
-                    <img src={item.product.image} alt="" className="cart-share-modal__thumb" />
+                    <img src={item.product.image} alt="" className="cart-share-modal__thumb" loading="lazy" decoding="async" />
                   ) : (
                     <div className="cart-share-modal__thumb cart-share-modal__thumb--fallback" />
                   )}

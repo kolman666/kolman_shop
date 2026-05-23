@@ -21,28 +21,37 @@ type BrandPageData = {
 }
 
 // Lets the admin preview modal pass unsaved edits directly into BrandPage
-// without going through the server. When this context is set, BrandPage
-// uses it instead of `fetchSiteContent` so the admin sees what they're
-// currently editing, not what's already saved.
-const BrandPagePreviewContext = createContext<BrandPageData | null>(null)
+// without going through the server. When `isPreview` is true, BrandPage
+// uses the context data instead of `fetchSiteContent` so the admin sees
+// what they're currently editing, not what's already saved. We use an
+// explicit `isPreview` flag (rather than just truthy-checking `data`) so
+// the preview path is unambiguous even for empty/initial admin states.
+type PreviewContextValue = { isPreview: true; data: BrandPageData } | null
+const BrandPagePreviewContext = createContext<PreviewContextValue>(null)
 
 export function BrandPagePreviewProvider({ data, children }: { data: BrandPageData; children: ReactNode }) {
-  return <BrandPagePreviewContext.Provider value={data}>{children}</BrandPagePreviewContext.Provider>
+  return (
+    <BrandPagePreviewContext.Provider value={{ isPreview: true, data }}>
+      {children}
+    </BrandPagePreviewContext.Provider>
+  )
 }
 
 export default function BrandPage() {
   const { slug } = useParams()
   const { t, i18n } = useTranslation()
-  const previewData = useContext(BrandPagePreviewContext)
-  const [data, setData] = useState<BrandPageData | null>(previewData ?? null)
-  const [loading, setLoading] = useState(!previewData)
+  const preview = useContext(BrandPagePreviewContext)
+  const previewData = preview?.data ?? null
+  const isPreview = preview?.isPreview === true
+  const [data, setData] = useState<BrandPageData | null>(previewData)
+  const [loading, setLoading] = useState(!isPreview)
   const { products } = useProducts()
 
   useEffect(() => {
-    // When the admin preview modal supplies data via context, bypass the
-    // server entirely so unsaved edits are reflected immediately.
-    if (previewData) {
-      setData(previewData)
+    // Admin preview path: bypass the network entirely. We watch `previewData`
+    // so every patch from the admin form flows through.
+    if (isPreview) {
+      setData(previewData ?? {})
       setLoading(false)
       return
     }
@@ -72,7 +81,7 @@ export default function BrandPage() {
       }
     })()
     return () => { cancelled = true }
-  }, [slug, i18n.language, previewData])
+  }, [slug, i18n.language, isPreview, previewData])
 
   // Resolve products that belong to this brand. Admins can override the
   // filter string in `brandFilter`; default to the slug.
@@ -102,7 +111,7 @@ export default function BrandPage() {
         >
           <div className="brand-page__hero-inner">
             <Link to="/" className="brand-page__back">← {t('ui.toHome')}</Link>
-            {data?.logo && <img className="brand-page__logo" src={data.logo} alt={data?.name ?? slug} loading="lazy" decoding="async" />}
+            {data?.logo && <img className="brand-page__logo" src={data.logo} alt={data?.name ?? slug} decoding="async" />}
             <h1 className="brand-page__title">{data?.name || slug}</h1>
             {data?.tagline && <p className="brand-page__tagline">{data.tagline}</p>}
             {websiteUrl && isExternalSite && (
