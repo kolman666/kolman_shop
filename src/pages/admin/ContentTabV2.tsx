@@ -697,23 +697,6 @@ function HeroPreview({ slides }: { slides: HeroSlide[] }) {
             </button>
           </div>
         )}
-        {/* Mirror of the live homepage's full-height CTA panel. We render
-          * a non-interactive <span> instead of <Link>: it's a preview, not a
-          * destination. The animations (shimmer, arrow bob) still play so
-          * the admin sees how it looks in motion. */}
-        <span className="hero-card__cta-panel" aria-hidden="true">
-          <span className="hero-card__cta-shimmer" />
-          <span className="hero-card__cta-grid" />
-          <span className="hero-card__cta-inner">
-            <span className="hero-card__cta-label">{t('ui.shopNow')}</span>
-            <span className="hero-card__cta-arrow">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
-            </span>
-          </span>
-        </span>
       </div>
       {/* Real side panel — mirrors the live homepage's <aside>. The accent
         * card now uses the redesigned `__shard` markup (two jagged
