@@ -715,13 +715,14 @@ function HeroPreview({ slides }: { slides: HeroSlide[] }) {
           </span>
         </span>
       </div>
-      {/* Real side panel — same markup as the live homepage's <aside>. */}
+      {/* Real side panel — mirrors the live homepage's <aside>. The accent
+        * card now uses the redesigned `__shard` markup (two jagged
+        * clip-path polygons) instead of the old rotated rectangles, so
+        * the preview matches what shoppers actually see. */}
       <aside className="side-panel">
         <div className="promo-card promo-card--accent" role="presentation">
-          <svg className="promo-card__shape" width="180" height="180" viewBox="0 0 180 180" aria-hidden="true">
-            <rect x="60" y="-30" width="120" height="120" rx="30" fill="#fff" transform="rotate(20 90 90)" />
-            <rect x="90" y="40" width="100" height="100" rx="24" fill="#fff" transform="rotate(10 90 90)" />
-          </svg>
+          <span className="promo-card__shard promo-card__shard--a" aria-hidden="true" />
+          <span className="promo-card__shard promo-card__shard--b" aria-hidden="true" />
           <p className="promo-label">{t('ui.readyToGearUp')}</p>
           <h2 className="promo-title">{t('ui.startShopping')}</h2>
           <span className="promo-arrow" aria-hidden="true">

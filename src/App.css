@@ -196,8 +196,7 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   font-family: var(--font-display);
-  transition:
-    background var(--transition-fast),
+  transition: background var(--transition-fast),
     color var(--transition-fast),
     transform var(--transition-fast);
 }
@@ -308,9 +307,8 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   cursor: pointer;
-  transition:
-    background 0.2s ease,
-    color 0.2s ease;
+  transition: background 0.3s ease,
+    color 0.3s ease;
 }
 
 .language-switch__button.active {
@@ -493,9 +491,8 @@
   background: linear-gradient(160deg, var(--color-main-hover) 0%, var(--color-main) 55%, #9d0d0d 100%);
   overflow: hidden;
   isolation: isolate;
-  transition:
-    width 0.45s cubic-bezier(0.22, 0.61, 0.36, 1),
-    filter 0.3s ease;
+  transition: width 0.675s cubic-bezier(0.22, 0.61, 0.36, 1),
+    filter 0.45s ease;
 }
 
 .hero-card__cta-panel:hover,
@@ -515,7 +512,7 @@
       rgba(255, 255, 255, 0.05) 56%,
       transparent 75%);
   transform: translateX(-30%);
-  animation: hero-cta-sheen 5.5s ease-in-out infinite;
+  animation: hero-cta-sheen 8.25s ease-in-out infinite;
   pointer-events: none;
   z-index: 1;
 }
@@ -572,7 +569,7 @@
   text-transform: lowercase;
   /* Subtle drop shadow lifts the text off the dot-grid texture. */
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
-  transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .hero-card__cta-panel:hover .hero-card__cta-label {
@@ -589,10 +586,9 @@
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.22);
   backdrop-filter: blur(2px);
-  transition:
-    transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1),
-    background 0.3s ease;
-  animation: hero-cta-arrow-bob 3.2s ease-in-out infinite;
+  transition: transform 0.675s cubic-bezier(0.22, 0.61, 0.36, 1),
+    background 0.45s ease;
+  animation: hero-cta-arrow-bob 4.8s ease-in-out infinite;
 }
 
 @keyframes hero-cta-arrow-bob {
@@ -615,7 +611,7 @@
 /* Pull the inner content slightly down on hover for a layered effect. */
 .hero-card__cta-panel:active .hero-card__cta-inner {
   transform: scale(0.985);
-  transition: transform 0.15s ease;
+  transition: transform 0.225s ease;
 }
 
 /* Tablet: shrink width to keep text readable on the slide. */
@@ -682,7 +678,7 @@
  * still for users who prefer no movement. The hover transitions stay. */
 
 .hero-card__copy {
-  animation: fadeSlide 0.5s ease both;
+  animation: fadeSlide 0.75s ease both;
 }
 
 .hero-tag {
@@ -732,11 +728,10 @@
   padding: 12px 24px;
   font-size: 13px;
   text-decoration: none;
-  transition:
-    background 0.22s ease,
-    color 0.22s ease,
-    border-color 0.22s ease,
-    transform 0.22s ease;
+  transition: background 0.33s ease,
+    color 0.33s ease,
+    border-color 0.33s ease,
+    transform 0.33s ease;
 }
 
 .cta-btn {
@@ -777,7 +772,7 @@
   height: 4px;
   border-radius: 999px;
   background: #333;
-  transition: all 0.3s ease;
+  transition: all 0.45s ease;
 }
 
 .dot.active {
@@ -804,10 +799,9 @@
   border-radius: 50%;
   background: var(--color-bg-muted);
   color: var(--color-text-muted);
-  transition:
-    transform 0.2s ease,
-    background 0.2s ease,
-    color 0.2s ease;
+  transition: transform 0.3s ease,
+    background 0.3s ease,
+    color 0.3s ease;
 }
 
 .slide-btn:hover {
@@ -848,7 +842,7 @@
   color: var(--color-text);
   height: 100%;
   isolation: isolate;
-  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 0.45s ease;
+  transition: transform 0.675s cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 0.675s ease;
 }
 
 .promo-card--accent:hover {
@@ -884,7 +878,7 @@
     20% 0%, 78% 8%, 100% 42%, 88% 78%,
     52% 100%, 12% 86%, 0% 38%
   );
-  animation: promo-shard-drift-a 11s ease-in-out infinite;
+  animation: promo-shard-drift-a 16.5s ease-in-out infinite;
 }
 
 /* Medium accent shape — a slimmer angular fragment on the right side.
@@ -900,7 +894,7 @@
     32% 0%, 100% 18%, 88% 62%, 70% 100%,
     18% 92%, 0% 46%
   );
-  animation: promo-shard-drift-b 14s ease-in-out infinite;
+  animation: promo-shard-drift-b 21s ease-in-out infinite;
 }
 
 /* Pure translate, different magnitudes / opposite-ish directions so the
@@ -916,8 +910,8 @@
 }
 
 /* Hover: speeds visibly accelerate. */
-.promo-card--accent:hover .promo-card__shard--a { animation-duration: 5.5s; }
-.promo-card--accent:hover .promo-card__shard--b { animation-duration: 7s;   }
+.promo-card--accent:hover .promo-card__shard--a { animation-duration: 8.25s; }
+.promo-card--accent:hover .promo-card__shard--b { animation-duration: 10.5s;   }
 
 .promo-label {
   position: relative;
@@ -951,9 +945,9 @@
   border-radius: 50%;
   background: var(--color-text);
   color: var(--color-main);
-  transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 0.3s ease;
+  transition: transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 0.45s ease;
   /* Idle nudge — the arrow visibly bobs to invite the click. */
-  animation: promo-arrow-bob 3.4s ease-in-out infinite;
+  animation: promo-arrow-bob 5.1s ease-in-out infinite;
 }
 
 @keyframes promo-arrow-bob {
@@ -994,7 +988,7 @@
   height: 8px;
   border-radius: 50%;
   background: var(--color-main);
-  animation: pulse 2s infinite;
+  animation: pulse 3s infinite;
 }
 
 .catalog-text {
@@ -1070,9 +1064,8 @@
   color: #181818;
   text-align: left;
   cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .category-card:hover {
@@ -1226,9 +1219,8 @@
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    background 0.2s ease;
+  transition: transform 0.3s ease,
+    background 0.3s ease;
 }
 
 .featured-card__button:hover {
@@ -1327,7 +1319,7 @@
   display: flex;
   align-items: center;
   width: max-content;
-  animation: marquee 28s linear infinite;
+  animation: marquee 42s linear infinite;
   will-change: transform;
 }
 
@@ -1340,7 +1332,7 @@
   align-items: center;
   padding: 0 36px;
   color: rgba(255, 255, 255, 0.38);
-  transition: color 0.22s ease;
+  transition: color 0.33s ease;
 }
 
 .marquee-item:hover {
@@ -1377,9 +1369,8 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg-elevated);
-  transition:
-    transform 0.25s ease,
-    border-color 0.25s ease;
+  transition: transform 0.375s ease,
+    border-color 0.375s ease;
 }
 
 .perk-card:hover {
@@ -1524,8 +1515,7 @@
   color: var(--color-text);
   text-decoration: none;
   background: rgba(255, 255, 255, 0.03);
-  transition:
-    border-color var(--transition-fast),
+  transition: border-color var(--transition-fast),
     transform var(--transition-fast),
     color var(--transition-fast),
     background var(--transition-fast);
@@ -1879,8 +1869,7 @@
   color: #f5f7ff;
   padding: 15px 16px;
   outline: none;
-  transition:
-    border-color var(--transition-fast),
+  transition: border-color var(--transition-fast),
     background var(--transition-fast);
   appearance: none;
   -webkit-appearance: none;
@@ -1930,11 +1919,10 @@
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    border-color 0.2s ease,
-    background 0.2s ease,
-    color 0.2s ease;
+  transition: transform 0.3s ease,
+    border-color 0.3s ease,
+    background 0.3s ease,
+    color 0.3s ease;
 }
 
 .catalog-tab:hover,
@@ -1993,9 +1981,8 @@
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    background 0.2s ease;
+  transition: transform 0.3s ease,
+    background 0.3s ease;
 }
 
 .catalog-filters__reset {
@@ -2045,7 +2032,7 @@
   height: 10px;
   border-radius: 3px;
   transform: scale(0);
-  transition: transform 0.18s ease;
+  transition: transform 0.27s ease;
   background: linear-gradient(180deg, #ff6969 0%, #e11d1d 100%);
 }
 
@@ -2097,10 +2084,9 @@
   border: 1px solid var(--color-border-soft);
   border-radius: 16px;
   background: var(--color-bg-elevated);
-  transition:
-    transform 0.28s ease,
-    border-color 0.28s ease,
-    box-shadow 0.28s ease;
+  transition: transform 0.42s ease,
+    border-color 0.42s ease,
+    box-shadow 0.42s ease;
   padding: 10px;
 }
 
@@ -2249,7 +2235,7 @@
 }
 
 .icon-button--added {
-  animation: cart-btn-pop 0.26s ease;
+  animation: cart-btn-pop 0.39s ease;
 }
 
 @keyframes cart-btn-pop {
@@ -2281,7 +2267,7 @@
   opacity: 0;
   transform: translateY(8px);
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .cart-toast--visible {
@@ -2306,7 +2292,7 @@
   opacity: 0;
   transform: translateY(8px);
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .chat-site-toast--admin {
@@ -2363,9 +2349,8 @@
   padding: 12px 16px;
   font-size: 13px;
   font-weight: 800;
-  transition:
-    transform 0.2s ease,
-    background 0.2s ease;
+  transition: transform 0.3s ease,
+    background 0.3s ease;
 }
 
 .product-card__link:hover {
@@ -2511,10 +2496,9 @@
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
+  transition: background 0.3s ease,
+    border-color 0.3s ease,
+    transform 0.3s ease;
 }
 
 .recommendations__more:hover {
@@ -2721,11 +2705,10 @@
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    border-color 0.2s ease,
-    background 0.2s ease,
-    color 0.2s ease;
+  transition: transform 0.3s ease,
+    border-color 0.3s ease,
+    background 0.3s ease,
+    color 0.3s ease;
 }
 
 .product-page__cta {
@@ -2917,7 +2900,7 @@
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    transition: border-color 0.18s ease, background 0.18s ease;
+    transition: border-color 0.27s ease, background 0.27s ease;
   }
 
   .catalog-filters-toggle:hover {
@@ -3234,9 +3217,8 @@
   pointer-events: none;
   opacity: 0;
   transform: translateY(8px);
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+  transition: opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
 .product-page__toast--visible {
@@ -3283,9 +3265,8 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
+  transition: background 0.225s,
+    color 0.225s;
   line-height: 1;
 }
 
@@ -3540,7 +3521,7 @@
   background-position: right 8px center;
   padding-right: 28px;
   cursor: pointer;
-  transition: border-color 0.18s ease, background-color 0.18s ease;
+  transition: border-color 0.27s ease, background-color 0.27s ease;
 }
 
 .admin__filter-select:hover {
@@ -3562,7 +3543,7 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.18s ease, color 0.18s ease;
+  transition: background 0.27s ease, color 0.27s ease;
 }
 
 .admin__filter-clear:hover {
@@ -4335,7 +4316,7 @@
   flex-direction: column;
   overflow-y: auto;
   transform: translateX(100%);
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.42s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .burger-panel--open {
@@ -4560,7 +4541,7 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: color 0.3s ease;
 }
 
 .bsp__banner-cta:hover {
@@ -4623,7 +4604,7 @@
   overflow: hidden;
   text-decoration: none;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.375s ease, border-color 0.375s ease, box-shadow 0.375s ease;
 }
 
 .bsp__card:hover {
@@ -4860,7 +4841,7 @@
   border-radius: var(--radius-md);
   background: var(--color-bg-soft);
   text-decoration: none;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition: border-color 0.3s ease, background 0.3s ease;
 }
 
 .bloggers-gear__item:hover {
@@ -5040,7 +5021,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease;
+  transition: color 0.3s ease, border-color 0.3s ease;
   margin-bottom: -1px;
   border-radius: 8px 8px 0 0;
 }
@@ -5149,7 +5130,7 @@
   padding: 10px 12px;
   border-radius: 10px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.225s ease;
   border: 1px solid transparent;
 }
 
@@ -5270,7 +5251,7 @@
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: color 0.3s ease;
 }
 
 .delivery-faq__q:hover {
@@ -5345,7 +5326,7 @@
   font-weight: 500;
   color: var(--color-text);
   cursor: pointer;
-  transition: border-color 0.18s, color 0.18s;
+  transition: border-color 0.27s, color 0.27s;
   line-height: 1.4;
 }
 
@@ -5370,7 +5351,7 @@
   background: var(--color-bg);
   text-decoration: none;
   color: inherit;
-  transition: border-color 0.18s, background 0.18s;
+  transition: border-color 0.27s, background 0.27s;
 }
 
 .search-drop__hit:hover {
@@ -5628,7 +5609,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg-elevated);
-  transition: border-color 0.2s ease;
+  transition: border-color 0.3s ease;
 }
 
 .about-timeline__row:hover {
@@ -5670,7 +5651,7 @@
     radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-main) 8%, transparent), transparent 60%),
     var(--color-bg-elevated);
   overflow: hidden;
-  transition: border-color 0.25s ease, transform 0.25s ease;
+  transition: border-color 0.375s ease, transform 0.375s ease;
 }
 
 .about-value:hover {
@@ -5796,7 +5777,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   background: var(--color-bg-elevated);
-  transition: border-color 0.25s ease, transform 0.25s ease;
+  transition: border-color 0.375s ease, transform 0.375s ease;
 }
 
 .partner-tier:hover {
@@ -5975,7 +5956,7 @@
   color: var(--color-text-soft);
   font-size: 12.5px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .support-chip:hover {
@@ -6031,7 +6012,7 @@
   background: var(--color-bg-soft);
   text-decoration: none;
   color: var(--color-text);
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.3s ease, transform 0.3s ease;
 }
 
 .support-channel:hover {
@@ -6168,7 +6149,7 @@
   background: var(--color-bg-soft);
   color: var(--color-text);
   cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;
   font-family: inherit;
 }
 
@@ -6296,7 +6277,7 @@
   height: 8px;
   border-radius: 50%;
   background: var(--color-main);
-  animation: pulse 1.8s ease-in-out infinite;
+  animation: pulse 2.7s ease-in-out infinite;
 }
 
 .delivery-timeline {
@@ -6496,7 +6477,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg-elevated);
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.3s ease, transform 0.3s ease;
 }
 
 .modding-perk:hover {
@@ -6595,7 +6576,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .modding-tab:hover {
@@ -6622,7 +6603,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg-elevated);
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.3s ease, transform 0.3s ease;
 }
 
 .modding-service:hover {
@@ -6706,7 +6687,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .modding-service__arrow:hover {
@@ -6855,7 +6836,7 @@
   text-decoration: none;
   cursor: pointer;
   border: none;
-  transition: transform 0.2s ease;
+  transition: transform 0.3s ease;
 }
 
 .modding-bundle__cta:hover {
@@ -6986,7 +6967,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .profile-tab__badge {
@@ -7170,7 +7151,7 @@
   cursor: pointer;
   font-size: 12.5px;
   font-family: inherit;
-  transition: color 0.2s ease;
+  transition: color 0.3s ease;
   text-decoration: underline;
   text-decoration-color: transparent;
 }
@@ -7237,7 +7218,7 @@
   border-radius: var(--radius-lg);
   background: var(--color-bg-elevated);
   overflow: hidden;
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.3s ease, transform 0.3s ease;
 }
 
 .profile-favorite:hover {
@@ -7331,7 +7312,7 @@
   justify-content: center;
   cursor: pointer;
   backdrop-filter: blur(6px);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .product-card__fav:hover {
@@ -7410,7 +7391,7 @@
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
-  transition: gap 0.2s ease;
+  transition: gap 0.3s ease;
   width: fit-content;
 }
 
@@ -7435,7 +7416,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .news-section__nav-btn:hover {
@@ -7459,7 +7440,7 @@
 .news-track {
   display: flex;
   gap: 20px;
-  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
 
@@ -7471,7 +7452,7 @@
   overflow: hidden;
   border: 1px solid var(--color-border);
   background: var(--color-bg-elevated);
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.3s ease, transform 0.3s ease;
   text-decoration: none;
   color: inherit;
 }
@@ -7559,7 +7540,7 @@
   align-items: center;
   gap: 6px;
   font-weight: 600;
-  transition: gap 0.2s ease;
+  transition: gap 0.3s ease;
 }
 
 .news-card:hover .news-card__cta {
@@ -7610,7 +7591,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .admin__lang-tab--active {
@@ -7628,7 +7609,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  animation: fadeSlide 0.2s ease;
+  animation: fadeSlide 0.3s ease;
 }
 
 .auth-modal__overlay,
@@ -7703,7 +7684,7 @@
   font: inherit;
   font-size: 14px;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.3s ease;
 }
 
 .auth-modal__field>input:focus,
@@ -7746,7 +7727,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .auth-modal__cancel:hover,
@@ -7766,7 +7747,7 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.15s ease;
+  transition: background 0.3s ease, transform 0.225s ease;
 }
 
 .auth-modal__submit:hover,
@@ -7792,7 +7773,7 @@
   font: inherit;
   font-size: 13px;
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: color 0.3s ease;
 }
 
 .auth-modal__switch:hover {
@@ -7976,7 +7957,7 @@
   font-family: inherit;
   font-size: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .admin__inbox-status-btn:hover:not(:disabled) {
@@ -8042,7 +8023,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .product-page__fav:hover {
@@ -8118,7 +8099,7 @@
   font-size: 14px;
   resize: vertical;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.3s ease;
 }
 
 .product-reviews__input:focus {
@@ -8351,7 +8332,7 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   white-space: nowrap;
 }
 
@@ -8375,7 +8356,7 @@
   border-radius: var(--radius-lg);
   background: var(--color-bg-elevated);
   margin-bottom: 12px;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.3s ease;
 }
 
 .accordion--open {
@@ -8406,7 +8387,7 @@
 
 .accordion__chev {
   color: var(--color-text-dim);
-  transition: transform 0.2s ease, color 0.2s ease;
+  transition: transform 0.3s ease, color 0.3s ease;
 }
 
 .accordion--open .accordion__chev {
@@ -8472,7 +8453,7 @@
   font: inherit;
   font-size: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .accordion__btn:hover {
@@ -8644,7 +8625,7 @@
   font: inherit;
   font-size: 13px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   width: fit-content;
 }
 
@@ -8689,7 +8670,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .admin__page-pick:hover {
@@ -8891,7 +8872,7 @@
 
 .chat-status--sending {
   opacity: 0.85;
-  animation: chat-status-spin 1.2s linear infinite;
+  animation: chat-status-spin 1.8s linear infinite;
 }
 
 @keyframes chat-status-spin {
@@ -8945,7 +8926,7 @@
  * even before they notice the spinner glyph. */
 .profile-chat__bubble--sending {
   opacity: 0.78;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.375s ease;
 }
 
 .profile-chat__bubble--failed {
@@ -8973,7 +8954,7 @@
   font-size: 14px;
   resize: vertical;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.3s ease;
   min-height: 48px;
 }
 
@@ -9033,7 +9014,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition: border-color 0.3s ease, background 0.3s ease;
 }
 
 .admin__chat-thread:hover {
@@ -9420,7 +9401,7 @@
   display: grid;
   gap: 6px;
   font-family: inherit;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition: border-color 0.3s ease, background 0.3s ease;
 }
 
 .profile-chat-thread:hover {
@@ -9519,7 +9500,7 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .admin__chat-filter:hover {
@@ -9589,7 +9570,7 @@
 
 .product-reviews__photos--shown .product-reviews__photo {
   cursor: zoom-in;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.3s ease, border-color 0.3s ease;
 }
 
 .product-reviews__photos--shown .product-reviews__photo:hover {
@@ -9634,7 +9615,7 @@
   font-size: 12px;
   padding: 4px;
   cursor: pointer;
-  transition: border-color 0.2s ease, color 0.2s ease;
+  transition: border-color 0.3s ease, color 0.3s ease;
   flex-shrink: 0;
 }
 
@@ -9663,7 +9644,7 @@
   border-radius: 999px;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background 0.3s ease, color 0.3s ease;
   white-space: nowrap;
 }
 
@@ -9706,7 +9687,7 @@
   font: inherit;
   font-size: 13.5px;
   cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition: border-color 0.3s ease, background 0.3s ease;
   width: fit-content;
 }
 
@@ -9807,7 +9788,7 @@
   border-radius: 50%;
   background: var(--color-main);
   box-shadow: 0 0 0 3px rgba(225, 29, 29, 0.25);
-  animation: brand-preview-pulse 2.4s ease-in-out infinite;
+  animation: brand-preview-pulse 3.6s ease-in-out infinite;
 }
 
 @keyframes brand-preview-pulse {
@@ -9871,7 +9852,7 @@
     0 16px 48px rgba(0, 0, 0, 0.55),
     0 2px 6px rgba(0, 0, 0, 0.4);
   overflow: hidden;
-  animation: account-popover-in 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation: account-popover-in 0.33s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 @keyframes account-popover-in {
@@ -9921,7 +9902,7 @@
   align-items: center;
   justify-content: center;
   color: inherit;
-  transition: color 0.2s ease, border-color 0.2s ease;
+  transition: color 0.3s ease, border-color 0.3s ease;
 }
 
 .account-popover__icon-btn:hover {
@@ -9961,7 +9942,7 @@
   text-decoration: none;
   letter-spacing: 0;
   text-transform: lowercase;
-  transition: color 0.15s ease;
+  transition: color 0.225s ease;
 }
 .account-popover__chats-all:hover {
   color: var(--color-main-hover);
@@ -9985,7 +9966,7 @@
   border-radius: 12px;
   color: var(--color-text);
   text-decoration: none;
-  transition: background 0.15s ease;
+  transition: background 0.225s ease;
   min-width: 0;
 }
 
@@ -10083,7 +10064,7 @@
   justify-content: center;
   margin-left: 4px;
   /* Subtle pulse so unread rows feel alive. */
-  animation: account-popover-chat-pulse 2.4s ease-in-out infinite;
+  animation: account-popover-chat-pulse 3.6s ease-in-out infinite;
 }
 
 @keyframes account-popover-chat-pulse {
@@ -10122,7 +10103,7 @@
   height: 40px;
   border-radius: 10px;
   background: var(--color-bg-muted);
-  animation: account-popover-skel 1.4s ease-in-out infinite;
+  animation: account-popover-skel 2.1s ease-in-out infinite;
 }
 
 .account-popover__chat-skel-body {
@@ -10135,7 +10116,7 @@
   height: 8px;
   border-radius: 4px;
   background: var(--color-bg-muted);
-  animation: account-popover-skel 1.4s ease-in-out infinite;
+  animation: account-popover-skel 2.1s ease-in-out infinite;
 }
 
 @keyframes account-popover-skel {
@@ -10163,7 +10144,7 @@
   border-radius: 14px;
   color: var(--color-text);
   text-decoration: none;
-  transition: background 0.15s ease;
+  transition: background 0.225s ease;
 }
 
 .account-popover__notif:hover {
@@ -10320,7 +10301,7 @@
   color: var(--color-text-soft);
   text-decoration: none;
   font-size: 14px;
-  transition: color 0.15s ease, background 0.15s ease, padding-inline 0.15s ease;
+  transition: color 0.225s ease, background 0.225s ease, padding-inline 0.225s ease;
 }
 
 .account-popover__menu-link:hover {
@@ -10353,7 +10334,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  transition: color 0.225s ease, border-color 0.225s ease, background 0.225s ease;
 }
 
 .account-popover__logout:hover {
@@ -10376,7 +10357,7 @@
     border-radius: 22px 22px 0 0;
     border-bottom: none;
     overflow-y: auto;
-    animation: account-popover-in-mobile 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+    animation: account-popover-in-mobile 0.42s cubic-bezier(0.22, 0.61, 0.36, 1);
   }
 
   @keyframes account-popover-in-mobile {
@@ -10498,7 +10479,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: border-color 0.2s ease, color 0.2s ease;
+  transition: border-color 0.3s ease, color 0.3s ease;
   padding: 0;
 }
 
@@ -10524,7 +10505,7 @@
   text-decoration: none;
   color: var(--color-text);
   border-radius: 12px;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: background 0.3s ease, transform 0.3s ease;
 }
 
 .marquee-item--photo:hover {
@@ -10666,11 +10647,10 @@
   align-items: center;
   justify-content: center;
   height: auto;
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease,
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
+  transition: background 0.27s ease,
+    border-color 0.27s ease,
+    transform 0.27s ease,
+    box-shadow 0.27s ease;
 }
 
 /* Hard-kill the underline pseudo-element on the pill in every state. */
@@ -10794,7 +10774,7 @@
   font-family: inherit;
   font-size: 13px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .used-page__filter:hover {
@@ -11006,7 +10986,7 @@
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.18);
   cursor: pointer;
-  transition: background 0.18s ease, transform 0.18s ease;
+  transition: background 0.27s ease, transform 0.27s ease;
 }
 
 .lightbox__close:hover,
@@ -11140,7 +11120,7 @@
   color: var(--color-text);
   font-size: 12px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.225s, border-color 0.225s;
 }
 
 .bb-editor__btn:hover {
@@ -11202,7 +11182,7 @@
   padding: 0;
   cursor: zoom-in;
   overflow: hidden;
-  transition: transform 0.18s ease, border-color 0.18s ease;
+  transition: transform 0.27s ease, border-color 0.27s ease;
 }
 
 .chat-bubble__photo:hover {
@@ -11228,7 +11208,7 @@
   background: var(--color-bg-soft);
   color: var(--color-text-soft);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background 0.225s ease, color 0.225s ease, border-color 0.225s ease;
   flex-shrink: 0;
 }
 
@@ -11338,7 +11318,7 @@
   border-radius: 999px;
   background: #28c057;
   box-shadow: 0 0 0 0 rgba(40, 192, 87, 0.6);
-  animation: dash-pulse 1.8s infinite;
+  animation: dash-pulse 2.7s infinite;
 }
 
 @keyframes dash-pulse {
@@ -11395,7 +11375,7 @@
   flex-direction: column;
   gap: 6px;
   min-height: 160px;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.3s ease, border-color 0.3s ease;
 }
 
 .dash-card::before {
@@ -11598,7 +11578,7 @@
   cursor: pointer;
   color: var(--color-text);
   text-align: left;
-  transition: border-color 0.18s ease, transform 0.18s ease;
+  transition: border-color 0.27s ease, transform 0.27s ease;
 }
 
 .dash-status:hover {
@@ -11730,7 +11710,7 @@
   cursor: pointer;
   font: inherit;
   text-align: left;
-  transition: border-color 0.18s, transform 0.18s, background 0.18s;
+  transition: border-color 0.27s, transform 0.27s, background 0.27s;
 }
 
 .dash-action:hover {
@@ -11805,7 +11785,7 @@
   font-weight: 600;
   cursor: pointer;
   text-align: left;
-  transition: border-color 0.18s, transform 0.18s, background 0.18s;
+  transition: border-color 0.27s, transform 0.27s, background 0.27s;
 }
 
 .dash-quick__btn:hover {
@@ -11948,7 +11928,7 @@
   height: 100%;
   background: linear-gradient(90deg, var(--color-main), color-mix(in srgb, var(--color-main) 50%, transparent));
   border-radius: inherit;
-  transition: width 0.4s ease;
+  transition: width 0.6s ease;
 }
 
 .dash-top-qty {
@@ -12070,7 +12050,7 @@
   color: var(--color-text-soft);
   font-size: 12px;
   cursor: pointer;
-  transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+  transition: border-color 0.27s ease, color 0.27s ease, background 0.27s ease;
   font: inherit;
   font-size: 12px;
 }
@@ -12317,7 +12297,7 @@
   text-decoration: none;
   cursor: pointer;
   position: relative;
-  transition: color 0.2s ease;
+  transition: color 0.3s ease;
 }
 
 .mobile-bottom-nav__item:hover,
@@ -12462,7 +12442,7 @@
       var(--color-bg-muted) 50%,
       var(--color-bg-soft) 100%);
   background-size: 200% 100%;
-  animation: sk-shimmer 1.4s ease-in-out infinite;
+  animation: sk-shimmer 2.1s ease-in-out infinite;
   color: transparent;
   user-select: none;
 }
@@ -12898,7 +12878,7 @@
   font-size: 13px;
   text-decoration: none;
   box-shadow: 0 8px 24px -10px rgba(225, 29, 29, 0.5);
-  transition: transform 0.18s ease;
+  transition: transform 0.27s ease;
 }
 
 .compare-bar:hover {
@@ -13085,7 +13065,7 @@
   pointer-events: none;
   display: flex;
   justify-content: center;
-  animation: cookie-slide-up 0.45s ease-out;
+  animation: cookie-slide-up 0.675s ease-out;
 }
 
 @keyframes cookie-slide-up {
@@ -13239,7 +13219,7 @@
   font-weight: 700;
   letter-spacing: 0.03em;
   cursor: pointer;
-  transition: border-color 0.35s ease;
+  transition: border-color 0.525s ease;
   /* Promote to own stacking context so children stay clipped above the
    * backdrop-filtered parent without Chrome short-circuiting the paint. */
   isolation: isolate;
@@ -13261,7 +13241,7 @@
   z-index: 0;
   /* Start fully translated down — invisible at rest. */
   transform: translateY(100%);
-  transition: transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: transform 0.825s cubic-bezier(0.22, 0.61, 0.36, 1);
   /* Compositor hint — Chrome on Windows respects this even inside a
    * backdrop-filter parent for real DOM nodes (not pseudos). */
   will-change: transform;
@@ -13286,7 +13266,7 @@
           mask-repeat: repeat-x;
   -webkit-mask-size: 28px 10px;
           mask-size: 28px 10px;
-  animation: cookie-wave-shift 1.4s linear infinite;
+  animation: cookie-wave-shift 2.1s linear infinite;
 }
 
 @keyframes cookie-wave-shift {
@@ -13303,7 +13283,7 @@
 .cookie-btn__label {
   position: relative;
   z-index: 1;
-  transition: color 0.35s ease 0.15s; /* slight delay so the colour swap
+  transition: color 0.525s ease 0.225s; /* slight delay so the colour swap
                                        * matches the fill arriving. */
   display: inline-block;
 }
@@ -13347,7 +13327,7 @@
   color: var(--color-text);
   font-size: 13px;
   cursor: pointer;
-  transition: border-color 0.18s ease, background 0.18s ease;
+  transition: border-color 0.27s ease, background 0.27s ease;
   white-space: nowrap;
 }
 
@@ -13454,7 +13434,7 @@
   display: flex;
   flex-direction: column;
   padding: 0;
-  transition: border-color 0.18s ease, transform 0.18s ease;
+  transition: border-color 0.27s ease, transform 0.27s ease;
   height: 100%;
   min-height: 150px;
 }
@@ -13700,7 +13680,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  animation: fadeSlide 0.2s ease;
+  animation: fadeSlide 0.3s ease;
 }
 
 .cart-share-modal__overlay {
@@ -13854,7 +13834,7 @@
   border-radius: var(--radius-sm);
   padding: 12px 20px;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.15s ease;
+  transition: background 0.3s ease, transform 0.225s ease;
   background: var(--color-main);
   color: var(--color-text);
 }
@@ -14086,7 +14066,7 @@
   justify-content: center;
   flex-shrink: 0;
   color: rgba(255, 255, 255, 0.5);
-  transition: color 0.22s ease;
+  transition: color 0.33s ease;
   min-width: 110px;
 }
 
@@ -14116,7 +14096,7 @@
   object-fit: contain;
   display: block;
   filter: grayscale(1) brightness(1.5);
-  transition: filter 0.2s ease;
+  transition: filter 0.3s ease;
 }
 
 .brand-ticker__link:hover img {
@@ -14134,7 +14114,7 @@
 
 @media (max-width: 720px) {
   .brand-ticker__lane {
-    animation-duration: 32s;
+    animation-duration: 48s;
   }
 
   .brand-ticker__item svg {
@@ -14183,7 +14163,7 @@
   background: linear-gradient(180deg, #0d0d10 0%, #0a0a0c 100%);
   border-right: 1px solid var(--color-border);
   overflow: hidden;
-  transition: width 0.22s ease;
+  transition: width 0.33s ease;
   width: 240px;
 }
 
@@ -14228,7 +14208,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: width 0.22s ease, height 0.22s ease;
+  transition: width 0.33s ease, height 0.33s ease;
 }
 
 .admin-sidebar__brand-text {
@@ -14268,7 +14248,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.18s, border-color 0.18s;
+  transition: color 0.27s, border-color 0.27s;
 }
 
 .admin-sidebar__collapse:hover {
@@ -14317,7 +14297,7 @@
   font-weight: 500;
   cursor: pointer;
   text-align: left;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.225s ease, color 0.225s ease;
   position: relative;
   width: 100%;
 }
@@ -14411,7 +14391,7 @@
   font-size: 12.5px;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.225s, color 0.225s;
 }
 
 .admin-sidebar__link:hover {
@@ -14480,7 +14460,7 @@
     width: 260px;
     transform: translateX(-100%);
     z-index: 70;
-    transition: transform 0.25s ease;
+    transition: transform 0.375s ease;
   }
 
   .admin-sidebar--mobile-open {
@@ -14965,11 +14945,11 @@ h4 {
 }
 
 .share-cart-toast--open .share-cart-toast__panel {
-  animation: share-cart-in 0.45s cubic-bezier(0.34, 1.36, 0.64, 1);
+  animation: share-cart-in 0.675s cubic-bezier(0.34, 1.36, 0.64, 1);
 }
 
 .share-cart-toast--closing .share-cart-toast__panel {
-  animation: share-cart-out 0.28s ease-in forwards;
+  animation: share-cart-out 0.42s ease-in forwards;
 }
 
 @keyframes share-cart-in {
@@ -15064,7 +15044,7 @@ h4 {
   background: var(--color-bg-soft);
   opacity: 0;
   transform: translateY(8px);
-  animation: share-cart-line 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation: share-cart-line 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
 }
 
 @keyframes share-cart-line {
@@ -15172,14 +15152,16 @@ h4 {
  * Reduced-motion — universal override.
  *
  * Replaces 10 scattered component-specific blocks with one global
- * rule that disables every animation + transition site-wide. Saves
- * CSS bytes, future-proofs new animations (they're automatically
- * covered), and is the WCAG-recommended pattern.
+ * rule that disables only the endless / decorative animations and
+ * keeps hover transitions intact. State-change transitions (button
+ * hover, focus, etc.) are NOT the real accessibility concern — it's
+ * the looping shimmer / float / spin animations that trigger
+ * vestibular reactions. Hovers should still feel responsive even
+ * for users with reduced-motion enabled.
  *
  * `0.01ms` is the trick — not `0s` because some browsers skip
  * animationend events at 0 duration, which would break code that
- * relies on them (we use a few). 0.01ms is effectively instant but
- * still fires the event.
+ * relies on them. 0.01ms is effectively instant but still fires.
  * =========================================================== */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -15187,7 +15169,6 @@ h4 {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
 }
