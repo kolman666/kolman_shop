@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, useRef, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BrowserRouter, Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
@@ -340,44 +340,55 @@ function HomePage() {
     'products.categories.accessories',
   ]
 
-  const i18nSlides = (t('slides', { returnObjects: true }) as SlideText[]).map((slide, index) => ({
-    ...slide,
-    img: slideImages[index] ?? '',
-  }))
-  const slides = dbSlides ?? i18nSlides
+  // i18n + DB-derived lists are wrapped in useMemo so they're only
+  // recomputed when their inputs actually change (admin DB hits, language
+  // switches, product list updates) — not on every state change like
+  // cart count or hero slider tick.
+  const slides = useMemo(() => {
+    if (dbSlides) return dbSlides
+    return (t('slides', { returnObjects: true }) as SlideText[]).map((slide, index) => ({
+      ...slide,
+      img: slideImages[index] ?? '',
+    }))
+  }, [dbSlides, t])
 
-  const i18nCategories = (t('categories', { returnObjects: true }) as string[]).map((title, index) => ({
-    catalogKey: homepageCategoryTargets[index] ?? '',
-    title,
-    image: categoryImages[index] ?? '',
-  }))
-  const activeCategories = dbCategories ?? i18nCategories
+  const activeCategories = useMemo(() => {
+    if (dbCategories) return dbCategories
+    return (t('categories', { returnObjects: true }) as string[]).map((title, index) => ({
+      catalogKey: homepageCategoryTargets[index] ?? '',
+      title,
+      image: categoryImages[index] ?? '',
+    }))
+  }, [dbCategories, t])
 
-  const i18nPerksBase = t('perks', { returnObjects: true }) as PerkText[]
-  const activePerks = (dbPerks ?? i18nPerksBase).map((perk, index) => ({
-    ...perk,
-    icon: perkIcons[index],
-  })) as Perk[]
+  const activePerks = useMemo<Perk[]>(() => {
+    const base = (dbPerks ?? (t('perks', { returnObjects: true }) as PerkText[]))
+    return base.map((perk, index) => ({ ...perk, icon: perkIcons[index] })) as Perk[]
+  }, [dbPerks, t])
+
+  // String arrays from i18n — pulled fresh each render but cheap (just
+  // primitive arrays); not worth memoizing.
   const navLinks = t('navLinks', { returnObjects: true }) as string[]
   const topLinks = t('topLinks', { returnObjects: true }) as string[]
   const footerNavigation = t('footerNavigation', { returnObjects: true }) as string[]
   const footerServices = t('footerServices', { returnObjects: true }) as string[]
   const footerProducts = t('footerProducts', { returnObjects: true }) as string[]
-  // perks and categories now come from DB override (activePerks / activeCategories below)
 
-  const featuredProducts = products
-    .filter((product) => product.isFeatured)
-    .slice(0, 2)
-    .map((product) => ({
-      id: product.id,
-      slug: product.slug,
-      title: product.titleDirect ?? t(product.titleKey),
-      subtitle: product.descriptionDirect ?? t(product.descriptionKey),
-      price: `${product.price} RUB`,
-      image: product.image,
-      tag: product.tagKey ? t(product.tagKey) : '',
-      specs: product.specs ?? [],
-    })) as FeaturedProduct[]
+  const featuredProducts = useMemo<FeaturedProduct[]>(() => {
+    return products
+      .filter((product) => product.isFeatured)
+      .slice(0, 2)
+      .map((product) => ({
+        id: product.id,
+        slug: product.slug,
+        title: product.titleDirect ?? t(product.titleKey),
+        subtitle: product.descriptionDirect ?? t(product.descriptionKey),
+        price: `${product.price} RUB`,
+        image: product.image,
+        tag: product.tagKey ? t(product.tagKey) : '',
+        specs: product.specs ?? [],
+      }))
+  }, [products, t])
 
   useEffect(() => {
     if (slides.length <= 1) return

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { lazy, Suspense, useState, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Product, VariantGroup } from '../data/products'
 import { useProducts } from '../hooks/useProducts'
@@ -12,14 +12,21 @@ import {
   clearAdminSecret,
   type ProductInput,
 } from '../lib/adminProducts'
-import { ContentTabV2 } from './admin/ContentTabV2'
-import { BrandPagesTab } from './admin/BrandPagesTab'
-import { PagesTabV2 } from './admin/PagesTabV2'
+// Admin sub-tabs are lazy-imported so the initial /admin chunk only ships
+// the tabs that are visible (Dashboard + Products by default). Opening
+// Content / Pages / Brands / Promos / Media / Audit pulls their bundles
+// on demand — each is wrapped in <Suspense> below so the rest of the
+// admin shell stays interactive while a tab module is fetching.
+const ContentTabV2  = lazy(() => import('./admin/ContentTabV2').then(m => ({ default: m.ContentTabV2 })))
+const BrandPagesTab = lazy(() => import('./admin/BrandPagesTab').then(m => ({ default: m.BrandPagesTab })))
+const PagesTabV2    = lazy(() => import('./admin/PagesTabV2').then(m => ({ default: m.PagesTabV2 })))
+const PromoTab      = lazy(() => import('./admin/PromoTab'))
+const MediaTab      = lazy(() => import('./admin/MediaTab'))
+const AuditLogTab   = lazy(() => import('./admin/AuditLogTab'))
+// Dashboard + CustomerModal stay eager — Dashboard is the default landing
+// view, CustomerModal opens via direct click and must render synchronously.
 import DashboardTab from './admin/DashboardTab'
 import CustomerModal from './admin/CustomerModal'
-import PromoTab from './admin/PromoTab'
-import MediaTab from './admin/MediaTab'
-import AuditLogTab from './admin/AuditLogTab'
 import { logAdminAction } from '../lib/adminAudit'
 import MediaPicker from '../components/admin/MediaPicker'
 import { toCsv, downloadCsv } from '../lib/csv'
@@ -858,18 +865,23 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           onJumpToTab={(tab) => setActiveTab(tab)}
         />
       )}
-      {activeTab === 'content' && <ContentTabV2 />}
-      {activeTab === 'pages' && <PagesTabV2 />}
-      {activeTab === 'brands' && <BrandPagesTab />}
+      {/* Lazy tab payloads need Suspense fallbacks. A single shared
+        * skeleton works because only one of these branches renders at a
+        * time. The "Загрузка..." copy matches the eager tab style. */}
+      <Suspense fallback={<div className="admin__content-empty"><p className="admin__empty-text">Загрузка...</p></div>}>
+        {activeTab === 'content' && <ContentTabV2 />}
+        {activeTab === 'pages' && <PagesTabV2 />}
+        {activeTab === 'brands' && <BrandPagesTab />}
+        {activeTab === 'promos' && <PromoTab />}
+        {activeTab === 'media' && <MediaTab />}
+        {activeTab === 'audit' && <AuditLogTab />}
+      </Suspense>
       {activeTab === 'orders' && (
         <OrdersTab initialStatus={ordersStatusFilter} onOpenCustomer={setOpenCustomer} />
       )}
       {activeTab === 'inquiries' && <InquiriesTab />}
       {activeTab === 'chat' && <ChatTab onOpenCustomer={setOpenCustomer} />}
       {activeTab === 'bloggers' && <BloggersTab allProducts={allProducts} />}
-      {activeTab === 'promos' && <PromoTab />}
-      {activeTab === 'media' && <MediaTab />}
-      {activeTab === 'audit' && <AuditLogTab />}
 
       {/* Products tab — kept INSIDE the main column so it gets the same
         * full-width edge-to-edge layout as the other tabs. Was previously

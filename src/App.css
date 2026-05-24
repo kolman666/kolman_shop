@@ -680,15 +680,6 @@
 
 /* Reduced-motion: kill the looping sheen + arrow bob so the panel stays
  * still for users who prefer no movement. The hover transitions stay. */
-@media (prefers-reduced-motion: reduce) {
-  .hero-card__cta-shimmer {
-    animation: none;
-  }
-
-  .hero-card__cta-arrow {
-    animation: none;
-  }
-}
 
 .hero-card__copy {
   animation: fadeSlide 0.5s ease both;
@@ -976,14 +967,6 @@
   animation: none; /* hover overrides the bob */
 }
 
-/* Reduced-motion: kill the continuous animations so the card stays still.
- * The hover transitions remain (they're event-triggered, not endless). */
-@media (prefers-reduced-motion: reduce) {
-  .promo-card__shard,
-  .promo-arrow {
-    animation: none !important;
-  }
-}
 
 .promo-card--catalog {
   border: 1px solid var(--color-border);
@@ -9832,10 +9815,6 @@
   50%      { box-shadow: 0 0 0 6px rgba(225, 29, 29, 0); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .brand-page__preview-dot { animation: none; }
-}
-
 /* Light-theme: the default `.brand-page__title` is `color: #ffffff` which
  * only reads on a dark banner. With the placeholder variant (no banner)
  * the hero bg is light → flip the title to dark text + drop the shadow. */
@@ -10112,10 +10091,6 @@
   50%      { box-shadow: 0 0 0 5px rgba(225, 29, 29, 0); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .account-popover__chat-badge { animation: none; }
-}
-
 .account-popover__chat--unread .account-popover__chat-title,
 .account-popover__chat--unread .account-popover__chat-preview {
   color: var(--color-text);
@@ -10166,13 +10141,6 @@
 @keyframes account-popover-skel {
   0%, 100% { opacity: 0.45; }
   50%      { opacity: 0.85; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .account-popover__chat-skel-thumb,
-  .account-popover__chat-skel-line {
-    animation: none;
-  }
 }
 
 /* Notification cards */
@@ -10426,10 +10394,6 @@
   .account-popover__notif-list {
     max-height: none;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .account-popover { animation: none; }
 }
 
 :root[data-theme="light"] .account-popover {
@@ -12517,13 +12481,6 @@
   border-radius: 999px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .sk {
-    animation: none;
-    background: var(--color-bg-soft);
-  }
-}
-
 /* Common card-skeleton layout used in catalog grid + profile lists. */
 .sk-card {
   display: grid;
@@ -12921,35 +12878,9 @@
   font-weight: 700;
 }
 
-/* ===== Product compare ============================================== */
-.product-card__compare {
-  position: absolute;
-  top: 12px;
-  right: 50px;
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  background: rgba(20, 20, 24, 0.7);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-soft);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.18s, color 0.18s, border-color 0.18s;
-  z-index: 2;
-}
-
-.product-card__compare:hover {
-  background: rgba(20, 20, 24, 0.92);
-  color: var(--color-text);
-}
-
-.product-card__compare--active {
-  background: var(--color-main);
-  color: #fff;
-  border-color: var(--color-main);
-}
+/* `.product-card__compare` rules removed — the button was deleted from
+ * ProductCard. The CompareBar at the bottom of the page is still wired
+ * (drives /compare from product detail pages), so its styles stay. */
 
 .compare-bar {
   position: fixed;
@@ -13385,13 +13316,6 @@
 .cookie-btn--decline:hover .cookie-btn__label,
 .cookie-btn--decline:focus-visible .cookie-btn__label {
   color: var(--color-bg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cookie-consent { animation: none; }
-  .cookie-btn__fill { transition: none; }
-  .cookie-btn__fill::after { animation: none; }
-  .cookie-btn:hover .cookie-btn__fill { transform: translateY(0); }
 }
 
 /* ===== Media picker + library ===== */
@@ -14228,12 +14152,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .brand-ticker__lane {
-    animation: none;
-  }
-}
-
 /* ============================================================
  * Admin redesign — sidebar layout.
  *
@@ -14916,11 +14834,6 @@ h4 {
     letter-spacing: 0.02em;
   }
 
-  /* Hide compare button on mobile — reduces visual noise; fav + menu remain */
-  .product-card__compare {
-    display: none !important;
-  }
-
   .product-card__fav {
     top: 8px;
     right: 8px;
@@ -15255,12 +15168,26 @@ h4 {
   }
 }
 
+/* ===========================================================
+ * Reduced-motion — universal override.
+ *
+ * Replaces 10 scattered component-specific blocks with one global
+ * rule that disables every animation + transition site-wide. Saves
+ * CSS bytes, future-proofs new animations (they're automatically
+ * covered), and is the WCAG-recommended pattern.
+ *
+ * `0.01ms` is the trick — not `0s` because some browsers skip
+ * animationend events at 0 duration, which would break code that
+ * relies on them (we use a few). 0.01ms is effectively instant but
+ * still fires the event.
+ * =========================================================== */
 @media (prefers-reduced-motion: reduce) {
-
-  .share-cart-toast--open .share-cart-toast__panel,
-  .share-cart-toast__line {
-    animation: none;
-    opacity: 1;
-    transform: none;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
