@@ -656,15 +656,27 @@ function HomePage() {
 
           <aside className="side-panel">
             <Link to="/catalog" className="promo-card promo-card--accent">
-              {/* Minimalist animated background — just two GPU-composited
-                * layers, no organic blobs or particle noise:
-                *   __glow  — single soft white halo top-right, slowly breathes
-                *   __sheen — barely-visible diagonal highlight that drifts
-                *             across once every 14s
-                * That's it. The card stays clean while never being fully
-                * static. */}
-              <span className="promo-card__glow" aria-hidden="true" />
-              <span className="promo-card__sheen" aria-hidden="true" />
+              {/* Decorative SVG art layer — four overlapping abstract shapes
+                * (two rounded rectangles + two circles) tinted white over the
+                * red background. Each shape gets its own CSS animation that
+                * drifts it slightly so the composition is never fully static.
+                * `preserveAspectRatio="xMidYMid slice"` lets the artwork
+                * crop-fill the card no matter the aspect ratio. */}
+              <svg
+                className="promo-card__art"
+                viewBox="0 0 400 300"
+                preserveAspectRatio="xMidYMid slice"
+                aria-hidden="true"
+              >
+                {/* Big rounded pill — top-left band */}
+                <rect className="promo-card__art-a" x="-40" y="-20" width="240" height="120" rx="60" />
+                {/* Larger rounded pill — middle/right (deeper layer) */}
+                <rect className="promo-card__art-b" x="170" y="70"  width="320" height="170" rx="85" />
+                {/* Soft circle — bottom-left */}
+                <circle className="promo-card__art-c" cx="70"  cy="270" r="70" />
+                {/* Small accent circle — top-right */}
+                <circle className="promo-card__art-d" cx="360" cy="20"  r="55" />
+              </svg>
 
               <p className="promo-label">{t('ui.readyToGearUp')}</p>
               <h2 className="promo-title">{t('ui.startShopping')}</h2>
