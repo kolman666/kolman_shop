@@ -865,89 +865,90 @@
   box-shadow: 0 14px 30px rgba(225, 29, 29, 0.32);
 }
 
-/* ── Decorative SVG art layer ───────────────────────────────
+/* ── Organic blob composition ───────────────────────────────
  *
- * Four overlapping abstract shapes — two rounded pills + two circles —
- * tinted white over the red background. They reference the dns-shop /
- * russian-promo-card look (geometric composition with rounded forms)
- * but each gets its own slow CSS animation so the whole composition
- * shifts continuously without ever syncing up.
+ * Three white shapes tinted over the red background:
+ *   --lg : big shape anchored top-left (carries the main composition)
+ *   --md : second big shape anchored bottom-right (interlocks with lg)
+ *   --sm : small accent disk floating in the negative space between them
  *
- * Why SVG rather than CSS divs: SVG `<rect rx>` corners stay perfectly
- * smooth at every size, and the whole layer scales with the card via
- * `preserveAspectRatio="slice"` without juggling percentages.
+ * The shapes themselves are spans with asymmetric `border-radius` — the
+ * standard CSS "blob" trick where each corner has its own elliptical
+ * radius, producing a smooth organic silhouette that no SVG rect/circle
+ * could match.
  *
- * Transforms on SVG elements need `transform-box: fill-box` to anchor
- * `transform-origin` to the element itself rather than the SVG viewport.
+ * Animations are pure translate-only, slow, and use ease-in-out. No
+ * rotation or scale — those read as "twitchy" at the speeds we want.
+ * Each blob drifts on its own clock so the composition never repeats.
  */
-.promo-card__art {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-  overflow: visible;
-}
 
-.promo-card__art rect,
-.promo-card__art circle {
-  fill: #ffffff;
-  transform-box: fill-box;
-  transform-origin: center;
+.promo-card__blob {
+  position: absolute;
+  pointer-events: none;
+  background: #ffffff;
+  z-index: 0;
   will-change: transform;
 }
 
-/* Per-shape tinting + animation. Different alpha levels create depth —
- * the bigger pieces are softer, the smaller accents are slightly more
- * present. Durations are deliberately co-prime so the motion never loops
- * back to the same composition. */
-.promo-card__art-a {
+/* Big upper-left silhouette. The unusual border-radius makes the corners
+ * each curve differently — three "soft" corners and one tighter one, so
+ * the shape feels designed rather than generic. Extends past the card
+ * edge so the cropped silhouette feels intentional. */
+.promo-card__blob--lg {
+  top: -25%;
+  left: -15%;
+  width: 95%;
+  height: 75%;
   opacity: 0.22;
-  animation: promo-art-drift-a 13s ease-in-out infinite;
+  border-radius: 68% 32% 58% 42% / 54% 46% 60% 40%;
+  animation: promo-blob-drift-lg 12s ease-in-out infinite;
 }
 
-.promo-card__art-b {
-  opacity: 0.14;
-  animation: promo-art-drift-b 17s ease-in-out infinite;
+/* Mirror blob anchored to the bottom-right. Its silhouette complements
+ * the upper one — the two read as one continuous composition that
+ * happens to overlap in the middle. */
+.promo-card__blob--md {
+  bottom: -30%;
+  right: -20%;
+  width: 90%;
+  height: 80%;
+  opacity: 0.13;
+  border-radius: 38% 62% 44% 56% / 60% 40% 56% 44%;
+  animation: promo-blob-drift-md 16s ease-in-out infinite;
 }
 
-.promo-card__art-c {
-  opacity: 0.18;
-  animation: promo-art-drift-c 11s ease-in-out infinite;
+/* Small bright accent — a single perfect disk in the visual breathing
+ * room between the two big blobs. Slightly more present (higher alpha)
+ * so it acts as a focal point. */
+.promo-card__blob--sm {
+  top: 35%;
+  right: 14%;
+  width: 14%;
+  aspect-ratio: 1;
+  opacity: 0.34;
+  border-radius: 50%;
+  animation: promo-blob-drift-sm 9s ease-in-out infinite;
 }
 
-.promo-card__art-d {
-  opacity: 0.26;
-  animation: promo-art-drift-d 15s ease-in-out infinite;
+@keyframes promo-blob-drift-lg {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(0, 10px); }
 }
 
-@keyframes promo-art-drift-a {
-  0%, 100% { transform: translate(0, 0)    rotate(0deg); }
-  50%      { transform: translate(10px, 6px) rotate(2deg); }
+@keyframes promo-blob-drift-md {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(0, -10px); }
 }
 
-@keyframes promo-art-drift-b {
-  0%, 100% { transform: translate(0, 0)      scale(1); }
-  50%      { transform: translate(-12px, -8px) scale(1.04); }
+@keyframes promo-blob-drift-sm {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(0, 6px); }
 }
 
-@keyframes promo-art-drift-c {
-  0%, 100% { transform: translate(0, 0)     scale(1); }
-  50%      { transform: translate(6px, -10px) scale(1.06); }
-}
-
-@keyframes promo-art-drift-d {
-  0%, 100% { transform: translate(0, 0)      rotate(0deg); }
-  50%      { transform: translate(-8px, 12px) rotate(-3deg); }
-}
-
-/* Hover speeds the drifts so the card "wakes up" briefly without
- * changing its character. */
-.promo-card--accent:hover .promo-card__art-a { animation-duration: 6s; }
-.promo-card--accent:hover .promo-card__art-b { animation-duration: 8s; }
-.promo-card--accent:hover .promo-card__art-c { animation-duration: 5s; }
-.promo-card--accent:hover .promo-card__art-d { animation-duration: 7s; }
+/* Hover: speed each drift up so the composition visibly breathes. */
+.promo-card--accent:hover .promo-card__blob--lg { animation-duration: 6s; }
+.promo-card--accent:hover .promo-card__blob--md { animation-duration: 8s; }
+.promo-card--accent:hover .promo-card__blob--sm { animation-duration: 4s; }
 
 .promo-label {
   position: relative;
@@ -1000,8 +1001,7 @@
 /* Reduced-motion: kill the continuous animations so the card stays still.
  * The hover transitions remain (they're event-triggered, not endless). */
 @media (prefers-reduced-motion: reduce) {
-  .promo-card__art rect,
-  .promo-card__art circle,
+  .promo-card__blob,
   .promo-arrow {
     animation: none !important;
   }
