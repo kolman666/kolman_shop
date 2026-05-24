@@ -8968,12 +8968,22 @@
   font-size: 12.5px;
 }
 
-/* ===== Admin chat ===== */
+/* ===== Admin chat =====
+ *
+ * Pinned to ~88% of viewport height so the chat never makes the admin
+ * page grow taller than the screen. Both columns get the same fixed
+ * height; internal lists (thread sidebar, messages feed) scroll inside
+ * their column instead of pushing the layout down. `min-height: 0` on
+ * the grid lets the flex children's `overflow-y: auto` actually trigger
+ * — without it, flex children stretch to their content's intrinsic size
+ * and the scroll bar never appears.
+ */
 .admin__chat {
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr);
   gap: 14px;
-  min-height: 540px;
+  height: 88vh;
+  min-height: 540px; /* fallback for very short laptops */
 }
 
 .admin__chat-list {
@@ -8984,6 +8994,9 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg-elevated);
+  height: 100%;
+  min-height: 0; /* see comment on .admin__chat above */
+  overflow: hidden;
 }
 
 .admin__chat-list-head {
@@ -9000,6 +9013,10 @@
   display: grid;
   gap: 6px;
   overflow-y: auto;
+  /* Eats remaining vertical space inside .admin__chat-list so the
+   * filters / search above stay pinned and the thread list scrolls. */
+  flex: 1;
+  min-height: 0;
 }
 
 .admin__chat-thread {
@@ -9053,6 +9070,11 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg-elevated);
+  /* Same height as the sidebar — the messages feed scrolls inside,
+   * header + form stay pinned at top / bottom. */
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .admin__chat-head {
@@ -9104,8 +9126,10 @@
   border-radius: var(--radius-md);
   background: var(--color-bg);
   border: 1px solid var(--color-border);
-  min-height: 360px;
-  max-height: 540px;
+  /* Removed the rigid `max-height: 540px` cap — feed now fills the
+   * remaining height of the conversation column (after the header +
+   * form pin top/bottom). `min-height: 0` lets the scroll trigger. */
+  min-height: 0;
 }
 
 .admin__chat-form {
