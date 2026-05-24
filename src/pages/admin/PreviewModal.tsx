@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 type PreviewModalProps = {
   open: boolean
@@ -11,6 +11,23 @@ type PreviewModalProps = {
 // passed as children inside a constrained "stage" so the admin sees an
 // accurate preview without leaving the panel.
 export function PreviewModal({ open, title = 'Превью', onClose, children }: PreviewModalProps) {
+  // Two-state mount so the closing tween can play before unmount —
+  // matches the AccountPopover + AuthModal pattern.
+  const [mounted, setMounted] = useState(open)
+  const [phase, setPhase] = useState<'open' | 'closing'>('open')
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true)
+      requestAnimationFrame(() => setPhase('open'))
+      return
+    }
+    if (!mounted) return
+    setPhase('closing')
+    const t = window.setTimeout(() => setMounted(false), 220)
+    return () => window.clearTimeout(t)
+  }, [open, mounted])
+
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -23,10 +40,10 @@ export function PreviewModal({ open, title = 'Превью', onClose, children }
     }
   }, [open, onClose])
 
-  if (!open) return null
+  if (!mounted) return null
 
   return (
-    <div className="preview-modal" role="dialog" aria-modal="true">
+    <div className={`preview-modal preview-modal--${phase}`} role="dialog" aria-modal="true">
       <div className="preview-modal__overlay" onClick={onClose} />
       <div className="preview-modal__shell">
         <header className="preview-modal__head">

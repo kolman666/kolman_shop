@@ -17,6 +17,23 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
   const [password, setPassword] = useState('')
   const [errorCode, setErrorCode] = useState<AuthErrorCode | 'UNKNOWN' | ''>('')
   const [submitting, setSubmitting] = useState(false)
+  // Same closing-state pattern as AccountPopover — keeps the modal in the
+  // DOM long enough for the reverse fadeSlide animation to play, then
+  // unmounts. Without this the modal vanished instantly on close.
+  const [mounted, setMounted] = useState(open)
+  const [phase, setPhase] = useState<'open' | 'closing'>('open')
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true)
+      requestAnimationFrame(() => setPhase('open'))
+      return
+    }
+    if (!mounted) return
+    setPhase('closing')
+    const t = window.setTimeout(() => setMounted(false), 230)
+    return () => window.clearTimeout(t)
+  }, [open, mounted])
 
   useEffect(() => {
     if (!open) {
@@ -43,7 +60,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
     }
   }, [open])
 
-  if (!open) {
+  if (!mounted) {
     return null
   }
 
@@ -73,7 +90,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
   const errorMessage = errorCode ? t(`ui.auth.errors.${errorCode}`) : ''
 
   return (
-    <div className="auth-modal" role="dialog" aria-modal="true">
+    <div className={`auth-modal auth-modal--${phase}`} role="dialog" aria-modal="true">
       <div className="auth-modal__overlay" onClick={onClose} />
       <div className="auth-modal__body">
         <h2 className="auth-modal__title">

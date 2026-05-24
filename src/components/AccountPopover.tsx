@@ -55,6 +55,29 @@ export default function AccountPopover({ open, user, unreadChats, anchorRef, onC
   // instantly when a user adds something while it's open.
   const [favCount, setFavCount] = useState(() => getFavoritesCount())
   const [cartCount, setCartCount] = useState(() => getCartCount())
+  // Two-state animation: `mounted` keeps the popover in the DOM long
+  // enough for a closing transition to play. `phase` decides which
+  // animation class to apply (entering vs leaving). When the parent
+  // sets `open=false`, we flip phase to 'closing', wait for the CSS
+  // animation to finish, then unmount.
+  const [mounted, setMounted] = useState(open)
+  const [phase, setPhase] = useState<'open' | 'closing'>('open')
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true)
+      // Next paint frame so the open animation starts from its
+      // pre-paint state (otherwise React batches and skips the
+      // transition).
+      requestAnimationFrame(() => setPhase('open'))
+      return
+    }
+    if (!mounted) return
+    setPhase('closing')
+    const ANIM_MS = 220
+    const t = window.setTimeout(() => setMounted(false), ANIM_MS)
+    return () => window.clearTimeout(t)
+  }, [open, mounted])
   // Recent chat threads — fetched lazily on first open so the popover never
   // adds bandwidth to a page nav. `loadingChats` lets us show a 1-line
   // skeleton while the round-trip completes.
@@ -205,12 +228,17 @@ export default function AccountPopover({ open, user, unreadChats, anchorRef, onC
     else navigate('/')
   }
 
-  if (!open) return null
+  if (!mounted) return null
 
   const initials = displayName.slice(0, 1).toUpperCase()
 
   return (
-    <div ref={popoverRef} className="account-popover" role="dialog" aria-label="Меню аккаунта">
+    <div
+      ref={popoverRef}
+      className={`account-popover account-popover--${phase}`}
+      role="dialog"
+      aria-label="Меню аккаунта"
+    >
       {/* Left column — Notifications */}
       <div className="account-popover__col account-popover__col--notif">
         <header className="account-popover__col-head">

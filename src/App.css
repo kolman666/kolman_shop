@@ -909,9 +909,11 @@
   50%      { transform: translate(-10px, -8px); }
 }
 
-/* Hover: speeds visibly accelerate. */
-.promo-card--accent:hover .promo-card__shard--a { animation-duration: 8.25s; }
-.promo-card--accent:hover .promo-card__shard--b { animation-duration: 10.5s;   }
+/* No hover-time `animation-duration` swap on the shards — CSS can't
+ * transition between two duration values, so the shards would jump to
+ * the new speed mid-cycle and visibly jerk on both mouseenter AND
+ * mouseleave. Hover feedback comes from the smooth card-level
+ * `transform` + `box-shadow` transitions above instead. */
 
 .promo-label {
   position: relative;
@@ -7609,7 +7611,25 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  animation: fadeSlide 0.3s ease;
+  /* Animation now phase-driven (`--open` / `--closing`) so the modal
+   * has a visible exit instead of vanishing instantly. The default
+   * (no modifier) is the opening tween for backwards compat with the
+   * still-using-`fadeSlide` `.ask-modal`. */
+  animation: fadeSlide 0.45s ease;
+}
+
+.auth-modal--open {
+  animation: fadeSlide 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.auth-modal--closing {
+  animation: fadeSlideOut 0.23s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes fadeSlideOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(6px); }
 }
 
 .auth-modal__overlay,
@@ -8469,6 +8489,28 @@
   display: flex;
   align-items: stretch;
   justify-content: stretch;
+}
+
+/* Phase-driven entry / exit. The opening tween mirrors the closing
+ * tween so the modal animates symmetrically — open is a fade + scale
+ * up from 0.96, close fades + scales back down. */
+.preview-modal--open {
+  animation: preview-modal-in 0.36s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.preview-modal--closing {
+  animation: preview-modal-out 0.22s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes preview-modal-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+@keyframes preview-modal-out {
+  from { opacity: 1; transform: scale(1);    }
+  to   { opacity: 0; transform: scale(0.96); }
 }
 
 .preview-modal__overlay {
@@ -9876,12 +9918,34 @@
     0 16px 48px rgba(0, 0, 0, 0.55),
     0 2px 6px rgba(0, 0, 0, 0.4);
   overflow: hidden;
-  animation: account-popover-in 0.33s cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* Animation depends on phase (set by the React component):
+   *   --open    → entering, plays `account-popover-in`
+   *   --closing → leaving, plays `account-popover-out`
+   * Both keyframes use the same cubic-bezier curve so open + close
+   * mirror each other and feel like a single reversible motion.
+   * `forwards` keeps the final frame so the closing state doesn't
+   * snap back to "open" right before the component unmounts. */
+}
+
+.account-popover--open {
+  animation: account-popover-in 0.33s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.account-popover--closing {
+  animation: account-popover-out 0.22s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  /* Drop pointer interactivity during the closing tween so a stray
+   * click doesn't re-trigger the unmount race. */
+  pointer-events: none;
 }
 
 @keyframes account-popover-in {
   from { opacity: 0; transform: translateY(-8px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+@keyframes account-popover-out {
+  from { opacity: 1; transform: translateY(0)    scale(1);    }
+  to   { opacity: 0; transform: translateY(-6px) scale(0.97); }
 }
 
 .account-popover__col {
@@ -10381,12 +10445,27 @@
     border-radius: 22px 22px 0 0;
     border-bottom: none;
     overflow-y: auto;
-    animation: account-popover-in-mobile 0.42s cubic-bezier(0.22, 0.61, 0.36, 1);
+    /* Mobile bottom-sheet variant: slide up from bottom on open, slide
+     * back down on close. Overrides the desktop opacity+scale tween. */
+    animation: none; /* reset desktop default */
+  }
+
+  .account-popover--open {
+    animation: account-popover-in-mobile 0.42s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+
+  .account-popover--closing {
+    animation: account-popover-out-mobile 0.3s cubic-bezier(0.4, 0, 0.6, 1) forwards;
   }
 
   @keyframes account-popover-in-mobile {
     from { transform: translateY(100%); }
     to   { transform: translateY(0); }
+  }
+
+  @keyframes account-popover-out-mobile {
+    from { transform: translateY(0); }
+    to   { transform: translateY(100%); }
   }
 
   .account-popover__col--notif {
@@ -13271,31 +13350,60 @@
   will-change: transform;
 }
 
-/* Wavy crest — a tiny SVG painted at the top edge of the fill that
- * slides horizontally while the fill rises. Pure decoration; the fill
- * still works without it. */
+/* Wavy crest — two layered SVG masks scrolling at different speeds in
+ * opposite directions, simulating real wave chop. The back wave is a
+ * gentler sine-style curve; the front wave is a chaotic multi-peak
+ * profile with varying amplitudes (sharp peaks, soft valleys). They
+ * sit atop the fill so the silhouette has organic movement rather than
+ * a uniform sine pattern. */
+.cookie-btn__fill::before,
 .cookie-btn__fill::after {
   content: "";
   position: absolute;
-  top: -7px;
   left: -50%;
   right: -50%;
-  height: 10px;
   background-color: currentColor;
-  /* Repeating sine wave silhouette as a mask. Each repetition is 28px
-   * wide; with 200% width the crest tiles ~14 times and shifts smoothly. */
-  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 10' preserveAspectRatio='none'><path d='M0 7 C 7 1, 7 1, 14 7 S 21 13, 28 7 L 28 10 L 0 10 Z' fill='black'/></svg>");
-          mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 10' preserveAspectRatio='none'><path d='M0 7 C 7 1, 7 1, 14 7 S 21 13, 28 7 L 28 10 L 0 10 Z' fill='black'/></svg>");
   -webkit-mask-repeat: repeat-x;
           mask-repeat: repeat-x;
-  -webkit-mask-size: 28px 10px;
-          mask-size: 28px 10px;
-  animation: cookie-wave-shift 2.1s linear infinite;
+  pointer-events: none;
 }
 
-@keyframes cookie-wave-shift {
+/* Back wave — softer, slower, slightly more transparent so the front
+ * layer reads as foreground. Tile width 90px so peaks land at different
+ * positions relative to the front wave. */
+.cookie-btn__fill::before {
+  top: -14px;
+  height: 18px;
+  opacity: 0.55;
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 18' preserveAspectRatio='none'><path d='M0 12 C 12 4, 24 16, 36 10 S 60 4, 72 12 S 90 8, 90 12 L 90 18 L 0 18 Z' fill='black'/></svg>");
+          mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 18' preserveAspectRatio='none'><path d='M0 12 C 12 4, 24 16, 36 10 S 60 4, 72 12 S 90 8, 90 12 L 90 18 L 0 18 Z' fill='black'/></svg>");
+  -webkit-mask-size: 90px 18px;
+          mask-size: 90px 18px;
+  animation: cookie-wave-back 4.5s linear infinite;
+}
+
+/* Front wave — chaotic profile with three distinct peak heights (a tall
+ * 4-unit one, a medium 8-unit one, a shallow 11-unit one). Travels in
+ * the OPPOSITE direction at a faster pace; the two waves continuously
+ * cross each other so the crest never looks repetitive. */
+.cookie-btn__fill::after {
+  top: -11px;
+  height: 16px;
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 16' preserveAspectRatio='none'><path d='M0 10 C 6 2, 14 14, 22 8 C 30 2, 36 16, 44 9 C 52 3, 60 14, 72 10 L 72 16 L 0 16 Z' fill='black'/></svg>");
+          mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 16' preserveAspectRatio='none'><path d='M0 10 C 6 2, 14 14, 22 8 C 30 2, 36 16, 44 9 C 52 3, 60 14, 72 10 L 72 16 L 0 16 Z' fill='black'/></svg>");
+  -webkit-mask-size: 72px 16px;
+          mask-size: 72px 16px;
+  animation: cookie-wave-front 2.7s linear infinite;
+}
+
+@keyframes cookie-wave-back {
   from { transform: translateX(0); }
-  to   { transform: translateX(28px); }
+  to   { transform: translateX(90px); }
+}
+
+@keyframes cookie-wave-front {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-72px); }
 }
 
 .cookie-btn:hover .cookie-btn__fill,
