@@ -3427,6 +3427,90 @@
   border-color: var(--color-main);
 }
 
+/* ─── Admin product filters ───────────────────────────────────
+ * Compact filter panel that lives under the search input in the admin
+ * Products sidebar. Three rows of native <select>s + a meta line showing
+ * how many products match. Native dropdowns work cross-platform without
+ * a heavy combobox library, and keyboard-nav comes for free.
+ */
+.admin__filters {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.admin__filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+@media (max-width: 1080px) {
+  .admin__filter-row { grid-template-columns: 1fr; }
+}
+
+.admin__filter-select {
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-soft);
+  color: var(--color-text);
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 28px;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.admin__filter-select:hover {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-bg-muted);
+}
+
+.admin__filter-select:focus {
+  outline: none;
+  border-color: var(--color-main);
+}
+
+.admin__filter-clear {
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(225, 29, 29, 0.45);
+  background: rgba(225, 29, 29, 0.1);
+  color: var(--color-main-hover);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.admin__filter-clear:hover {
+  background: var(--color-main);
+  color: #fff;
+  border-color: transparent;
+}
+
+.admin__filter-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-text-dim);
+  padding: 2px 4px;
+}
+
+.admin__filter-meta span {
+  font-weight: 700;
+  color: var(--color-text);
+  font-size: 12px;
+}
+
 .admin__stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -8746,14 +8830,40 @@
   opacity: 1;
 }
 
-.chat-status--sent {
-  opacity: 0.6;
-}
+.chat-status--sent { opacity: 0.75; }
 
 .chat-status--read {
-  /* Bright accent ✓✓ when the other side has read the message. */
+  /* Bright accent ✓✓ when the other side has read the message. The colour
+   * is contextual — see the bubble overrides below. The default value here
+   * applies to admin (dark bubble) where the brand red reads well. */
   color: var(--color-main);
   opacity: 1;
+  /* Subtle drop-glow so the ✓✓ feels "lit up" the instant it flips. */
+  filter: drop-shadow(0 0 6px rgba(225, 29, 29, 0.45));
+}
+
+/* ── Contextual contrast ──────────────────────────────────────
+ * The customer-side bubble is `var(--color-main)` (red) — a red ✓✓ on red
+ * is invisible, which is why users reported "the icon just disappears
+ * when the message is read". On red bubbles we flip the indicator to
+ * bright white + a soft outer glow so it reads as "lit up". On dark
+ * (admin / incoming) bubbles the red accent (above) does the same job.
+ */
+.profile-chat__msg--user .profile-chat__bubble .chat-status--sent {
+  color: rgba(255, 255, 255, 0.85);
+  opacity: 1;
+}
+
+.profile-chat__msg--user .profile-chat__bubble .chat-status--read {
+  color: #ffffff;
+  opacity: 1;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.6));
+}
+
+.profile-chat__msg--user .profile-chat__bubble .chat-status--sending,
+.profile-chat__msg--user .profile-chat__bubble .chat-status--failed {
+  color: #ffffff;
+  opacity: 0.9;
 }
 
 /* "Sending" bubble gets a subtle dimming so the user can tell it's in flight,
@@ -9576,6 +9686,439 @@
   font-size: 11px;
   color: var(--color-text-dim);
   font-weight: 400;
+}
+
+/* ===== Brand page — preview hardening ========================
+ * The hero used to be a flat `--color-bg-elevated` block (= #111 dark / #fff
+ * light). When the admin opens the preview before filling in banner/logo/
+ * description it looked like an empty rectangle — easily mistaken for
+ * "broken" or "black screen". Two fixes:
+ *   1. `--placeholder` variant paints a subtle red→dark gradient so the
+ *      hero always has visible texture, even with zero content.
+ *   2. `.brand-page__preview-chip` is a clear "это превью" badge inside
+ *      the hero so the admin sees content is loaded and intentional.
+ *      Only rendered when isPreview === true.
+ * ============================================================ */
+.brand-page__hero--placeholder {
+  background:
+    radial-gradient(80% 120% at 0% 0%, color-mix(in srgb, var(--color-main) 24%, transparent), transparent 65%),
+    radial-gradient(60% 100% at 100% 100%, color-mix(in srgb, var(--color-main) 14%, transparent), transparent 55%),
+    repeating-linear-gradient(135deg, transparent 0 18px, color-mix(in srgb, var(--color-main) 5%, transparent) 18px 19px),
+    var(--color-bg-elevated);
+}
+
+.brand-page__preview-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  margin-bottom: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(225, 29, 29, 0.16);
+  border: 1px solid rgba(225, 29, 29, 0.42);
+  color: #ffd6d6;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  z-index: 2;
+  position: relative;
+}
+
+.brand-page__preview-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-main);
+  box-shadow: 0 0 0 3px rgba(225, 29, 29, 0.25);
+  animation: brand-preview-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes brand-preview-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(225, 29, 29, 0.4); }
+  50%      { box-shadow: 0 0 0 6px rgba(225, 29, 29, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-page__preview-dot { animation: none; }
+}
+
+/* Light-theme: the default `.brand-page__title` is `color: #ffffff` which
+ * only reads on a dark banner. With the placeholder variant (no banner)
+ * the hero bg is light → flip the title to dark text + drop the shadow. */
+:root[data-theme="light"] .brand-page__hero--placeholder {
+  background:
+    radial-gradient(80% 120% at 0% 0%, color-mix(in srgb, var(--color-main) 12%, transparent), transparent 65%),
+    radial-gradient(60% 100% at 100% 100%, color-mix(in srgb, var(--color-main) 6%, transparent), transparent 55%),
+    repeating-linear-gradient(135deg, transparent 0 18px, rgba(0, 0, 0, 0.04) 18px 19px),
+    var(--color-bg-elevated);
+}
+
+:root[data-theme="light"] .brand-page__hero--placeholder .brand-page__title {
+  color: var(--color-text);
+  text-shadow: none;
+}
+
+:root[data-theme="light"] .brand-page__hero--placeholder .brand-page__tagline {
+  color: var(--color-text-muted);
+}
+
+:root[data-theme="light"] .brand-page__hero--placeholder .brand-page__back {
+  color: var(--color-text-dim);
+}
+
+:root[data-theme="light"] .brand-page__preview-chip {
+  color: var(--color-main);
+  background: rgba(225, 29, 29, 0.08);
+  border-color: rgba(225, 29, 29, 0.28);
+}
+
+/* ===== Account popover (DNS-shop style) =====================
+ * Floating two-column panel that opens under the header avatar button.
+ * Left column = notifications, right = profile menu + user header. On
+ * desktop it positions itself absolute relative to the closest
+ * `.account-popover-anchor`. On mobile (≤720px) it collapses to a
+ * full-width bottom sheet for thumb-reach.
+ * ============================================================ */
+.account-popover-anchor {
+  position: relative;
+}
+
+.account-popover {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: min(720px, calc(100vw - 32px));
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, 20px);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  animation: account-popover-in 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes account-popover-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.account-popover__col {
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.account-popover__col--notif {
+  background: var(--color-bg-soft);
+  border-right: 1px solid var(--color-border);
+}
+
+.account-popover__col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.account-popover__col-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.account-popover__col-actions {
+  display: inline-flex;
+  gap: 6px;
+  color: var(--color-text-dim);
+}
+
+.account-popover__icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.account-popover__icon-btn:hover {
+  color: var(--color-main);
+  border-color: var(--color-main);
+}
+
+/* Notification cards */
+.account-popover__notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.account-popover__notif {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.account-popover__notif:hover {
+  background: var(--color-bg-muted);
+}
+
+.account-popover__notif-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.account-popover__notif-icon--red    { background: rgba(225, 29, 29, 0.12); color: var(--color-main); }
+.account-popover__notif-icon--orange { background: rgba(255, 152, 0, 0.14); color: #ff9800; }
+.account-popover__notif-icon--blue   { background: rgba(74, 134, 232, 0.16); color: #6ea1f0; }
+.account-popover__notif-icon--green  { background: rgba(60, 179, 113, 0.16); color: #65d09a; }
+
+.account-popover__notif-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.account-popover__notif-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-popover__notif-hint {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-popover__notif-count {
+  flex-shrink: 0;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 11px;
+  background: var(--color-main);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* User header + menu */
+.account-popover__user {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.account-popover__avatar {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-bg-muted);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.account-popover__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.account-popover__avatar-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #ff9800;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-bg-elevated);
+}
+
+.account-popover__user-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.account-popover__user-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-popover__user-email {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-popover__menu {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.account-popover__menu-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 4px;
+  border-radius: 8px;
+  color: var(--color-text-soft);
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.15s ease, background 0.15s ease, padding-inline 0.15s ease;
+}
+
+.account-popover__menu-link:hover {
+  color: var(--color-main);
+  background: var(--color-bg-soft);
+  padding-inline: 10px;
+}
+
+.account-popover__menu-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--color-main);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.account-popover__logout {
+  align-self: stretch;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-strong);
+  background: transparent;
+  color: var(--color-text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.account-popover__logout:hover {
+  color: var(--color-main);
+  border-color: var(--color-main);
+  background: rgba(225, 29, 29, 0.08);
+}
+
+/* Mobile: bottom sheet */
+@media (max-width: 720px) {
+  .account-popover {
+    position: fixed;
+    top: auto;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    width: 100vw;
+    max-height: 88vh;
+    grid-template-columns: 1fr;
+    border-radius: 22px 22px 0 0;
+    border-bottom: none;
+    overflow-y: auto;
+    animation: account-popover-in-mobile 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  @keyframes account-popover-in-mobile {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  .account-popover__col--notif {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    order: 2;
+  }
+  .account-popover__col--menu { order: 1; }
+
+  .account-popover__notif-list {
+    max-height: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-popover { animation: none; }
+}
+
+:root[data-theme="light"] .account-popover {
+  box-shadow:
+    0 14px 40px rgba(20, 20, 20, 0.12),
+    0 2px 6px rgba(20, 20, 20, 0.08);
 }
 
 /* ===== Light theme ============================================
