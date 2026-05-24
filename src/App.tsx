@@ -656,10 +656,24 @@ function HomePage() {
 
           <aside className="side-panel">
             <Link to="/catalog" className="promo-card promo-card--accent">
-              <svg className="promo-card__shape" width="180" height="180" viewBox="0 0 180 180" aria-hidden="true">
-                <rect x="60" y="-30" width="120" height="120" rx="30" fill="#fff" transform="rotate(20 90 90)" />
-                <rect x="90" y="40" width="100" height="100" rx="24" fill="#fff" transform="rotate(10 90 90)" />
-              </svg>
+              {/* Layered animated background. Each <span> is a separate paint
+                * layer so the browser composites them on the GPU instead of
+                * repainting per frame:
+                *   __blob   — morphing organic mass that drifts diagonally
+                *   __rings  — three concentric circles expanding outward
+                *   __dots   — small particles drifting across
+                *   __sheen  — diagonal highlight sweeping left→right
+                */}
+              <span className="promo-card__blob promo-card__blob--a" aria-hidden="true" />
+              <span className="promo-card__blob promo-card__blob--b" aria-hidden="true" />
+              <span className="promo-card__rings" aria-hidden="true">
+                <span /><span /><span />
+              </span>
+              <span className="promo-card__dots" aria-hidden="true">
+                <span /><span /><span /><span /><span />
+              </span>
+              <span className="promo-card__sheen" aria-hidden="true" />
+
               <p className="promo-label">{t('ui.readyToGearUp')}</p>
               <h2 className="promo-title">{t('ui.startShopping')}</h2>
               <span className="promo-arrow" aria-hidden="true">

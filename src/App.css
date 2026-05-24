@@ -849,16 +849,175 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  background: var(--color-main);
+  /* Layered gradient: red core + softer accent in the top-right corner +
+   * a deeper red wash at the bottom-left, so the card has a sense of depth
+   * even before the animated layers kick in. */
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(255, 255, 255, 0.18), transparent 55%),
+    radial-gradient(140% 100% at 0% 100%, #8d0d0d, transparent 60%),
+    var(--color-main);
   color: var(--color-text);
   height: 100%;
+  isolation: isolate; /* keeps blob/sheen blend-modes scoped to this card */
+  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 0.45s ease;
 }
 
-.promo-card__shape {
+.promo-card--accent:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(225, 29, 29, 0.32);
+}
+
+/* ── Animated layers ──────────────────────────────────────── */
+
+/* Morphing organic mass — a single span whose border-radius animates between
+ * four states so the silhouette feels alive. Drifts diagonally at the same
+ * time, simulating a floating blob. Two instances (a, b) overlap for parallax.
+ */
+.promo-card__blob {
   position: absolute;
-  top: 0;
-  right: 0;
-  opacity: 0.18;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.16);
+  filter: blur(1px);
+  z-index: 0;
+}
+
+.promo-card__blob--a {
+  top: -30%;
+  right: -20%;
+  width: 70%;
+  height: 70%;
+  border-radius: 56% 44% 38% 62% / 48% 60% 40% 52%;
+  animation:
+    promo-blob-morph 14s ease-in-out infinite,
+    promo-blob-drift 18s ease-in-out infinite;
+}
+
+.promo-card__blob--b {
+  bottom: -30%;
+  left: -25%;
+  width: 60%;
+  height: 60%;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 38% 62% 56% 44% / 60% 40% 60% 40%;
+  animation:
+    promo-blob-morph-rev 18s ease-in-out infinite,
+    promo-blob-drift-rev 22s ease-in-out infinite;
+}
+
+@keyframes promo-blob-morph {
+  0%, 100% { border-radius: 56% 44% 38% 62% / 48% 60% 40% 52%; }
+  33%      { border-radius: 40% 60% 52% 48% / 58% 42% 58% 42%; }
+  66%      { border-radius: 62% 38% 60% 40% / 38% 64% 36% 62%; }
+}
+
+@keyframes promo-blob-morph-rev {
+  0%, 100% { border-radius: 38% 62% 56% 44% / 60% 40% 60% 40%; }
+  50%      { border-radius: 58% 42% 40% 60% / 42% 62% 38% 58%; }
+}
+
+@keyframes promo-blob-drift {
+  0%, 100% { transform: translate(0, 0)     scale(1); }
+  50%      { transform: translate(-12%, 8%) scale(1.08); }
+}
+
+@keyframes promo-blob-drift-rev {
+  0%, 100% { transform: translate(0, 0)    scale(1); }
+  50%      { transform: translate(10%, -8%) scale(1.05); }
+}
+
+/* Concentric rings emanating from the top-right corner — like a slow radar
+ * ping. Three rings staggered in time so one is always visible. */
+.promo-card__rings {
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 160px;
+  height: 160px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.promo-card__rings span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.32);
+  animation: promo-ring-pulse 4.5s ease-out infinite;
+}
+
+.promo-card__rings span:nth-child(2) { animation-delay: 1.5s; }
+.promo-card__rings span:nth-child(3) { animation-delay: 3s;   }
+
+@keyframes promo-ring-pulse {
+  0%   { transform: scale(0.35); opacity: 0;   }
+  20%  {                          opacity: 0.7; }
+  100% { transform: scale(1);     opacity: 0;   }
+}
+
+/* Small drifting particles. Each dot has a different start position and a
+ * slightly different animation duration so the motion never syncs up. */
+.promo-card__dots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.promo-card__dots span {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+  animation: promo-dot-float 9s ease-in-out infinite;
+}
+
+.promo-card__dots span:nth-child(1) { top: 18%; left: 12%; animation-duration: 10s; }
+.promo-card__dots span:nth-child(2) { top: 38%; left: 70%; animation-duration: 7.5s;  animation-delay: 0.8s; }
+.promo-card__dots span:nth-child(3) { top: 62%; left: 20%; animation-duration: 11s;  animation-delay: 1.6s; }
+.promo-card__dots span:nth-child(4) { top: 78%; left: 60%; animation-duration: 8.5s; animation-delay: 2.4s; }
+.promo-card__dots span:nth-child(5) { top: 28%; left: 88%; animation-duration: 9s;   animation-delay: 0.4s; opacity: 0.6; }
+
+@keyframes promo-dot-float {
+  0%, 100% { transform: translate(0, 0);    opacity: 0.4; }
+  50%      { transform: translate(8px, -10px); opacity: 1; }
+}
+
+/* Diagonal sheen sweep — same trick as the hero CTA. Lives above the blobs
+ * but below the text. */
+.promo-card__sheen {
+  position: absolute;
+  inset: -20% -50%;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0.05) 56%,
+    transparent 70%
+  );
+  transform: translateX(-30%);
+  animation: promo-sheen 6.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: screen;
+}
+
+@keyframes promo-sheen {
+  0%   { transform: translateX(-40%); opacity: 0.6; }
+  50%  { transform: translateX(40%);  opacity: 1;   }
+  100% { transform: translateX(-40%); opacity: 0.6; }
+}
+
+/* Hover: speed up the blobs + intensify the sheen so the card "wakes up". */
+.promo-card--accent:hover .promo-card__blob--a {
+  animation-duration: 7s, 9s;
+}
+.promo-card--accent:hover .promo-card__blob--b {
+  animation-duration: 9s, 11s;
+}
+.promo-card--accent:hover .promo-card__sheen {
+  animation-duration: 3.5s;
 }
 
 .promo-label {
@@ -878,6 +1037,8 @@
   color: var(--color-text);
   font-size: 26px;
   line-height: 1.1;
+  /* Subtle drop shadow keeps the title readable when a blob drifts behind it. */
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.25);
 }
 
 .promo-arrow {
@@ -891,6 +1052,33 @@
   border-radius: 50%;
   background: var(--color-text);
   color: var(--color-main);
+  transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 0.3s ease;
+  /* Idle nudge — the arrow visibly bobs to invite the click. */
+  animation: promo-arrow-bob 3.4s ease-in-out infinite;
+}
+
+@keyframes promo-arrow-bob {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(4px); }
+}
+
+.promo-card--accent:hover .promo-arrow {
+  transform: translateX(8px);
+  box-shadow: 0 6px 14px rgba(255, 255, 255, 0.2);
+  animation: none; /* hover overrides the bob */
+}
+
+/* Reduced-motion: kill every continuous animation so the card stays still.
+ * The hover transitions remain (they're event-triggered, not endless). */
+@media (prefers-reduced-motion: reduce) {
+  .promo-card__blob--a,
+  .promo-card__blob--b,
+  .promo-card__rings span,
+  .promo-card__dots span,
+  .promo-card__sheen,
+  .promo-arrow {
+    animation: none !important;
+  }
 }
 
 .promo-card--catalog {
@@ -9858,6 +10046,231 @@
   border-color: var(--color-main);
 }
 
+/* ── Chat thread rows in the notification column ─────────────
+ * Renders the customer's recent chats with their last message preview
+ * and (when present) a 32×32 thumbnail of the first photo in the latest
+ * message. Mirrors the messenger-list aesthetic — title row, preview
+ * truncated to one line, unread accent dot on the right.
+ */
+.account-popover__chats {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.account-popover__chats-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+.account-popover__chats-all {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-main);
+  text-decoration: none;
+  letter-spacing: 0;
+  text-transform: lowercase;
+  transition: color 0.15s ease;
+}
+.account-popover__chats-all:hover {
+  color: var(--color-main-hover);
+}
+
+.account-popover__chat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.account-popover__chat {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px;
+  border-radius: 12px;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background 0.15s ease;
+  min-width: 0;
+}
+
+.account-popover__chat:hover {
+  background: var(--color-bg-muted);
+}
+
+.account-popover__chat-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.account-popover__chat-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.account-popover__chat-thumb-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-main);
+  background: rgba(225, 29, 29, 0.12);
+  width: 100%;
+  height: 100%;
+}
+
+.account-popover__chat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.account-popover__chat-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.account-popover__chat-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.account-popover__chat-time {
+  font-size: 11px;
+  color: var(--color-text-dim);
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.account-popover__chat-preview {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.35;
+}
+
+.account-popover__chat-sender {
+  color: var(--color-text-soft);
+  font-weight: 600;
+}
+
+.account-popover__chat-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--color-main);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  /* Subtle pulse so unread rows feel alive. */
+  animation: account-popover-chat-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes account-popover-chat-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(225, 29, 29, 0.45); }
+  50%      { box-shadow: 0 0 0 5px rgba(225, 29, 29, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-popover__chat-badge { animation: none; }
+}
+
+.account-popover__chat--unread .account-popover__chat-title,
+.account-popover__chat--unread .account-popover__chat-preview {
+  color: var(--color-text);
+}
+.account-popover__chat--unread .account-popover__chat-preview {
+  font-weight: 600;
+}
+
+/* Skeleton state while threads are fetching on first open. */
+.account-popover__chats-skel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.account-popover__chat-skel {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 4px 8px;
+}
+
+.account-popover__chat-skel-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--color-bg-muted);
+  animation: account-popover-skel 1.4s ease-in-out infinite;
+}
+
+.account-popover__chat-skel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.account-popover__chat-skel-line {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-bg-muted);
+  animation: account-popover-skel 1.4s ease-in-out infinite;
+}
+
+@keyframes account-popover-skel {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-popover__chat-skel-thumb,
+  .account-popover__chat-skel-line {
+    animation: none;
+  }
+}
+
 /* Notification cards */
 .account-popover__notif-list {
   list-style: none;
@@ -12950,22 +13363,34 @@
  *   - Explicit `will-change: transform, border-radius` and `translateZ(0)`
  *     on `.cookie-btn` force the button into its own compositor layer so
  *     Chrome stops trying to re-render the pseudo via the parent's blur. */
-/* Wave-rise fill — built on height animation (NOT transform).
+/* ===========================================================
+ * Cookie button — gradual fill animation.
  *
- * Why this approach finally works in Chrome on Windows:
- *   - Chrome's backdrop-filter on the parent `.cookie-consent__panel`
- *     creates a compositor isolation that prevented `transform`-animated
- *     pseudo-elements from repainting on hover (this was the original
- *     bug — the wave just popped to its end state).
- *   - Animating `height` is a paint-layer property, not compositor —
- *     it's rendered every frame by the layout engine regardless of the
- *     ancestor backdrop-filter. Slightly less smooth than transforms,
- *     but bullet-proof across Chrome / Edge / Firefox / Safari / Opera.
- *   - The wavy top edge is a `clip-path` polygon with little zig-zag
- *     teeth — at rest the polygon clips the entire pseudo to height 0;
- *     as the height grows, the wavy crest moves up.
- *   - The "ripple" animation runs in parallel and animates clip-path
- *     between two waveforms so the surface looks like water moving. */
+ * Why a real `<span>` child instead of `::before` / `::after`:
+ *
+ *   Chrome on Windows has a long-standing bug where pseudo-elements
+ *   inside a backdrop-filter ancestor don't get their style updates
+ *   delivered to the compositor in time — `:hover` switches the
+ *   computed style instantly, the transition is skipped, and the fill
+ *   appears at the end state on frame 1. The parent
+ *   `.cookie-consent__panel` uses backdrop-filter, so the pseudo on
+ *   `.cookie-btn` was hitting this exact bug.
+ *
+ *   A real DOM child gets its own paint+compositor record. Hover styles
+ *   on the parent button cascade into the child via a normal CSS rule,
+ *   and the child's `transform` transition is honoured because it
+ *   doesn't share the pseudo's broken pipeline.
+ *
+ * Why `transform: translateY` instead of `height`:
+ *   - Compositor-only animation → no layout / paint per frame.
+ *   - `will-change: transform` puts it on its own GPU layer so the
+ *     ripple wave overlay can play on top without stutter.
+ *   - Falls back gracefully on every browser (no clip-path mask hacks).
+ *
+ * The wave look comes from a second child layer (`.cookie-btn__fill`'s
+ * `::after`) — a small SVG wave painted as a mask along the top edge,
+ * sliding horizontally so the crest visibly moves while the fill rises.
+ * =========================================================== */
 .cookie-btn {
   position: relative;
   overflow: hidden;
@@ -12980,58 +13405,71 @@
   letter-spacing: 0.03em;
   cursor: pointer;
   transition: border-color 0.35s ease;
+  /* Promote to own stacking context so children stay clipped above the
+   * backdrop-filtered parent without Chrome short-circuiting the paint. */
+  isolation: isolate;
   z-index: 0;
 }
 
-.cookie-btn--accept {
-  color: var(--color-main);
-}
+.cookie-btn--accept  { color: var(--color-main); }
+.cookie-btn--decline { color: var(--color-text-soft); }
 
-.cookie-btn--decline {
-  color: var(--color-text-soft);
-}
-
-.cookie-btn::before {
-  content: "";
+.cookie-btn__fill {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 0;
+  top: 0;
   background: currentColor;
   border-radius: inherit;
-  transition: height 0.65s cubic-bezier(0.22, 0.61, 0.36, 1);
   pointer-events: none;
   z-index: 0;
+  /* Start fully translated down — invisible at rest. */
+  transform: translateY(100%);
+  transition: transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* Compositor hint — Chrome on Windows respects this even inside a
+   * backdrop-filter parent for real DOM nodes (not pseudos). */
+  will-change: transform;
 }
 
-.cookie-btn:hover::before,
-.cookie-btn:active::before,
-.cookie-btn:focus-visible::before {
-  height: 110%;
-  animation: cookie-wave-ripple 1.8s ease-in-out 0.65s infinite;
+/* Wavy crest — a tiny SVG painted at the top edge of the fill that
+ * slides horizontally while the fill rises. Pure decoration; the fill
+ * still works without it. */
+.cookie-btn__fill::after {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: -50%;
+  right: -50%;
+  height: 10px;
+  background-color: currentColor;
+  /* Repeating sine wave silhouette as a mask. Each repetition is 28px
+   * wide; with 200% width the crest tiles ~14 times and shifts smoothly. */
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 10' preserveAspectRatio='none'><path d='M0 7 C 7 1, 7 1, 14 7 S 21 13, 28 7 L 28 10 L 0 10 Z' fill='black'/></svg>");
+          mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 10' preserveAspectRatio='none'><path d='M0 7 C 7 1, 7 1, 14 7 S 21 13, 28 7 L 28 10 L 0 10 Z' fill='black'/></svg>");
+  -webkit-mask-repeat: repeat-x;
+          mask-repeat: repeat-x;
+  -webkit-mask-size: 28px 10px;
+          mask-size: 28px 10px;
+  animation: cookie-wave-shift 1.4s linear infinite;
 }
 
-@keyframes cookie-wave-ripple {
+@keyframes cookie-wave-shift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(28px); }
+}
 
-  0%,
-  100% {
-    clip-path: polygon(0 16%, 8% 8%, 16% 16%, 24% 8%, 32% 16%, 40% 8%,
-        48% 16%, 56% 8%, 64% 16%, 72% 8%, 80% 16%, 88% 8%,
-        96% 16%, 100% 16%, 100% 100%, 0 100%);
-  }
-
-  50% {
-    clip-path: polygon(0 8%, 8% 16%, 16% 8%, 24% 16%, 32% 8%, 40% 16%,
-        48% 8%, 56% 16%, 64% 8%, 72% 16%, 80% 8%, 88% 16%,
-        96% 8%, 100% 8%, 100% 100%, 0 100%);
-  }
+.cookie-btn:hover .cookie-btn__fill,
+.cookie-btn:active .cookie-btn__fill,
+.cookie-btn:focus-visible .cookie-btn__fill {
+  transform: translateY(0);
 }
 
 .cookie-btn__label {
   position: relative;
   z-index: 1;
-  transition: color 0.35s ease;
+  transition: color 0.35s ease 0.15s; /* slight delay so the colour swap
+                                       * matches the fill arriving. */
   display: inline-block;
 }
 
@@ -13046,19 +13484,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cookie-consent {
-    animation: none;
-  }
-
-  .cookie-btn::before {
-    transition: none;
-    animation: none !important;
-  }
-
-  .cookie-btn:hover::before {
-    height: 110%;
-    clip-path: none;
-  }
+  .cookie-consent { animation: none; }
+  .cookie-btn__fill { transition: none; }
+  .cookie-btn__fill::after { animation: none; }
+  .cookie-btn:hover .cookie-btn__fill { transform: translateY(0); }
 }
 
 /* ===== Media picker + library ===== */

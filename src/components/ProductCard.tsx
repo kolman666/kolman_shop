@@ -5,7 +5,6 @@ import type { Product } from '../data/products'
 import { productPath } from '../lib/productRoute'
 import { addToCart } from '../lib/cart'
 import { FAVORITES_EVENT, isFavorite, toggleFavorite } from '../lib/favorites'
-import { COMPARE_EVENT, isInCompare, toggleCompare } from '../lib/compare'
 import { AUTH_EVENT } from '../lib/auth'
 
 type ProductCardProps = {
@@ -17,7 +16,6 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
   const { t } = useTranslation()
   const [isAdded, setIsAdded] = useState(false)
   const [fav, setFav] = useState(() => isFavorite(product.id))
-  const [comparing, setComparing] = useState(() => isInCompare(product.id))
   // Single source of truth: if quantity is explicitly 0, the product is OOS
   // regardless of what the `availability` flag says. Used (second-hand)
   // products treat null/undefined quantity as "one-off" — still in stock.
@@ -50,22 +48,6 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
     }
   }, [product.id])
 
-  useEffect(() => {
-    const sync = () => setComparing(isInCompare(product.id))
-    window.addEventListener(COMPARE_EVENT, sync)
-    window.addEventListener('storage', sync)
-    return () => {
-      window.removeEventListener(COMPARE_EVENT, sync)
-      window.removeEventListener('storage', sync)
-    }
-  }, [product.id])
-
-  const handleToggleCompare = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
-    setComparing(toggleCompare(product.id))
-  }
-
   const handleQuickAdd = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
     event.stopPropagation()
@@ -92,17 +74,6 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill={fav ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8">
           <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-        </svg>
-      </button>
-      <button
-        type="button"
-        className={`product-card__compare ${comparing ? 'product-card__compare--active' : ''}`.trim()}
-        onClick={handleToggleCompare}
-        aria-label={comparing ? 'remove from compare' : 'add to compare'}
-        title={comparing ? 'убрать из сравнения' : 'добавить к сравнению'}
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M3 6h18M3 12h18M3 18h18" />
         </svg>
       </button>
       <div className="product-card__visual">

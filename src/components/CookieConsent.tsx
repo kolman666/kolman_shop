@@ -58,11 +58,18 @@ export default function CookieConsent() {
           </div>
         </div>
         <div className="cookie-consent__buttons">
+          {/* Real DOM `<span class="cookie-btn__fill">` instead of a ::before
+            * pseudo-element. Chrome on Windows had a long-standing bug where
+            * pseudo-elements inside a backdrop-filter ancestor (`.cookie-
+            * consent__panel`) wouldn't repaint on hover — the fill would
+            * appear instantly at the end state. Real DOM children get their
+            * own paint records and animate cleanly. */}
           <button
             type="button"
             className="cookie-btn cookie-btn--decline"
             onClick={() => decide('declined')}
           >
+            <span className="cookie-btn__fill" aria-hidden="true" />
             <span className="cookie-btn__label">отклонить</span>
           </button>
           <button
@@ -70,6 +77,7 @@ export default function CookieConsent() {
             className="cookie-btn cookie-btn--accept"
             onClick={() => decide('accepted')}
           >
+            <span className="cookie-btn__fill" aria-hidden="true" />
             <span className="cookie-btn__label">принять</span>
           </button>
         </div>

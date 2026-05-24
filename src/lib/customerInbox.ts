@@ -61,16 +61,22 @@ export type ChatThread = {
   status: 'open' | 'closed'
   created_at: string
   last_message_at: string
-  // Admin-only field: number of customer messages since the last admin reply
-  // in this specific thread. Sent by /api/messages?resource=threads when the
-  // request has the admin secret.
+  // Number of unanswered customer messages since the last admin reply in this
+  // thread (admin view) — used by the admin sidebar to show "N new".
   unread_user_messages?: number
-  // Admin-only: tiny preview of the most recent message in the thread
-  // (with `[[photo:…]]` markers replaced by 📷) + the sender, so the sidebar
-  // can show "вы: ok, отправил" or "клиент: когда придёт?" without an extra
-  // round-trip.
+  // Number of admin messages newer than the customer's last_user_seen_at
+  // (customer view) — used by the account popover to highlight active
+  // threads with their last admin response.
+  unread_admin_messages?: number
+  // Tiny preview of the most recent message (photo markers replaced by 📷)
+  // + the sender, so a sidebar / popover can show "вы: ok, отправил" or
+  // "поддержка: ваш заказ собран" without an extra round-trip.
   last_message_preview?: string
   last_message_sender?: 'user' | 'admin'
+  // First photo data-URL / external URL extracted from the most recent
+  // message. Used by the account popover to render a 32×32 thumbnail next
+  // to the chat snippet. Undefined when the last message has no photo.
+  last_message_photo?: string
   // Optional read-receipt timestamps. Both sides bump their own column when
   // they view the thread (PATCH `?resource=threads` with action=mark_seen).
   // Used to render Telegram-style ✓/✓✓ on outgoing messages: anything sent

@@ -51,11 +51,14 @@ export default function ChatStatusIcon({
 
   // Sent / read share the same double-check shape; "read" colors it accent-red.
   if (status === 'read') {
+    // Telegram-style ✓✓ — the second check's tail tucks behind the apex of
+    // the first one. Previous geometry left a visible gap; pulling the
+    // second polyline ~3 units left makes them read as a single glyph.
     return (
       <span className={cls} aria-label="прочитано">
-        <svg width="16" height="14" viewBox="0 0 24 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="2 10 7 15 14 4" />
-          <polyline points="10 10 15 15 22 4" />
+        <svg width="16" height="14" viewBox="0 0 20 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="1 10 6 15 13 4" />
+          <polyline points="7 10 12 15 19 4" />
         </svg>
       </span>
     )

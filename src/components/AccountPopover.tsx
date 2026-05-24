@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { logout, type User } from '../lib/auth'
 import { getFavoritesCount, FAVORITES_EVENT } from '../lib/favorites'
 import { getCartCount } from '../lib/cart'
+import { fetchMyThreads, type ChatThread } from '../lib/customerInbox'
+import { formatThreadTime } from '../lib/chatFormat'
 
 // ─── Two-column "account" dropdown inspired by dns-shop.ru ─────────────
 // Clicking the header avatar opens this popover instead of jumping straight
@@ -53,6 +55,11 @@ export default function AccountPopover({ open, user, unreadChats, anchorRef, onC
   // instantly when a user adds something while it's open.
   const [favCount, setFavCount] = useState(() => getFavoritesCount())
   const [cartCount, setCartCount] = useState(() => getCartCount())
+  // Recent chat threads — fetched lazily on first open so the popover never
+  // adds bandwidth to a page nav. `loadingChats` lets us show a 1-line
+  // skeleton while the round-trip completes.
+  const [chatThreads, setChatThreads] = useState<ChatThread[]>([])
+  const [loadingChats, setLoadingChats] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -68,6 +75,25 @@ export default function AccountPopover({ open, user, unreadChats, anchorRef, onC
       window.removeEventListener('cart:update', sync)
     }
   }, [open])
+
+  // Pull the user's chat threads when the popover opens. Each thread carries
+  // its `last_message_preview` + (optionally) `last_message_photo` so we
+  // can render an inline chat row with a 32×32 thumbnail. Re-fetched every
+  // time the popover opens so previews stay fresh.
+  useEffect(() => {
+    if (!open || !user.email) return
+    let cancelled = false
+    setLoadingChats(true)
+    void fetchMyThreads(user.email)
+      .then((rows) => {
+        if (cancelled) return
+        setChatThreads(rows)
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingChats(false)
+      })
+    return () => { cancelled = true }
+  }, [open, user.email])
 
   // Close on click-outside and on Escape. We listen on `mousedown` instead
   // of `click` so the popover dismisses *before* React fires any unwanted
@@ -108,22 +134,18 @@ export default function AccountPopover({ open, user, unreadChats, anchorRef, onC
     return full || user.name || user.email.split('@')[0]
   }, [user])
 
+  // Top N threads sorted by recent activity. We keep all threads sorted by
+  // last_message_at; only the active ones are rendered. Server already sorts
+  // descending by last_message_at, so a simple slice is enough.
+  const recentChats = chatThreads.slice(0, 4)
+  const hasAnyChat = chatThreads.length > 0
+
   // Notification cards — only render the ones with actual signal so an
   // empty account doesn't feel cluttered. Each has a tone for the icon
-  // colour and a count badge when relevant.
+  // colour and a count badge when relevant. Chat goes on top via its own
+  // dedicated section (renderChatRows below), so we skip it here.
   const notifications: NotificationItem[] = []
 
-  if (unreadChats > 0) {
-    notifications.push({
-      key: 'chat',
-      icon: <BubbleIcon />,
-      label: 'Чат с поддержкой',
-      hint: unreadChats === 1 ? 'новое сообщение' : `${unreadChats} новых сообщений`,
-      count: unreadChats,
-      href: '/profile?tab=chat',
-      tone: 'red',
-    })
-  }
   notifications.push({
     key: 'orders',
     icon: <BoxIcon />,
@@ -200,6 +222,78 @@ export default function AccountPopover({ open, user, unreadChats, anchorRef, onC
           </div>
         </header>
 
+        {/* Real chat threads with last-message previews + photo thumbs.
+          * Server fills `last_message_preview`, `last_message_sender`, and
+          * (when there's an image) `last_message_photo` — see
+          * api/messages.js threads branch. Each row links straight to the
+          * /profile chat tab so the user lands inside that conversation.
+          */}
+        {hasAnyChat && (
+          <div className="account-popover__chats">
+            <div className="account-popover__chats-head">
+              <span>Сообщения</span>
+              <Link to="/profile?tab=chat" className="account-popover__chats-all" onClick={onClose}>
+                все чаты →
+              </Link>
+            </div>
+            <ul className="account-popover__chat-list">
+              {recentChats.map((th) => {
+                const isOwn = th.last_message_sender === 'user'
+                const senderLabel = isOwn ? 'Вы: ' : ''
+                // Customer-side unread = admin messages the user hasn't opened.
+                const unread = th.unread_admin_messages ?? 0
+                const preview = th.last_message_preview ?? (th.last_message_photo ? '📷 фото' : 'нет сообщений')
+                return (
+                  <li key={th.id}>
+                    <Link
+                      to="/profile?tab=chat"
+                      className={`account-popover__chat ${unread > 0 ? 'account-popover__chat--unread' : ''}`.trim()}
+                      onClick={onClose}
+                    >
+                      <span className="account-popover__chat-thumb">
+                        {th.last_message_photo ? (
+                          <img src={th.last_message_photo} alt="" loading="lazy" decoding="async" />
+                        ) : (
+                          <span className="account-popover__chat-thumb-fallback">
+                            <BubbleIcon />
+                          </span>
+                        )}
+                      </span>
+                      <span className="account-popover__chat-body">
+                        <span className="account-popover__chat-title-row">
+                          <span className="account-popover__chat-title">{th.title || 'Чат с поддержкой'}</span>
+                          <time className="account-popover__chat-time">{formatThreadTime(th.last_message_at)}</time>
+                        </span>
+                        <span className="account-popover__chat-preview">
+                          <span className={isOwn ? 'account-popover__chat-sender' : ''}>{senderLabel}</span>
+                          {preview}
+                        </span>
+                      </span>
+                      {unread > 0 && (
+                        <span className="account-popover__chat-badge">{unread}</span>
+                      )}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
+
+        {!hasAnyChat && loadingChats && (
+          <div className="account-popover__chats-skel" aria-hidden="true">
+            {[0, 1].map((i) => (
+              <div key={i} className="account-popover__chat-skel">
+                <span className="account-popover__chat-skel-thumb" />
+                <span className="account-popover__chat-skel-body">
+                  <span className="account-popover__chat-skel-line" style={{ width: '60%' }} />
+                  <span className="account-popover__chat-skel-line" style={{ width: '85%' }} />
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <ul className="account-popover__notif-list">
           {notifications.map((n) => (
             <li key={n.key}>
@@ -264,48 +358,61 @@ export default function AccountPopover({ open, user, unreadChats, anchorRef, onC
   )
 }
 
-// ─── Tiny inline icon set ──────────────────────────────────────────────
-// Each icon uses currentColor so the parent's tone class drives the hue.
-// Sized to 22px — matches DNS-shop's notification list ratio.
+// ─── Inline icon set ───────────────────────────────────────────────────
+// Same paths the admin sidebar uses (see ADMIN_NAV in AdminPage.tsx) so the
+// notification cards feel like part of the same visual system. Stroke 1.7,
+// 22×22 — matches the admin sidebar look + the DNS-shop notification list
+// proportions.
 
+// "Orders" — shopping cart with wheels (admin's `orders` tab).
 function BoxIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
-      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-      <line x1="12" y1="22.08" x2="12" y2="12" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="21" r="1" />
+      <circle cx="20" cy="21" r="1" />
+      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
     </svg>
   )
 }
 
+// "Cart & favourites" — admin's promo tab (price tag) doubles for this
+// combined card since it represents purchase intent in general.
 function HeartIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <line x1="7" y1="7" x2="7.01" y2="7" />
     </svg>
   )
 }
 
+// "Chat" — speech bubble (admin's `chat` tab).
 function BubbleIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
     </svg>
   )
 }
 
+// "Inquiries" — document with lines (admin's `inquiries` tab).
 function ChatBubbleIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z" />
-      <line x1="7" y1="22" x2="7" y2="11" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="9" y1="13" x2="15" y2="13" />
+      <line x1="9" y1="17" x2="15" y2="17" />
     </svg>
   )
 }
 
+// "Reviews" — five-point star, drawn with the same line-art weight as the
+// admin sidebar icons (admin doesn't have a Reviews tab so there's no
+// direct match to copy).
 function StarIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
   )
