@@ -134,11 +134,14 @@ export default function AccountPopover({ open, user, unreadChats, anchorRef, onC
     return full || user.name || user.email.split('@')[0]
   }, [user])
 
-  // Top N threads sorted by recent activity. We keep all threads sorted by
-  // last_message_at; only the active ones are rendered. Server already sorts
-  // descending by last_message_at, so a simple slice is enough.
-  const recentChats = chatThreads.slice(0, 4)
-  const hasAnyChat = chatThreads.length > 0
+  // Notification-style filter: only render threads with unread admin
+  // messages — anything the user has already read shouldn't clutter the
+  // popover. If everything is read, the section is hidden entirely so the
+  // notifications column doesn't carry empty headers.
+  const recentChats = chatThreads
+    .filter((th) => (th.unread_admin_messages ?? 0) > 0)
+    .slice(0, 4)
+  const hasAnyChat = recentChats.length > 0
 
   // Notification cards — only render the ones with actual signal so an
   // empty account doesn't feel cluttered. Each has a tone for the icon
@@ -280,7 +283,10 @@ export default function AccountPopover({ open, user, unreadChats, anchorRef, onC
           </div>
         )}
 
-        {!hasAnyChat && loadingChats && (
+        {/* Skeleton only fires on the very first fetch (no threads yet). After
+          * load, an empty result simply means "no unread chats" — we render
+          * nothing rather than a stale placeholder. */}
+        {loadingChats && chatThreads.length === 0 && (
           <div className="account-popover__chats-skel" aria-hidden="true">
             {[0, 1].map((i) => (
               <div key={i} className="account-popover__chat-skel">

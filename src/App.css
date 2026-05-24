@@ -849,16 +849,14 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  /* Layered gradient: red core + softer accent in the top-right corner +
-   * a deeper red wash at the bottom-left, so the card has a sense of depth
-   * even before the animated layers kick in. */
+  /* Single base red with a soft inner falloff so the card has gentle
+   * depth without competing layers — minimalism first. */
   background:
-    radial-gradient(120% 80% at 100% 0%, rgba(255, 255, 255, 0.18), transparent 55%),
-    radial-gradient(140% 100% at 0% 100%, #8d0d0d, transparent 60%),
+    radial-gradient(140% 100% at 100% 0%, rgba(255, 255, 255, 0.12), transparent 60%),
     var(--color-main);
   color: var(--color-text);
   height: 100%;
-  isolation: isolate; /* keeps blob/sheen blend-modes scoped to this card */
+  isolation: isolate;
   transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 0.45s ease;
 }
 
@@ -867,157 +865,70 @@
   box-shadow: 0 14px 30px rgba(225, 29, 29, 0.32);
 }
 
-/* ── Animated layers ──────────────────────────────────────── */
-
-/* Morphing organic mass — a single span whose border-radius animates between
- * four states so the silhouette feels alive. Drifts diagonally at the same
- * time, simulating a floating blob. Two instances (a, b) overlap for parallax.
+/* ── Minimalist animated layers ────────────────────────────
+ *
+ * Just two layers — a breathing halo and a slow diagonal sheen. The
+ * goal is "the card looks alive but you can't put your finger on
+ * what's actually moving". Both layers use compositor-only properties
+ * (transform / opacity) so the animation is essentially free.
  */
-.promo-card__blob {
+
+/* Soft white halo anchored to the top-right corner. Scales between 1 and
+ * 1.08 over 9 seconds, with a tiny opacity wobble so it feels like a slow
+ * inhale-exhale rather than a metronome. */
+.promo-card__glow {
   position: absolute;
-  pointer-events: none;
-  background: rgba(255, 255, 255, 0.16);
-  filter: blur(1px);
-  z-index: 0;
-}
-
-.promo-card__blob--a {
-  top: -30%;
-  right: -20%;
-  width: 70%;
-  height: 70%;
-  border-radius: 56% 44% 38% 62% / 48% 60% 40% 52%;
-  animation:
-    promo-blob-morph 14s ease-in-out infinite,
-    promo-blob-drift 18s ease-in-out infinite;
-}
-
-.promo-card__blob--b {
-  bottom: -30%;
-  left: -25%;
-  width: 60%;
-  height: 60%;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 38% 62% 56% 44% / 60% 40% 60% 40%;
-  animation:
-    promo-blob-morph-rev 18s ease-in-out infinite,
-    promo-blob-drift-rev 22s ease-in-out infinite;
-}
-
-@keyframes promo-blob-morph {
-  0%, 100% { border-radius: 56% 44% 38% 62% / 48% 60% 40% 52%; }
-  33%      { border-radius: 40% 60% 52% 48% / 58% 42% 58% 42%; }
-  66%      { border-radius: 62% 38% 60% 40% / 38% 64% 36% 62%; }
-}
-
-@keyframes promo-blob-morph-rev {
-  0%, 100% { border-radius: 38% 62% 56% 44% / 60% 40% 60% 40%; }
-  50%      { border-radius: 58% 42% 40% 60% / 42% 62% 38% 58%; }
-}
-
-@keyframes promo-blob-drift {
-  0%, 100% { transform: translate(0, 0)     scale(1); }
-  50%      { transform: translate(-12%, 8%) scale(1.08); }
-}
-
-@keyframes promo-blob-drift-rev {
-  0%, 100% { transform: translate(0, 0)    scale(1); }
-  50%      { transform: translate(10%, -8%) scale(1.05); }
-}
-
-/* Concentric rings emanating from the top-right corner — like a slow radar
- * ping. Three rings staggered in time so one is always visible. */
-.promo-card__rings {
-  position: absolute;
-  top: -20px;
-  right: -20px;
-  width: 160px;
-  height: 160px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.promo-card__rings span {
-  position: absolute;
-  inset: 0;
+  top: -40%;
+  right: -25%;
+  width: 80%;
+  height: 80%;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.32);
-  animation: promo-ring-pulse 4.5s ease-out infinite;
-}
-
-.promo-card__rings span:nth-child(2) { animation-delay: 1.5s; }
-.promo-card__rings span:nth-child(3) { animation-delay: 3s;   }
-
-@keyframes promo-ring-pulse {
-  0%   { transform: scale(0.35); opacity: 0;   }
-  20%  {                          opacity: 0.7; }
-  100% { transform: scale(1);     opacity: 0;   }
-}
-
-/* Small drifting particles. Each dot has a different start position and a
- * slightly different animation duration so the motion never syncs up. */
-.promo-card__dots {
-  position: absolute;
-  inset: 0;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.22), transparent 65%);
   pointer-events: none;
   z-index: 0;
+  transform-origin: center;
+  animation: promo-glow-breathe 9s ease-in-out infinite;
+  filter: blur(2px);
 }
 
-.promo-card__dots span {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.55);
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
-  animation: promo-dot-float 9s ease-in-out infinite;
+@keyframes promo-glow-breathe {
+  0%, 100% { transform: scale(1);    opacity: 0.85; }
+  50%      { transform: scale(1.08); opacity: 1;    }
 }
 
-.promo-card__dots span:nth-child(1) { top: 18%; left: 12%; animation-duration: 10s; }
-.promo-card__dots span:nth-child(2) { top: 38%; left: 70%; animation-duration: 7.5s;  animation-delay: 0.8s; }
-.promo-card__dots span:nth-child(3) { top: 62%; left: 20%; animation-duration: 11s;  animation-delay: 1.6s; }
-.promo-card__dots span:nth-child(4) { top: 78%; left: 60%; animation-duration: 8.5s; animation-delay: 2.4s; }
-.promo-card__dots span:nth-child(5) { top: 28%; left: 88%; animation-duration: 9s;   animation-delay: 0.4s; opacity: 0.6; }
-
-@keyframes promo-dot-float {
-  0%, 100% { transform: translate(0, 0);    opacity: 0.4; }
-  50%      { transform: translate(8px, -10px); opacity: 1; }
-}
-
-/* Diagonal sheen sweep — same trick as the hero CTA. Lives above the blobs
- * but below the text. */
+/* Slow diagonal sheen. Much subtler than the previous version — the white
+ * band peaks at 12% alpha (vs 22%) and the cycle takes 14s instead of 6.5s.
+ * You see the highlight only when you look directly at it, but the card
+ * is never truly still. */
 .promo-card__sheen {
   position: absolute;
   inset: -20% -50%;
   background: linear-gradient(
-    115deg,
-    transparent 35%,
-    rgba(255, 255, 255, 0.22) 50%,
-    rgba(255, 255, 255, 0.05) 56%,
-    transparent 70%
+    118deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.12) 50%,
+    transparent 60%
   );
   transform: translateX(-30%);
-  animation: promo-sheen 6.5s ease-in-out infinite;
+  animation: promo-sheen-slow 14s ease-in-out infinite;
   pointer-events: none;
   z-index: 0;
   mix-blend-mode: screen;
 }
 
-@keyframes promo-sheen {
-  0%   { transform: translateX(-40%); opacity: 0.6; }
-  50%  { transform: translateX(40%);  opacity: 1;   }
-  100% { transform: translateX(-40%); opacity: 0.6; }
+@keyframes promo-sheen-slow {
+  0%   { transform: translateX(-45%); opacity: 0.7; }
+  50%  { transform: translateX(45%);  opacity: 1;   }
+  100% { transform: translateX(-45%); opacity: 0.7; }
 }
 
-/* Hover: speed up the blobs + intensify the sheen so the card "wakes up". */
-.promo-card--accent:hover .promo-card__blob--a {
-  animation-duration: 7s, 9s;
-}
-.promo-card--accent:hover .promo-card__blob--b {
-  animation-duration: 9s, 11s;
+/* Hover speeds the breathing slightly and the sheen visibly so the
+ * interaction feels intentional without changing the card's character. */
+.promo-card--accent:hover .promo-card__glow {
+  animation-duration: 5s;
 }
 .promo-card--accent:hover .promo-card__sheen {
-  animation-duration: 3.5s;
+  animation-duration: 6s;
 }
 
 .promo-label {
@@ -1068,13 +979,10 @@
   animation: none; /* hover overrides the bob */
 }
 
-/* Reduced-motion: kill every continuous animation so the card stays still.
+/* Reduced-motion: kill the continuous animations so the card stays still.
  * The hover transitions remain (they're event-triggered, not endless). */
 @media (prefers-reduced-motion: reduce) {
-  .promo-card__blob--a,
-  .promo-card__blob--b,
-  .promo-card__rings span,
-  .promo-card__dots span,
+  .promo-card__glow,
   .promo-card__sheen,
   .promo-arrow {
     animation: none !important;

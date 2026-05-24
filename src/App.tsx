@@ -656,22 +656,14 @@ function HomePage() {
 
           <aside className="side-panel">
             <Link to="/catalog" className="promo-card promo-card--accent">
-              {/* Layered animated background. Each <span> is a separate paint
-                * layer so the browser composites them on the GPU instead of
-                * repainting per frame:
-                *   __blob   — morphing organic mass that drifts diagonally
-                *   __rings  — three concentric circles expanding outward
-                *   __dots   — small particles drifting across
-                *   __sheen  — diagonal highlight sweeping left→right
-                */}
-              <span className="promo-card__blob promo-card__blob--a" aria-hidden="true" />
-              <span className="promo-card__blob promo-card__blob--b" aria-hidden="true" />
-              <span className="promo-card__rings" aria-hidden="true">
-                <span /><span /><span />
-              </span>
-              <span className="promo-card__dots" aria-hidden="true">
-                <span /><span /><span /><span /><span />
-              </span>
+              {/* Minimalist animated background — just two GPU-composited
+                * layers, no organic blobs or particle noise:
+                *   __glow  — single soft white halo top-right, slowly breathes
+                *   __sheen — barely-visible diagonal highlight that drifts
+                *             across once every 14s
+                * That's it. The card stays clean while never being fully
+                * static. */}
+              <span className="promo-card__glow" aria-hidden="true" />
               <span className="promo-card__sheen" aria-hidden="true" />
 
               <p className="promo-label">{t('ui.readyToGearUp')}</p>
