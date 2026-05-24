@@ -865,24 +865,19 @@
   box-shadow: 0 14px 30px rgba(225, 29, 29, 0.32);
 }
 
-/* ── Organic blob composition ───────────────────────────────
+/* ── Angular "shard" composition ────────────────────────────
  *
- * Three white shapes tinted over the red background:
- *   --lg : big shape anchored top-left (carries the main composition)
- *   --md : second big shape anchored bottom-right (interlocks with lg)
- *   --sm : small accent disk floating in the negative space between them
+ * Five irregular polygons via `clip-path: polygon(...)`. Each shard has
+ * sharp asymmetric corners — no two angles repeat — so the composition
+ * reads as broken glass / torn paper rather than friendly bubbles.
  *
- * The shapes themselves are spans with asymmetric `border-radius` — the
- * standard CSS "blob" trick where each corner has its own elliptical
- * radius, producing a smooth organic silhouette that no SVG rect/circle
- * could match.
- *
- * Animations are pure translate-only, slow, and use ease-in-out. No
- * rotation or scale — those read as "twitchy" at the speeds we want.
- * Each blob drifts on its own clock so the composition never repeats.
+ * Each shard drifts independently (different durations, different
+ * directions). Translate-only motion: no rotation or scale — the angles
+ * already provide visual energy, so the movement just needs to be subtle
+ * drift.
  */
 
-.promo-card__blob {
+.promo-card__shard {
   position: absolute;
   pointer-events: none;
   background: #ffffff;
@@ -890,65 +885,108 @@
   will-change: transform;
 }
 
-/* Big upper-left silhouette. The unusual border-radius makes the corners
- * each curve differently — three "soft" corners and one tighter one, so
- * the shape feels designed rather than generic. Extends past the card
- * edge so the cropped silhouette feels intentional. */
-.promo-card__blob--lg {
-  top: -25%;
-  left: -15%;
-  width: 95%;
-  height: 75%;
+/* Big jagged shape anchored top-left. 7 vertices, none symmetric. */
+.promo-card__shard--a {
+  top: -15%;
+  left: -10%;
+  width: 70%;
+  height: 60%;
   opacity: 0.22;
-  border-radius: 68% 32% 58% 42% / 54% 46% 60% 40%;
-  animation: promo-blob-drift-lg 12s ease-in-out infinite;
+  clip-path: polygon(
+    20% 0%, 78% 8%, 100% 42%, 88% 78%,
+    52% 100%, 12% 86%, 0% 38%
+  );
+  animation: promo-shard-drift-a 11s ease-in-out infinite;
 }
 
-/* Mirror blob anchored to the bottom-right. Its silhouette complements
- * the upper one — the two read as one continuous composition that
- * happens to overlap in the middle. */
-.promo-card__blob--md {
-  bottom: -30%;
-  right: -20%;
-  width: 90%;
-  height: 80%;
-  opacity: 0.13;
-  border-radius: 38% 62% 44% 56% / 60% 40% 56% 44%;
-  animation: promo-blob-drift-md 16s ease-in-out infinite;
+/* Long angled slash piece anchored to the right side. */
+.promo-card__shard--b {
+  top: 18%;
+  right: -18%;
+  width: 78%;
+  height: 70%;
+  opacity: 0.12;
+  clip-path: polygon(
+    32% 0%, 100% 12%, 92% 55%, 76% 100%,
+    18% 88%, 0% 46%, 14% 18%
+  );
+  animation: promo-shard-drift-b 15s ease-in-out infinite;
 }
 
-/* Small bright accent — a single perfect disk in the visual breathing
- * room between the two big blobs. Slightly more present (higher alpha)
- * so it acts as a focal point. */
-.promo-card__blob--sm {
-  top: 35%;
-  right: 14%;
-  width: 14%;
-  aspect-ratio: 1;
-  opacity: 0.34;
-  border-radius: 50%;
-  animation: promo-blob-drift-sm 9s ease-in-out infinite;
+/* Triangular shard pointing into the middle from bottom-left. */
+.promo-card__shard--c {
+  bottom: -18%;
+  left: 8%;
+  width: 58%;
+  height: 60%;
+  opacity: 0.16;
+  clip-path: polygon(
+    10% 0%, 84% 22%, 100% 58%, 64% 90%,
+    20% 100%, 0% 50%
+  );
+  animation: promo-shard-drift-c 9s ease-in-out infinite;
 }
 
-@keyframes promo-blob-drift-lg {
+/* Small angular fragment — diamond-ish accent. */
+.promo-card__shard--d {
+  top: 38%;
+  right: 18%;
+  width: 18%;
+  height: 22%;
+  opacity: 0.32;
+  clip-path: polygon(
+    50% 0%, 100% 32%, 84% 100%, 12% 86%, 0% 40%
+  );
+  animation: promo-shard-drift-d 8s ease-in-out infinite;
+}
+
+/* Tiny spike — extra texture, smaller alpha so it doesn't compete. */
+.promo-card__shard--e {
+  top: 12%;
+  right: 8%;
+  width: 12%;
+  height: 14%;
+  opacity: 0.24;
+  clip-path: polygon(
+    36% 0%, 100% 14%, 86% 76%, 18% 100%, 0% 46%
+  );
+  animation: promo-shard-drift-e 7s ease-in-out infinite;
+}
+
+/* All translate-only, all ease-in-out, all different magnitudes/directions
+ * so the composition reads as a slow chaotic drift instead of synced
+ * bouncing. */
+@keyframes promo-shard-drift-a {
   0%, 100% { transform: translate(0, 0); }
-  50%      { transform: translate(0, 10px); }
+  50%      { transform: translate(8px, 6px); }
 }
 
-@keyframes promo-blob-drift-md {
+@keyframes promo-shard-drift-b {
   0%, 100% { transform: translate(0, 0); }
-  50%      { transform: translate(0, -10px); }
+  50%      { transform: translate(-10px, -8px); }
 }
 
-@keyframes promo-blob-drift-sm {
+@keyframes promo-shard-drift-c {
   0%, 100% { transform: translate(0, 0); }
-  50%      { transform: translate(0, 6px); }
+  50%      { transform: translate(6px, -10px); }
 }
 
-/* Hover: speed each drift up so the composition visibly breathes. */
-.promo-card--accent:hover .promo-card__blob--lg { animation-duration: 6s; }
-.promo-card--accent:hover .promo-card__blob--md { animation-duration: 8s; }
-.promo-card--accent:hover .promo-card__blob--sm { animation-duration: 4s; }
+@keyframes promo-shard-drift-d {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-6px, 8px); }
+}
+
+@keyframes promo-shard-drift-e {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(8px, -4px); }
+}
+
+/* Hover: speed each drift up — composition visibly accelerates. */
+.promo-card--accent:hover .promo-card__shard--a { animation-duration: 5.5s; }
+.promo-card--accent:hover .promo-card__shard--b { animation-duration: 7.5s; }
+.promo-card--accent:hover .promo-card__shard--c { animation-duration: 4.5s; }
+.promo-card--accent:hover .promo-card__shard--d { animation-duration: 4s;   }
+.promo-card--accent:hover .promo-card__shard--e { animation-duration: 3.5s; }
 
 .promo-label {
   position: relative;
@@ -1001,7 +1039,7 @@
 /* Reduced-motion: kill the continuous animations so the card stays still.
  * The hover transitions remain (they're event-triggered, not endless). */
 @media (prefers-reduced-motion: reduce) {
-  .promo-card__blob,
+  .promo-card__shard,
   .promo-arrow {
     animation: none !important;
   }

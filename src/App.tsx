@@ -656,15 +656,15 @@ function HomePage() {
 
           <aside className="side-panel">
             <Link to="/catalog" className="promo-card promo-card--accent">
-              {/* Two large organic blobs + one small accent disk. Each shape
-                * is a `<span>` styled with an asymmetric `border-radius`
-                * (the standard CSS "blob" technique — much softer and more
-                * designed-looking than circles or rects). Pure translate-
-                * only animations: no rotation or scaling, so the motion
-                * reads as a slow drift rather than a twitchy wobble. */}
-              <span className="promo-card__blob promo-card__blob--lg" aria-hidden="true" />
-              <span className="promo-card__blob promo-card__blob--md" aria-hidden="true" />
-              <span className="promo-card__blob promo-card__blob--sm" aria-hidden="true" />
+              {/* Five jagged "shards" with `clip-path` polygons — angular,
+                * asymmetric silhouettes that read as torn paper or broken
+                * glass. White with varying alpha for depth. Each drifts on
+                * its own clock so the composition never repeats. */}
+              <span className="promo-card__shard promo-card__shard--a" aria-hidden="true" />
+              <span className="promo-card__shard promo-card__shard--b" aria-hidden="true" />
+              <span className="promo-card__shard promo-card__shard--c" aria-hidden="true" />
+              <span className="promo-card__shard promo-card__shard--d" aria-hidden="true" />
+              <span className="promo-card__shard promo-card__shard--e" aria-hidden="true" />
 
               <p className="promo-label">{t('ui.readyToGearUp')}</p>
               <h2 className="promo-title">{t('ui.startShopping')}</h2>
