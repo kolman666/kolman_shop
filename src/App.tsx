@@ -656,15 +656,13 @@ function HomePage() {
 
           <aside className="side-panel">
             <Link to="/catalog" className="promo-card promo-card--accent">
-              {/* Five jagged "shards" with `clip-path` polygons — angular,
-                * asymmetric silhouettes that read as torn paper or broken
-                * glass. White with varying alpha for depth. Each drifts on
-                * its own clock so the composition never repeats. */}
+              {/* Two jagged "shards" with `clip-path` polygons — one large
+                * silhouette anchored top-left + one medium accent shape on
+                * the right. White with varying alpha for depth. Each drifts
+                * on its own clock so the composition is always shifting
+                * slightly. */}
               <span className="promo-card__shard promo-card__shard--a" aria-hidden="true" />
               <span className="promo-card__shard promo-card__shard--b" aria-hidden="true" />
-              <span className="promo-card__shard promo-card__shard--c" aria-hidden="true" />
-              <span className="promo-card__shard promo-card__shard--d" aria-hidden="true" />
-              <span className="promo-card__shard promo-card__shard--e" aria-hidden="true" />
 
               <p className="promo-label">{t('ui.readyToGearUp')}</p>
               <h2 className="promo-title">{t('ui.startShopping')}</h2>
