@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { AUTH_EVENT, getUser, logout, updateProfile, type User } from '../lib/auth'
 import { FAVORITES_EVENT, getFavorites, removeFavorite } from '../lib/favorites'
@@ -49,12 +49,43 @@ function formatOrderId(id: string): string {
   return rest.length > 6 ? rest.slice(-6) : rest
 }
 
+// Valid query-param values that can deep-link into a tab. Keeps the type
+// narrow so we don't accept arbitrary strings from the URL.
+const TAB_VALUES: readonly Tab[] = ['profile', 'orders', 'inquiries', 'chat', 'reviews', 'favorites']
+function parseTabParam(raw: string | null | undefined): Tab | null {
+  if (!raw) return null
+  return (TAB_VALUES as readonly string[]).includes(raw) ? (raw as Tab) : null
+}
+
 export default function ProfilePage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const [user, setUser] = useState<User | null>(() => getUser())
-  const [tab, setTab] = useState<Tab>('profile')
+  // Deep-link support: the account popover links to /profile?tab=orders etc.
+  // We seed `tab` from the URL on first render so the right section opens
+  // immediately, and we keep it in sync when the URL changes (e.g. browser
+  // back/forward, or the popover navigating again).
+  const [tab, setTab] = useState<Tab>(() => parseTabParam(new URLSearchParams(location.search).get('tab')) ?? 'profile')
   const [unreadChatThreads, setUnreadChatThreads] = useState<Set<number | string>>(() => new Set())
+
+  useEffect(() => {
+    const next = parseTabParam(new URLSearchParams(location.search).get('tab'))
+    if (next && next !== tab) setTab(next)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search])
+
+  // Reflect tab changes back into the URL so refreshes / back-button stay
+  // on the right section. `replace: true` avoids polluting history with
+  // every tab click.
+  function selectTab(next: Tab) {
+    setTab(next)
+    const params = new URLSearchParams(location.search)
+    if (next === 'profile') params.delete('tab')
+    else params.set('tab', next)
+    const qs = params.toString()
+    navigate(`/profile${qs ? `?${qs}` : ''}`, { replace: true })
+  }
 
   useEffect(() => {
     const sync = () => setUser(getUser())
@@ -150,7 +181,7 @@ export default function ProfilePage() {
               role="tab"
               aria-selected={tab === key}
               className={`profile-tab ${tab === key ? 'profile-tab--active' : ''}`.trim()}
-              onClick={() => setTab(key)}
+              onClick={() => selectTab(key)}
             >
               {t(`ui.profile.tabs.${key}`)}
               {key === 'chat' && unreadChatThreads.size > 0 && (

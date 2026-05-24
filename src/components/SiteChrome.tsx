@@ -10,6 +10,7 @@ import CookieConsent from './CookieConsent'
 import ShareCartImportToast from './ShareCartImportToast'
 import SearchDropdown, { type SearchSection } from './SearchDropdown'
 import AuthModal from './AuthModal'
+import AccountPopover from './AccountPopover'
 import { fetchSiteContent } from '../lib/siteContent'
 import { useCustomerChatNotifications } from '../hooks/useCustomerChatNotifications'
 import { usePresenceHeartbeat } from '../hooks/usePresenceHeartbeat'
@@ -110,11 +111,16 @@ export default function SiteChrome({ children }: SiteChromeProps) {
     return () => window.removeEventListener('pointerdown', unlockAudio)
   }, [])
 
+  // Account popover state. Clicking the avatar while logged in opens the
+  // DNS-shop-style notifications + menu panel rather than navigating away.
+  const [accountOpen, setAccountOpen] = useState(false)
+  const accountAnchorRef = useRef<HTMLButtonElement>(null)
+
   const handleAccountClick = () => {
     if (currentUser) {
       markChatNotificationsRead()
       chatNotifications.clear()
-      navigate('/profile')
+      setAccountOpen((v) => !v)
     } else {
       setAuthOpen(true)
     }
@@ -325,29 +331,43 @@ export default function SiteChrome({ children }: SiteChromeProps) {
               {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
             </button>
 
-            <button
-              type="button"
-              className="icon-button icon-button--avatar hide-on-mobile"
-              aria-label="account"
-              onClick={handleAccountClick}
-              title={currentUser ? (currentUser.firstName || currentUser.name) : t('ui.auth.loginTitle')}
-            >
-              {currentUser?.photo ? (
-                <img
-                  src={currentUser.photo}
-                  alt=""
-                  className="icon-button__avatar"
+            <div className="account-popover-anchor">
+              <button
+                ref={accountAnchorRef}
+                type="button"
+                className="icon-button icon-button--avatar hide-on-mobile"
+                aria-label="account"
+                aria-expanded={accountOpen}
+                onClick={handleAccountClick}
+                title={currentUser ? (currentUser.firstName || currentUser.name) : t('ui.auth.loginTitle')}
+              >
+                {currentUser?.photo ? (
+                  <img
+                    src={currentUser.photo}
+                    alt=""
+                    className="icon-button__avatar"
+                  />
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                )}
+                {chatNotifications.unreadChats > 0 && (
+                  <span className="chat-site-badge">{chatNotifications.unreadChats}</span>
+                )}
+              </button>
+              {currentUser && (
+                <AccountPopover
+                  open={accountOpen}
+                  user={currentUser}
+                  unreadChats={chatNotifications.unreadChats}
+                  anchorRef={accountAnchorRef}
+                  onClose={() => setAccountOpen(false)}
+                  onLogout={() => navigate('/')}
                 />
-              ) : (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
               )}
-              {chatNotifications.unreadChats > 0 && (
-                <span className="chat-site-badge">{chatNotifications.unreadChats}</span>
-              )}
-            </button>
+            </div>
 
             <button type="button" className="burger-btn" aria-label="menu" onClick={() => setIsBurgerOpen(true)}>
               <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

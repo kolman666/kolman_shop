@@ -102,17 +102,29 @@ export default function BrandPage() {
   const websiteUrl = safeHref(data?.website ?? '')
   const isExternalSite = websiteUrl && /^https?:\/\//i.test(websiteUrl)
 
+  // Visible title fallback chain. Both `data?.name` and `slug` may be empty
+  // (admin preview before anything is filled in) — show a clear placeholder
+  // so the hero never renders as a near-empty dark block.
+  const displayTitle = (data?.name && data.name.trim()) || (slug ?? '') || 'превью бренд-страницы'
+  const hasBanner = Boolean(bannerUrl)
+
   return (
-    <main className="page-shell">
+    <main className={`page-shell ${isPreview ? 'brand-page--preview' : ''}`.trim()}>
       <article className="brand-page">
         <header
-          className="brand-page__hero"
-          style={bannerUrl ? { backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url("${bannerUrl}")` } : undefined}
+          className={`brand-page__hero ${hasBanner ? '' : 'brand-page__hero--placeholder'}`.trim()}
+          style={hasBanner ? { backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url("${bannerUrl}")` } : undefined}
         >
           <div className="brand-page__hero-inner">
             <Link to="/" className="brand-page__back">← {t('ui.toHome')}</Link>
+            {isPreview && (
+              <span className="brand-page__preview-chip">
+                <span className="brand-page__preview-dot" />
+                превью · вы видите неcохранённый черновик
+              </span>
+            )}
             {data?.logo && <img className="brand-page__logo" src={data.logo} alt={data?.name ?? slug} decoding="async" />}
-            <h1 className="brand-page__title">{data?.name || slug}</h1>
+            <h1 className="brand-page__title">{displayTitle}</h1>
             {data?.tagline && <p className="brand-page__tagline">{data.tagline}</p>}
             {websiteUrl && isExternalSite && (
               <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="ghost-btn brand-page__website" style={{ textDecoration: 'none' }}>

@@ -96,11 +96,24 @@ export function BrandPagesTab() {
     void fetchSiteContent<BrandPageData>(`brand_data_${activeSlug}_${lang}`).then((result) => {
       if (cancelled) return
       const logo = logos.find((brand) => brand.slug === activeSlug)
+      // Strip empty strings/arrays from the server result before merging.
+      // A previously-saved `name: ""` would overwrite the brand_logos fallback
+      // name and the preview hero would render with no visible title — looked
+      // like a black screen to the admin.
+      const cleanedResult: Partial<BrandPageData> = {}
+      if (result.data) {
+        for (const [k, v] of Object.entries(result.data)) {
+          if (v == null) continue
+          if (typeof v === 'string' && v.trim() === '') continue
+          if (Array.isArray(v) && v.length === 0) continue
+          ;(cleanedResult as Record<string, unknown>)[k] = v
+        }
+      }
       setData({
         ...BLANK_BRAND,
         name: logo?.name ?? '',
         logo: logo?.image ?? '',
-        ...result.data,
+        ...cleanedResult,
       })
       setDirty(false)
       setLoading(false)

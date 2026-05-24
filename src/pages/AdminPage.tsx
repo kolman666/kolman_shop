@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react'
+import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Product, VariantGroup } from '../data/products'
 import { useProducts } from '../hooks/useProducts'
@@ -622,21 +622,76 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [variantOptionInputs, setVariantOptionInputs] = useState<Record<number, string>>({})
   const [galleryInput, setGalleryInput] = useState('')
   const [search, setSearch] = useState('')
+  // Three independent filters — text search runs on top of the dropdown
+  // selections so admins can e.g. "show all in-stock mice from WLMOUSE that
+  // mention 'wireless'".
+  const [filterCategory, setFilterCategory] = useState<string>('')
+  const [filterBrand, setFilterBrand] = useState<string>('')
+  const [filterAvailability, setFilterAvailability] = useState<'' | 'inStock' | 'preorder'>('')
+  const [filterSource, setFilterSource] = useState<'' | 'admin' | 'static'>('')
+  const [sortKey, setSortKey] = useState<'default' | 'priceAsc' | 'priceDesc' | 'newest' | 'name'>('default')
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [saved, setSaved] = useState(false)
 
-  const filteredList = search.trim()
-    ? allProducts.filter((p) => {
-        const q = search.toLowerCase()
-        return (
-          p.brand.toLowerCase().includes(q) ||
-          (p.titleDirect ?? '').toLowerCase().includes(q) ||
-          CATEGORY_LABEL[p.categoryKey]?.toLowerCase().includes(q)
-        )
+  // List of unique brands across the catalog, sorted alphabetically. Recomputed
+  // when products change so newly-added brands show up immediately.
+  const brandOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const p of allProducts) {
+      if (p.brand) set.add(p.brand)
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'ru'))
+  }, [allProducts])
+
+  const filteredList = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    let list = allProducts.filter((p) => {
+      if (filterCategory && p.categoryKey !== filterCategory) return false
+      if (filterBrand && p.brand !== filterBrand) return false
+      if (filterAvailability && p.availability !== filterAvailability) return false
+      if (filterSource === 'admin' && !p.isAdminCreated) return false
+      if (filterSource === 'static' && p.isAdminCreated) return false
+      if (q) {
+        const hay = [
+          p.brand,
+          p.titleDirect ?? '',
+          CATEGORY_LABEL[p.categoryKey] ?? '',
+        ].join(' ').toLowerCase()
+        if (!hay.includes(q)) return false
+      }
+      return true
+    })
+
+    // Sort is non-destructive — `slice()` shields the underlying products list.
+    if (sortKey !== 'default') {
+      list = list.slice().sort((a, b) => {
+        switch (sortKey) {
+          case 'priceAsc':  return a.price - b.price
+          case 'priceDesc': return b.price - a.price
+          case 'newest':    return b.id - a.id
+          case 'name':      return (a.titleDirect ?? a.brand).localeCompare(b.titleDirect ?? b.brand, 'ru')
+          default:          return 0
+        }
       })
-    : allProducts
+    }
+    return list
+  }, [allProducts, search, filterCategory, filterBrand, filterAvailability, filterSource, sortKey])
+
+  // True if any filter is active — used to render the "сбросить" button.
+  const hasActiveFilters = Boolean(
+    search.trim() || filterCategory || filterBrand || filterAvailability || filterSource || sortKey !== 'default',
+  )
+
+  function clearFilters() {
+    setSearch('')
+    setFilterCategory('')
+    setFilterBrand('')
+    setFilterAvailability('')
+    setFilterSource('')
+    setSortKey('default')
+  }
 
   const inStockCount = allProducts.filter((p) => p.availability === 'inStock').length
   const preorderCount = allProducts.filter((p) => p.availability === 'preorder').length
@@ -859,6 +914,91 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+
+            {/* ─── Filters ──────────────────────────────────────────
+              * Category / brand / availability / origin (static seed vs admin
+              * created) + sort. Each control is independent — the filter
+              * runs in `filteredList` above. The "сбросить" pill only shows
+              * when at least one filter is non-default.
+              */}
+            <div className="admin__filters">
+              <div className="admin__filter-row">
+                <select
+                  className="admin__filter-select"
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  aria-label="Категория"
+                >
+                  <option value="">Все категории</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c.key} value={c.key}>{c.label}</option>
+                  ))}
+                </select>
+                <select
+                  className="admin__filter-select"
+                  value={filterAvailability}
+                  onChange={(e) => setFilterAvailability(e.target.value as '' | 'inStock' | 'preorder')}
+                  aria-label="Наличие"
+                >
+                  <option value="">Любое наличие</option>
+                  <option value="inStock">В наличии</option>
+                  <option value="preorder">Предзаказ</option>
+                </select>
+              </div>
+
+              <div className="admin__filter-row">
+                <select
+                  className="admin__filter-select"
+                  value={filterBrand}
+                  onChange={(e) => setFilterBrand(e.target.value)}
+                  aria-label="Бренд"
+                >
+                  <option value="">Все бренды</option>
+                  {brandOptions.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+                <select
+                  className="admin__filter-select"
+                  value={filterSource}
+                  onChange={(e) => setFilterSource(e.target.value as '' | 'admin' | 'static')}
+                  aria-label="Источник"
+                >
+                  <option value="">Все источники</option>
+                  <option value="admin">Созданные в админке</option>
+                  <option value="static">Базовый каталог</option>
+                </select>
+              </div>
+
+              <div className="admin__filter-row">
+                <select
+                  className="admin__filter-select"
+                  value={sortKey}
+                  onChange={(e) => setSortKey(e.target.value as typeof sortKey)}
+                  aria-label="Сортировка"
+                >
+                  <option value="default">Сортировка: по умолчанию</option>
+                  <option value="newest">Сначала новые</option>
+                  <option value="priceAsc">Цена: по возрастанию</option>
+                  <option value="priceDesc">Цена: по убыванию</option>
+                  <option value="name">По названию (А → Я)</option>
+                </select>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    className="admin__filter-clear"
+                    onClick={clearFilters}
+                    title="Сбросить все фильтры"
+                  >
+                    Сбросить
+                  </button>
+                )}
+              </div>
+
+              <div className="admin__filter-meta">
+                <span>{filteredList.length}</span> из {allProducts.length}
+              </div>
+            </div>
           </div>
 
           <div className="admin__stats">

@@ -17,6 +17,7 @@ import CartShareListener from './components/CartShareListener'
 import BloggersBlock from './components/BloggersBlock'
 import NewsBlock from './components/NewsBlock'
 import AuthModal from './components/AuthModal'
+import AccountPopover from './components/AccountPopover'
 import ProductRecommendations from './components/ProductRecommendations'
 import { AUTH_EVENT, getUser, refreshUser, type User } from './lib/auth'
 // Heavy routes are code-split so the home page doesn't ship them on first paint.
@@ -415,18 +416,30 @@ function HomePage() {
     }
   }, [])
 
+  // Account popover state. Clicking the avatar while logged in opens the
+  // DNS-shop-style two-column panel (notifications + menu). Clicking while
+  // logged out still opens the auth modal. The ref points to the avatar
+  // button so the popover can anchor itself + ignore its own clicks for
+  // the outside-click handler.
+  const [accountOpen, setAccountOpen] = useState(false)
+  const accountAnchorRef = useRef<HTMLButtonElement>(null)
+
   const handleAccountClick = () => {
     if (currentUser) {
       markChatNotificationsRead()
       chatNotifications.clear()
-      navigate('/profile')
+      setAccountOpen((v) => !v)
     } else {
       setAuthOpen(true)
     }
   }
 
   const visibleSlideIndex = slides.length > 0 ? current % slides.length : 0
-  const slide = slides[visibleSlideIndex]
+  // Always non-null. If the i18n key or DB blob ever returns an empty array
+  // we used to dereference `slide.img` and crash the whole page (dead black
+  // screen). The fallback keeps the hero rendering with empty strings —
+  // worse-looking, but the rest of the site stays alive.
+  const slide = slides[visibleSlideIndex] ?? { tag: '', title: '', subtitle: '', accent: '', img: '' }
 
   const handleLanguageChange = (language: 'en' | 'ru') => {
     void i18n.changeLanguage(language)
@@ -515,29 +528,43 @@ function HomePage() {
               {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
             </button>
 
-            <button
-              type="button"
-              className="icon-button icon-button--avatar hide-on-mobile"
-              aria-label="account"
-              onClick={handleAccountClick}
-              title={currentUser ? (currentUser.firstName || currentUser.name) : t('ui.auth.loginTitle')}
-            >
-              {currentUser?.photo ? (
-                <img
-                  src={currentUser.photo}
-                  alt=""
-                  className="icon-button__avatar"
+            <div className="account-popover-anchor">
+              <button
+                ref={accountAnchorRef}
+                type="button"
+                className="icon-button icon-button--avatar hide-on-mobile"
+                aria-label="account"
+                aria-expanded={accountOpen}
+                onClick={handleAccountClick}
+                title={currentUser ? (currentUser.firstName || currentUser.name) : t('ui.auth.loginTitle')}
+              >
+                {currentUser?.photo ? (
+                  <img
+                    src={currentUser.photo}
+                    alt=""
+                    className="icon-button__avatar"
+                  />
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                )}
+                {chatNotifications.unreadChats > 0 && (
+                  <span className="chat-site-badge">{chatNotifications.unreadChats}</span>
+                )}
+              </button>
+              {currentUser && (
+                <AccountPopover
+                  open={accountOpen}
+                  user={currentUser}
+                  unreadChats={chatNotifications.unreadChats}
+                  anchorRef={accountAnchorRef}
+                  onClose={() => setAccountOpen(false)}
+                  onLogout={() => navigate('/')}
                 />
-              ) : (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
               )}
-              {chatNotifications.unreadChats > 0 && (
-                <span className="chat-site-badge">{chatNotifications.unreadChats}</span>
-              )}
-            </button>
+            </div>
 
             <button type="button" className="burger-btn" aria-label="menu" onClick={() => setIsBurgerOpen(true)}>
               <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
