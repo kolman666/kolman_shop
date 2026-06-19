@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { isAdminAuthorized } from './_lib/auth.js'
-import { isTableMissing } from './_lib/db.js'
+import { isTableMissing, sanitizeOrPattern } from './_lib/db.js'
 import { writeAuditLog } from './_lib/audit-log.js'
 
 function getSupabase() {
@@ -40,8 +40,9 @@ export default async function handler(req, res) {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
-    if (q) {
-      query = query.or(`summary.ilike.%${q}%,action.ilike.%${q}%,entity.ilike.%${q}%,entity_id.ilike.%${q}%`)
+    const term = sanitizeOrPattern(q)
+    if (term) {
+      query = query.or(`summary.ilike.%${term}%,action.ilike.%${term}%,entity.ilike.%${term}%,entity_id.ilike.%${term}%`)
     }
 
     const r = await query

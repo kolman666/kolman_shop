@@ -15,3 +15,13 @@ export function isTableMissing(err) {
     msg.includes('Could not find the table')
   )
 }
+
+// Sanitize a user-supplied search term before interpolating it into a
+// PostgREST `.or(...)` filter string. The `.or()` mini-language uses `,` to
+// separate conditions and `()` to group them, so an unescaped term could break
+// out of the intended `ilike` and inject extra filter conditions. We also drop
+// the `ilike` wildcards (`%`, `*`), quote and backslash — a plain substring
+// search doesn't need them. Returns '' when nothing searchable remains.
+export function sanitizeOrPattern(q) {
+  return String(q ?? '').replace(/[,()"*\\%]/g, ' ').replace(/\s+/g, ' ').trim()
+}

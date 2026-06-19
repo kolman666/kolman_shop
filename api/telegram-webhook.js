@@ -306,12 +306,19 @@ export default async function handler(req, res) {
 
   // Verify webhook secret (Telegram sends it in this header when set via setWebhook).
   // Constant-time compare — was a plain `!==`, vulnerable to timing brute-force.
+  //
+  // Fail CLOSED when no secret is configured. Previously a missing
+  // TG_WEBHOOK_SECRET skipped the check entirely, turning this into an
+  // unauthenticated endpoint that drives the admin bot (changing order /
+  // inquiry statuses via crafted callback_query payloads). Require the secret.
   const expected = process.env.TG_WEBHOOK_SECRET
-  if (expected) {
-    const got = req.headers['x-telegram-bot-api-secret-token']
-    if (typeof got !== 'string' || !safeEqual(got, expected)) {
-      return res.status(401).json({ error: 'invalid webhook secret' })
-    }
+  if (!expected) {
+    console.error('[telegram-webhook] TG_WEBHOOK_SECRET is not set — refusing to process updates')
+    return res.status(503).json({ error: 'webhook secret not configured' })
+  }
+  const got = req.headers['x-telegram-bot-api-secret-token']
+  if (typeof got !== 'string' || !safeEqual(got, expected)) {
+    return res.status(401).json({ error: 'invalid webhook secret' })
   }
 
   const update = req.body

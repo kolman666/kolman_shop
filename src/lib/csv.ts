@@ -4,7 +4,16 @@
 
 function escapeCell(v: unknown): string {
   if (v === null || v === undefined) return ''
-  const s = typeof v === 'string' ? v : String(v)
+  let s = typeof v === 'string' ? v : String(v)
+  // Neutralize spreadsheet formula injection (CWE-1236). Excel / Sheets /
+  // LibreOffice evaluate any cell whose value starts with = + - @ (or a
+  // leading tab / CR), so attacker-controlled order fields like
+  // `=cmd|'/c calc'!A1` would execute when the admin opens the export. RFC
+  // quoting does NOT prevent this — the app still sees the leading `=`. Prefix
+  // such cells with a single quote so they render as literal text.
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = `'${s}`
+  }
   // Wrap if it contains comma, quote, semicolon, or newline. Double internal quotes.
   if (/[",;\r\n]/.test(s)) {
     return `"${s.replace(/"/g, '""')}"`
