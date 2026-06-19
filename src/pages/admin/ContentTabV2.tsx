@@ -148,12 +148,19 @@ export function ContentTabV2() {
     if (dirty.size === 0) return
     setSaving(true)
     setError('')
+    const dirtyKeys = Array.from(dirty)
     try {
-      const dirtyKeys = Array.from(dirty)
       for (const sec of dirtyKeys) {
         await updateSiteContent(storageKey(sec, lang), data[sec])
+        // Clear each section from the dirty set as soon as it lands, so a
+        // failure partway through doesn't keep already-saved sections marked
+        // as unsaved (which previously caused confusing re-saves).
+        setDirty((prev) => {
+          const next = new Set(prev)
+          next.delete(sec)
+          return next
+        })
       }
-      setDirty(new Set())
       setSavedAt(Date.now())
     } catch (e) {
       setError(e instanceof Error ? e.message : 'save failed')
@@ -175,9 +182,12 @@ export function ContentTabV2() {
                   key={lng}
                   type="button"
                   className={`admin__lang-tab ${lang === lng ? 'admin__lang-tab--active' : ''}`.trim()}
-                  onClick={() => setLang(lng)}
-                  disabled={dirty.size > 0}
-                  title={dirty.size > 0 ? 'Сначала сохраните изменения' : ''}
+                  onClick={() => {
+                    if (lang === lng) return
+                    if (dirty.size > 0 && !confirm('Есть несохранённые изменения. Переключить язык и потерять их?')) return
+                    setLang(lng)
+                  }}
+                  title={dirty.size > 0 ? 'Есть несохранённые изменения' : ''}
                 >
                   {lng.toUpperCase()}
                 </button>

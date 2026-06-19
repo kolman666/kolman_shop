@@ -188,9 +188,12 @@ export function BrandPagesTab() {
                 key={brand.slug}
                 type="button"
                 className={`admin__page-pick ${activeSlug === brand.slug ? 'admin__page-pick--active' : ''}`.trim()}
-                onClick={() => setActiveSlug(brand.slug ?? '')}
-                disabled={dirty}
-                title={dirty ? 'Сначала сохраните изменения' : ''}
+                onClick={() => {
+                  if (activeSlug === brand.slug) return
+                  if (dirty && !confirm('Есть несохранённые изменения. Переключить бренд и потерять их?')) return
+                  setActiveSlug(brand.slug ?? '')
+                }}
+                title={dirty ? 'Есть несохранённые изменения' : ''}
               >
                 {brand.name || brand.slug}
               </button>
@@ -227,9 +230,12 @@ export function BrandPagesTab() {
                   key={lng}
                   type="button"
                   className={`admin__lang-tab ${lang === lng ? 'admin__lang-tab--active' : ''}`.trim()}
-                  onClick={() => setLang(lng)}
-                  disabled={dirty}
-                  title={dirty ? 'Сначала сохраните изменения' : ''}
+                  onClick={() => {
+                    if (lang === lng) return
+                    if (dirty && !confirm('Есть несохранённые изменения. Переключить язык и потерять их?')) return
+                    setLang(lng)
+                  }}
+                  title={dirty ? 'Есть несохранённые изменения' : ''}
                 >
                   {lng.toUpperCase()}
                 </button>

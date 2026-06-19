@@ -214,9 +214,12 @@ export function PagesTabV2() {
                 key={id}
                 type="button"
                 className={`admin__page-pick ${pageId === id ? 'admin__page-pick--active' : ''}`.trim()}
-                onClick={() => setPageId(id)}
-                disabled={dirty}
-                title={dirty ? 'Сначала сохраните изменения' : ''}
+                onClick={() => {
+                  if (pageId === id) return
+                  if (dirty && !confirm('Есть несохранённые изменения. Переключить страницу и потерять их?')) return
+                  setPageId(id)
+                }}
+                title={dirty ? 'Есть несохранённые изменения' : ''}
               >
                 {PAGE_LABELS[id]}
               </button>
@@ -230,8 +233,11 @@ export function PagesTabV2() {
                   key={lng}
                   type="button"
                   className={`admin__lang-tab ${lang === lng ? 'admin__lang-tab--active' : ''}`.trim()}
-                  onClick={() => setLang(lng)}
-                  disabled={dirty}
+                  onClick={() => {
+                    if (lang === lng) return
+                    if (dirty && !confirm('Есть несохранённые изменения. Переключить язык и потерять их?')) return
+                    setLang(lng)
+                  }}
                 >
                   {lng.toUpperCase()}
                 </button>

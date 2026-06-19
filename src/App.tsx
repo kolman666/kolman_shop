@@ -961,7 +961,15 @@ function HomePage() {
             {t('ui.privacyPolicy')}
           </Link>
           <p className="footer-credit">
-            {t('ui.developedBy')} <span className="footer-credit__brand">kolman</span>
+            {t('ui.developedBy')}{' '}
+            <a
+              className="footer-credit__brand"
+              href="https://t.me/kolman7"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              kolman
+            </a>
           </p>
           <span className="footer-year">(c) 2026 xD rofl sixseven</span>
         </div>

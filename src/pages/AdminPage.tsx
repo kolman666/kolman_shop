@@ -686,11 +686,11 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       })
     }
     return list
-  }, [allProducts, search, filterCategory, filterBrand, filterAvailability, filterSource, sortKey])
+  }, [allProducts, search, filterCategory, filterBrand, filterAvailability, sortKey])
 
   // True if any filter is active — used to render the "сбросить" button.
   const hasActiveFilters = Boolean(
-    search.trim() || filterCategory || filterBrand || filterAvailability || filterSource || sortKey !== 'default',
+    search.trim() || filterCategory || filterBrand || filterAvailability || sortKey !== 'default',
   )
 
   function clearFilters() {
@@ -698,7 +698,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     setFilterCategory('')
     setFilterBrand('')
     setFilterAvailability('')
-    setFilterSource('')
     setSortKey('default')
   }
 
@@ -840,7 +839,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   }
 
   const editingProduct = editingId !== null ? allProducts.find((p) => p.id === editingId) : null
-  const isEditingStatic = false
 
   return (
     <div className="admin admin--shell">
@@ -972,16 +970,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     <option key={b} value={b}>{b}</option>
                   ))}
                 </select>
-                <select
-                  className="admin__filter-select"
-                  value={filterSource}
-                  onChange={(e) => setFilterSource(e.target.value as '' | 'admin' | 'static')}
-                  aria-label="Источник"
-                >
-                  <option value="">Все источники</option>
-                  <option value="admin">Созданные в админке</option>
-                  <option value="static">Базовый каталог</option>
-                </select>
               </div>
 
               <div className="admin__filter-row">
@@ -1099,11 +1087,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
             <form className="admin__form" onSubmit={handleSubmit}>
               <h2 className="admin__form-title">
                 {editingId !== null ? 'Редактировать товар' : 'Новый товар'}
-                {isEditingStatic && (
-                  <span className="admin__form-title-hint">
-                    (статический — создаётся копия в Supabase)
-                  </span>
-                )}
               </h2>
 
               {/* Основная информация */}
@@ -1462,7 +1445,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                   </button>
                 )}
                 <button type="submit" className="admin__save-btn" disabled={saving}>
-                  {saving ? 'Сохраняем...' : editingId !== null && !isEditingStatic ? 'Сохранить изменения' : 'Создать товар'}
+                  {saving ? 'Сохраняем...' : editingId !== null ? 'Сохранить изменения' : 'Создать товар'}
                 </button>
               </div>
             </form>

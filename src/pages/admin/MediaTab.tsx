@@ -43,19 +43,26 @@ export default function MediaTab() {
     setUploading(true)
     setError('')
     const uploaded: MediaItem[] = []
-    try {
-      for (const f of Array.from(files)) {
-        const m = await uploadMedia(f)
-        uploaded.push(m)
+    const failed: string[] = []
+    // Upload each file independently so one bad file (too large, unsupported,
+    // network blip) doesn't abort the whole batch and lose the rest.
+    for (const f of Array.from(files)) {
+      try {
+        uploaded.push(await uploadMedia(f))
+      } catch (e) {
+        failed.push(f.name)
+        console.warn('[media] upload failed:', f.name, e)
       }
+    }
+    if (uploaded.length > 0) {
       setItems((prev) => [...uploaded, ...prev])
       setTotal((n) => n + uploaded.length)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'failed')
-    } finally {
-      setUploading(false)
-      if (inputRef.current) inputRef.current.value = ''
     }
+    if (failed.length > 0) {
+      setError(`Не удалось загрузить (${failed.length}): ${failed.join(', ')}`)
+    }
+    setUploading(false)
+    if (inputRef.current) inputRef.current.value = ''
   }
 
   async function runImport() {
