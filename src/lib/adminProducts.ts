@@ -38,7 +38,9 @@ export type ProductInput = {
   is_used?: boolean
   condition?: string
   defects?: string
-  original_price?: number
+  // `null` is sent to actively clear the column when a product is un-flagged as
+  // used, so previously-typed values don't linger as hidden orphaned data.
+  original_price?: number | null
 }
 
 export async function createProduct(input: ProductInput): Promise<Product> {

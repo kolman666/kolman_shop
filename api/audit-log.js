@@ -15,6 +15,19 @@ function s(value, max = 500) {
   return value.replace(/[\r\n\t]+/g, ' ').trim().slice(0, max)
 }
 
+// Guard client-supplied `meta` on the manual audit POST: only accept a plain
+// object capped by serialized size, so a caller can't stuff a huge/deeply
+// nested blob into the log row (writeAuditLog only clamps `changes`, not meta).
+function safeClientMeta(meta) {
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return undefined
+  try {
+    if (JSON.stringify(meta).length > 4000) return { note: 'meta omitted (too large)' }
+  } catch {
+    return undefined
+  }
+  return meta
+}
+
 export default async function handler(req, res) {
   if (!isAdminAuthorized(req)) {
     return res.status(401).json({ error: 'unauthorized' })
@@ -62,7 +75,7 @@ export default async function handler(req, res) {
       entity: b.entity ? s(String(b.entity), 64) : undefined,
       entity_id: b.entity_id != null ? s(String(b.entity_id), 128) : undefined,
       summary: s(b.summary ?? action, 500),
-      meta: b.meta,
+      meta: safeClientMeta(b.meta),
     })
     return res.status(201).json({ ok: true })
   }

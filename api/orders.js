@@ -172,12 +172,16 @@ export default async function handler(req, res) {
 
     const dbIds = [...new Set(parsed.map((it) => it.dbId))]
     const catalogById = new Map()
+    // Track which catalog table this deployment actually uses so the stock
+    // decrement below writes to the same one (legacy shops use `products`).
+    let productsTable = 'admin_products'
     if (dbIds.length > 0) {
       let pr = await supabase
         .from('admin_products')
         .select('id, price, title, brand, quantity')
         .in('id', dbIds)
       if (pr.error && /admin_products/i.test(pr.error.message)) {
+        productsTable = 'products'
         pr = await supabase.from('products').select('id, price, title, brand, quantity').in('id', dbIds)
       }
       if (!pr.error && Array.isArray(pr.data)) {
@@ -297,14 +301,18 @@ export default async function handler(req, res) {
                 .then(() => undefined, () => undefined)
               claimed = true
             } else {
-              // Capped code, RPC missing — fallback non-atomic write.
-              await supabase
+              // Capped code, RPC missing — fallback non-atomic guarded write.
+              // Only count the claim if the conditional UPDATE actually matched
+              // a row (used_count < max_uses). Previously `claimed` was set to
+              // true unconditionally, so an exhausted code still granted the
+              // discount and over-incremented used_count.
+              const upd = await supabase
                 .from('promo_codes')
                 .update({ used_count: (c.used_count ?? 0) + 1 })
                 .eq('code', code)
                 .lt('used_count', c.max_uses)
-                .then(() => undefined, () => undefined)
-              claimed = true
+                .select('code')
+              claimed = !upd.error && Array.isArray(upd.data) && upd.data.length > 0
             }
             if (claimed) {
               const discount = c.kind === 'percent'
@@ -358,6 +366,13 @@ export default async function handler(req, res) {
       const retry = await supabase.from('orders').insert([fallback]).select().single()
       data = retry.data
       error = retry.error
+      if (promoApplied && !error) {
+        // Promo use was already claimed (used_count bumped) but this DB has no
+        // promo_code/promo_discount columns to record which order consumed it.
+        // Surface it so the admin can reconcile; applying the orders migration
+        // makes this branch unreachable.
+        console.warn(`[orders] promo ${promoApplied.code} (−${promoApplied.discount}) applied to order ${data?.id ?? '?'} but not recorded — run the orders promo-columns migration`)
+      }
     }
 
     if (error) {
@@ -398,11 +413,14 @@ export default async function handler(req, res) {
       try {
         const rpc = await supabase.rpc('decrement_product_quantity', { p_id: it.id, p_delta: it.quantity })
         if (!rpc.error) continue
-        // Fallback: non-atomic. Documented race — see migration above.
-        const got = await supabase.from('admin_products').select('quantity').eq('id', it.id).maybeSingle()
+        // Fallback: non-atomic read-modify-write against whichever catalog
+        // table this deployment uses. Previously this always hit
+        // `admin_products`, so shops on the legacy `products` table never had
+        // stock decremented at all (silent infinite oversell).
+        const got = await supabase.from(productsTable).select('quantity').eq('id', it.id).maybeSingle()
         if (got.error || !got.data || typeof got.data.quantity !== 'number') continue
         const next = Math.max(0, got.data.quantity - it.quantity)
-        await supabase.from('admin_products').update({ quantity: next }).eq('id', it.id)
+        await supabase.from(productsTable).update({ quantity: next }).eq('id', it.id)
       } catch {
         // Per-item failure must not break the order — admin reconciles.
       }
@@ -577,8 +595,14 @@ export default async function handler(req, res) {
     const since30 = new Date(now - 30 * day).toISOString()
     const since14 = new Date(now - 14 * day).toISOString()
     const since7 = new Date(now - 7 * day).toISOString()
-    const sinceToday = new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
-    const sinceYesterday = new Date(new Date().setHours(0, 0, 0, 0) - day).toISOString()
+    // Day boundary in the shop's timezone (Europe/Moscow, UTC+3, no DST).
+    // Serverless runs in UTC, so `setHours` would put the "today" cutoff at
+    // 00:00 UTC = 03:00 MSK, mis-bucketing 3 hours of orders every night.
+    const MSK_OFFSET_MS = 3 * 60 * 60 * 1000
+    const mskMidnight = new Date(now + MSK_OFFSET_MS)
+    mskMidnight.setUTCHours(0, 0, 0, 0)
+    const sinceToday = new Date(mskMidnight.getTime() - MSK_OFFSET_MS).toISOString()
+    const sinceYesterday = new Date(mskMidnight.getTime() - MSK_OFFSET_MS - day).toISOString()
 
     const emptyStats = {
       revenue: { today: 0, yesterday: 0, week: 0, weekPrev: 0, month: 0, monthPrev: 0 },

@@ -68,6 +68,7 @@ export type AdminInquiry = {
   category: InquiryCategory
   customer_name: string
   customer_contact: string
+  customer_email?: string | null
   message: string
 }
 

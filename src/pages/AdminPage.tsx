@@ -166,9 +166,14 @@ function formToInput(form: FormValues): ProductInput {
     is_featured: form.isFeatured,
     quantity: parseInt(form.quantity, 10) || 0,
     is_used: form.isUsed,
-    condition: form.condition,
-    defects: form.defects,
-    original_price: form.originalPrice.trim() ? (parseFloat(form.originalPrice) || 0) : undefined,
+    // Used-market fields only apply when the product is flagged б/у. When it's
+    // unticked we actively clear them ('' / null) so values typed and then
+    // hidden don't persist as invisible orphaned data on the row.
+    condition: form.isUsed ? form.condition : '',
+    defects: form.isUsed ? form.defects : '',
+    original_price: form.isUsed && form.originalPrice.trim()
+      ? (parseFloat(form.originalPrice) || 0)
+      : null,
   }
 }
 
@@ -635,7 +640,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [filterCategory, setFilterCategory] = useState<string>('')
   const [filterBrand, setFilterBrand] = useState<string>('')
   const [filterAvailability, setFilterAvailability] = useState<'' | 'inStock' | 'preorder'>('')
-  const [filterSource, setFilterSource] = useState<'' | 'admin' | 'static'>('')
   const [sortKey, setSortKey] = useState<'default' | 'priceAsc' | 'priceDesc' | 'newest' | 'name'>('default')
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
@@ -658,8 +662,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       if (filterCategory && p.categoryKey !== filterCategory) return false
       if (filterBrand && p.brand !== filterBrand) return false
       if (filterAvailability && p.availability !== filterAvailability) return false
-      if (filterSource === 'admin' && !p.isAdminCreated) return false
-      if (filterSource === 'static' && p.isAdminCreated) return false
       if (q) {
         const hay = [
           p.brand,
@@ -879,7 +881,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       {activeTab === 'orders' && (
         <OrdersTab initialStatus={ordersStatusFilter} onOpenCustomer={setOpenCustomer} />
       )}
-      {activeTab === 'inquiries' && <InquiriesTab />}
+      {activeTab === 'inquiries' && <InquiriesTab onOpenCustomer={setOpenCustomer} />}
       {activeTab === 'chat' && <ChatTab onOpenCustomer={setOpenCustomer} />}
       {activeTab === 'bloggers' && <BloggersTab allProducts={allProducts} />}
 
@@ -2338,7 +2340,7 @@ const INQUIRY_CATEGORY_LABELS: Record<InquiryCategory, string> = {
   other: 'другое',
 }
 
-function InquiriesTab() {
+function InquiriesTab({ onOpenCustomer }: { onOpenCustomer?: (email: string) => void } = {}) {
   const [items, setItems] = useState<AdminInquiry[]>([])
   const [statusFilter, setStatusFilter] = useState<InquiryStatus | ''>('')
   const [categoryFilter, setCategoryFilter] = useState<InquiryCategory | ''>('')
@@ -2431,7 +2433,19 @@ function InquiriesTab() {
                 <span className="admin__inbox-date">{new Date(q.created_at).toLocaleString('ru-RU')}</span>
               </div>
               <div className="admin__inbox-meta">
-                <div><b>Имя:</b> {q.customer_name || '—'}</div>
+                <div>
+                  <b>Имя:</b>{' '}
+                  {q.customer_email && onOpenCustomer ? (
+                    <button
+                      type="button"
+                      className="customer-modal__link"
+                      onClick={() => onOpenCustomer(q.customer_email!)}
+                      title="Открыть карточку клиента"
+                    >
+                      {q.customer_name || q.customer_email}
+                    </button>
+                  ) : (q.customer_name || '—')}
+                </div>
                 <div><b>Контакт:</b> {q.customer_contact || '—'}</div>
               </div>
               <p className="admin__inbox-text">{q.message}</p>
