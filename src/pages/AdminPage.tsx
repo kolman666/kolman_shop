@@ -99,6 +99,8 @@ type FormValues = {
   specs: string[]
   variantGroups: VariantGroup[]
   price: string
+  // Optional "before discount" price for regular products (empty = no sale).
+  oldPrice: string
   isFeatured: boolean
   // Used marketplace (Барахолка) fields. `isUsed` flips the product into the
   // /used catalog; the other three describe the second-hand condition.
@@ -120,6 +122,7 @@ const BLANK: FormValues = {
   specs: [],
   variantGroups: [],
   price: '',
+  oldPrice: '',
   isFeatured: false,
   isUsed: false,
   condition: '',
@@ -140,6 +143,7 @@ function productToValues(p: Product): FormValues {
     specs: p.specs ?? [],
     variantGroups: p.variantGroups ?? [],
     price: String(p.price),
+    oldPrice: p.oldPrice != null ? String(p.oldPrice) : '',
     isFeatured: p.isFeatured ?? false,
     isUsed: p.isUsed ?? false,
     condition: p.condition ?? '',
@@ -157,6 +161,8 @@ function formToInput(form: FormValues): ProductInput {
     title: form.title,
     description: form.description,
     price: parseFloat(form.price) || 0,
+    // Sale "old price": send the number when set, null to clear it.
+    old_price: form.oldPrice.trim() ? (parseFloat(form.oldPrice) || 0) : null,
     image: form.image,
     gallery: galleryFull,
     availability: form.availability,
@@ -1340,17 +1346,31 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     />
                   </div>
                   <div className="admin__field">
-                    <span className="admin__label">Рекомендованный</span>
-                    <label className="admin__checkbox-field">
-                      <input
-                        type="checkbox"
-                        className="admin__checkbox-input"
-                        checked={form.isFeatured}
-                        onChange={(e) => setField('isFeatured', e.target.checked)}
-                      />
-                      <span className="admin__checkbox-label">Показывать на главной</span>
-                    </label>
+                    <span className="admin__label">Цена до скидки (RUB)</span>
+                    <input
+                      className="admin__input"
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="напр. 16990"
+                      value={form.oldPrice}
+                      onChange={(e) => setField('oldPrice', e.target.value)}
+                    />
+                    <span className="admin__label-hint">
+                      Если больше текущей цены — будет зачёркнута + бейдж скидки. Пусто = без скидки.
+                    </span>
                   </div>
+                </div>
+                <div className="admin__field">
+                  <label className="admin__checkbox-field">
+                    <input
+                      type="checkbox"
+                      className="admin__checkbox-input"
+                      checked={form.isFeatured}
+                      onChange={(e) => setField('isFeatured', e.target.checked)}
+                    />
+                    <span className="admin__checkbox-label">Показывать на главной (рекомендованный)</span>
+                  </label>
                 </div>
               </div>
 
@@ -2323,6 +2343,63 @@ const INQUIRY_CATEGORY_LABELS: Record<InquiryCategory, string> = {
   other: 'другое',
 }
 
+// Back-in-stock waitlist — demand capture for out-of-stock products. Reads
+// /api/inquiries?resource=stock and groups by product so the admin sees who to
+// contact when restocking. Collapsed by default.
+type StockRow = { id: number; product_id: number; email: string; notified: boolean; created_at: string }
+function StockWaitlist() {
+  const { products } = useProducts()
+  const [rows, setRows] = useState<StockRow[]>([])
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const r = await fetch('/api/inquiries?resource=stock', {
+          headers: { 'X-Admin-Secret': sessionStorage.getItem('admin_secret') ?? '' },
+        })
+        if (r.ok && !cancelled) setRows(await r.json())
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const byProduct = useMemo(() => {
+    const titleById = new Map(products.map((p) => [p.id, `${p.brand} ${p.titleDirect ?? ''}`.trim()]))
+    const map = new Map<number, { title: string; emails: string[] }>()
+    for (const r of rows) {
+      const entry = map.get(r.product_id) ?? { title: titleById.get(r.product_id) ?? `#${r.product_id}`, emails: [] }
+      entry.emails.push(r.email)
+      map.set(r.product_id, entry)
+    }
+    return Array.from(map.entries()).sort((a, b) => b[1].emails.length - a[1].emails.length)
+  }, [rows, products])
+
+  if (loading || rows.length === 0) return null
+
+  return (
+    <div className="admin__waitlist">
+      <button type="button" className="admin__waitlist-toggle" onClick={() => setOpen((v) => !v)}>
+        🔔 Ждут поступления: {rows.length} {open ? '▲' : '▼'}
+      </button>
+      {open && (
+        <div className="admin__waitlist-body">
+          {byProduct.map(([pid, info]) => (
+            <div key={pid} className="admin__waitlist-row">
+              <b>{info.title}</b> — {info.emails.length} чел.
+              <div className="admin__waitlist-emails">{info.emails.join(', ')}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function InquiriesTab({ onOpenCustomer }: { onOpenCustomer?: (email: string) => void } = {}) {
   const [items, setItems] = useState<AdminInquiry[]>([])
   const [statusFilter, setStatusFilter] = useState<InquiryStatus | ''>('')
@@ -2396,6 +2473,8 @@ function InquiriesTab({ onOpenCustomer }: { onOpenCustomer?: (email: string) => 
       <p className="admin__label-hint" style={{ marginBottom: 16 }}>
         Заявки из формы поддержки и со страниц «помощь с выбором». Telegram-бот пишет сюда же — обновления синхронны.
       </p>
+
+      <StockWaitlist />
 
       {items.length === 0 ? (
         <div className="admin__content-empty">

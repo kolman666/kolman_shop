@@ -34,6 +34,8 @@ export type ProductInput = {
   variant_groups: VariantGroup[]
   is_featured: boolean
   quantity: number
+  // "Before discount" price for regular products. `null` clears it.
+  old_price?: number | null
   // Used-marketplace fields (Барахолка). Optional so old call sites still compile.
   is_used?: boolean
   condition?: string

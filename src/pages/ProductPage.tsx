@@ -13,6 +13,9 @@ import { resizeImageToDataUrl } from '../lib/imageResize'
 import PhotoLightbox, { type LightboxState } from '../components/PhotoLightbox'
 import { logRecentlyViewed } from '../lib/recentlyViewed'
 import RecentlyViewedStrip from '../components/RecentlyViewedStrip'
+import JsonLd from '../components/JsonLd'
+import TrustBadges from '../components/TrustBadges'
+import StockNotify from '../components/StockNotify'
 import {
   createReviewRemote,
   deleteReviewRemote,
@@ -156,6 +159,30 @@ export default function ProductPage() {
   const productTitle = product.titleDirect ?? t(product.titleKey)
   const productDescription = product.descriptionDirect ?? t(product.descriptionKey)
 
+  // JSON-LD structured data → Google rich results (price, availability, ★).
+  const reviewCount = reviews.length
+  const ratingValue = reviewCount > 0
+    ? Math.round((reviews.reduce((acc, r) => acc + r.rating, 0) / reviewCount) * 10) / 10
+    : 0
+  const productLd: Record<string, unknown> = {
+    '@context': 'https://schema.org/',
+    '@type': 'Product',
+    name: productTitle,
+    image: gallery,
+    description: productDescription,
+    brand: { '@type': 'Brand', name: product.brand },
+    sku: product.slug,
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'RUB',
+      price: product.price,
+      availability: isOutOfStock ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
+    },
+    ...(reviewCount > 0
+      ? { aggregateRating: { '@type': 'AggregateRating', ratingValue, reviewCount, bestRating: 5 } }
+      : {}),
+  }
+
   const prevImage = () => {
     setActiveImageIndex((prev) => (prev - 1 + gallery.length) % gallery.length)
   }
@@ -184,6 +211,7 @@ export default function ProductPage() {
 
   return (
     <main className="product-page">
+      <JsonLd data={productLd} />
       <section className="product-page__hero container">
         <div className="product-page__media">
           <img className="product-page__image" src={gallery[activeImageIndex]} alt={productTitle} loading="eager" decoding="async" />
@@ -316,6 +344,12 @@ export default function ProductPage() {
             <div className="product-page__price-wrap">
               <span className="product-page__price-label">RUB</span>
               <strong className="product-page__price">{product.price.toLocaleString('ru-RU')}</strong>
+              {typeof product.oldPrice === 'number' && product.oldPrice > product.price && (
+                <span className="product-page__price-sale">
+                  <s className="product-page__price-old">{product.oldPrice.toLocaleString('ru-RU')}</s>
+                  <span className="product-page__price-discount">−{Math.round((1 - product.price / product.oldPrice) * 100)}%</span>
+                </span>
+              )}
             </div>
 
             <div className="product-page__actions">
@@ -361,6 +395,8 @@ export default function ProductPage() {
             </div>
             <span className={`product-page__toast${added ? ' product-page__toast--visible' : ''}`}>{t('ui.productPage.addedToCart')}</span>
           </div>
+          {isOutOfStock && <StockNotify productId={product.id} />}
+          <TrustBadges />
         </div>
       </section>
 

@@ -90,6 +90,7 @@ export type ProductRow = {
   title: string
   description: string
   price: number
+  old_price?: number
   image: string
   gallery: string[]
   availability: 'inStock' | 'preorder'
@@ -112,6 +113,7 @@ export function rowToProduct(row: ProductRow): Product {
     slug: row.slug,
     brand: row.brand,
     price: row.price,
+    oldPrice: row.old_price ?? undefined,
     image: row.image,
     gallery: (row.gallery as unknown as string[]) ?? [],
     availability: row.availability,

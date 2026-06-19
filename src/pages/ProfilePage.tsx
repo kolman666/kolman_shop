@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { AUTH_EVENT, getUser, logout, updateProfile, type User } from '../lib/auth'
+import { AUTH_EVENT, getReferral, getUser, logout, updateProfile, type User } from '../lib/auth'
 import { FAVORITES_EVENT, getFavorites, removeFavorite } from '../lib/favorites'
 import { getOrders, USER_DATA_EVENT, type Order as LocalOrder } from '../lib/userData'
 import { fetchMyReviewsRemote, deleteReviewRemote, type RemoteReview } from '../lib/reviews'
@@ -191,7 +191,12 @@ export default function ProfilePage() {
           ))}
         </nav>
 
-        {tab === 'profile' && <ProfileForm user={user} />}
+        {tab === 'profile' && (
+          <>
+            <ProfileForm user={user} />
+            <ReferralCard />
+          </>
+        )}
         {tab === 'orders' && <OrdersTab email={user.email} />}
         {tab === 'inquiries' && <InquiriesTab email={user.email} />}
         {tab === 'chat' && <ChatTab email={user.email} userName={user.firstName || user.name} />}
@@ -199,6 +204,53 @@ export default function ProfilePage() {
         {tab === 'favorites' && <FavoritesTab />}
       </div>
     </div>
+  )
+}
+
+// "Invite a friend" card on the profile tab. The friend gets a discount via
+// the user's personal referral promo code; the referrer watches the count grow.
+function ReferralCard() {
+  const [data, setData] = useState<{ code: string; uses: number; percent: number } | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void getReferral().then((r) => { if (!cancelled) setData(r) })
+    return () => { cancelled = true }
+  }, [])
+
+  if (!data) return null
+
+  const link = `${window.location.origin}/?ref=${data.code}`
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch { /* clipboard blocked — user can select manually */ }
+  }
+
+  return (
+    <section className="referral-card">
+      <h2 className="profile-form__title">Пригласить друга</h2>
+      <p className="referral-card__text">
+        Друг получает скидку <b>{data.percent}%</b> на заказ по вашей ссылке, а вы — бонусы от магазина за каждого приведённого.
+      </p>
+      <div className="referral-card__row">
+        <input
+          className="referral-card__input"
+          readOnly
+          value={link}
+          onFocus={(e) => e.currentTarget.select()}
+        />
+        <button type="button" className="referral-card__btn" onClick={() => void copy()}>
+          {copied ? '✓ скопировано' : 'копировать ссылку'}
+        </button>
+      </div>
+      <p className="referral-card__meta">
+        Ваш код: <code>{data.code}</code> · приглашено: <b>{data.uses}</b>
+      </p>
+    </section>
   )
 }
 

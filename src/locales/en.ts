@@ -56,6 +56,25 @@ const en = {
     },
   ],
   ui: {
+    bundles: {
+      kicker: 'ready-made sets',
+      title: 'Build your setup',
+      note: 'discounted bundles — mouse, mousepad, glides and accessories together',
+      add: 'grab the set',
+    },
+    trust: {
+      original: 'Authentic, originality guaranteed',
+      warranty: '14-day warranty & returns',
+      delivery: 'CDEK & Russian Post delivery',
+      payment: 'Pay by transfer, SBP or on delivery',
+    },
+    stockNotify: {
+      label: 'Out of stock — notify me when available?',
+      placeholder: 'your email',
+      submit: 'notify me',
+      done: "✓ We'll let you know once it's back",
+      error: 'Check the email and try again',
+    },
     searchPlaceholder: "i'm looking for...",
     newsKicker: 'fresh reads',
     newsTitleStart: 'our ',

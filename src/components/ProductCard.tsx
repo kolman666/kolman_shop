@@ -35,6 +35,12 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
   const discount = typeof product.originalPrice === 'number' && product.originalPrice > product.price
     ? Math.round((1 - product.price / product.originalPrice) * 100)
     : 0
+  // Regular-product sale (distinct from the used-market originalPrice above):
+  // when oldPrice is set and higher, show it struck through + a sale badge.
+  const saleOldPrice = !isUsedCard && typeof product.oldPrice === 'number' && product.oldPrice > product.price
+    ? product.oldPrice
+    : 0
+  const salePercent = saleOldPrice ? Math.round((1 - product.price / saleOldPrice) * 100) : 0
 
   useEffect(() => {
     const sync = () => setFav(isFavorite(product.id))
@@ -79,6 +85,7 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
       <div className="product-card__visual">
         <div className="product-card__badges">
           <span className={`product-card__status product-card__status--${statusClass}`}>{statusLabel}</span>
+          {salePercent > 0 && <span className="product-card__sale-badge">−{salePercent}%</span>}
         </div>
         <img className="product-card__image" src={product.image} alt={title} loading="lazy" decoding="async" />
       </div>
@@ -121,7 +128,12 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
 
         <div className="product-card__footer">
           <div className="product-card__price-block">
-            <strong className="product-card__price">{product.price.toLocaleString('ru-RU')} rub</strong>
+            {salePercent > 0 && (
+              <span className="product-card__old-price">{saleOldPrice.toLocaleString('ru-RU')} rub</span>
+            )}
+            <strong className={`product-card__price ${salePercent > 0 ? 'product-card__price--sale' : ''}`.trim()}>
+              {product.price.toLocaleString('ru-RU')} rub
+            </strong>
           </div>
           <button
             type="button"

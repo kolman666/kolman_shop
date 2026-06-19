@@ -200,6 +200,20 @@ export async function updateProfile(patch: Partial<Omit<User, 'id' | 'email'>>):
   return body.user
 }
 
+// Fetches (creating on first call) the signed-in user's personal referral
+// code + how many times it's been used. Returns null if not logged in / on error.
+export async function getReferral(): Promise<{ code: string; uses: number; percent: number } | null> {
+  if (!readToken()) return null
+  try {
+    return await callApi<{ code: string; uses: number; percent: number }>('/api/auth?action=referral', {
+      method: 'POST',
+      headers: authHeaders(),
+    })
+  } catch {
+    return null
+  }
+}
+
 export function logout() {
   writeToken(null)
   writeUserCache(null)

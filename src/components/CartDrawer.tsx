@@ -7,6 +7,7 @@ import { getPromo, setPromo, getPromoAdjustedTotal, validatePromo, PROMO_EVENT, 
 import { sendTelegramMessage, TelegramSendError } from '../lib/telegram'
 import { getUser } from '../lib/auth'
 import { addOrder } from '../lib/userData'
+import TrustBadges from './TrustBadges'
 
 type CartDrawerProps = {
   isOpen: boolean
@@ -514,6 +515,7 @@ function CartView({ entries, total, onClose, onQtyChange, onRemove, onCheckout }
             оформить заказ
           </button>
           <ShareCartButton />
+          <TrustBadges variant="compact" />
         </div>
       )}
     </>

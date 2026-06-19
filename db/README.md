@@ -50,5 +50,14 @@
 ## 5. Что внутри схемы
 Таблицы: `auth_users`, `admin_products`, `orders`, `inquiries`, `reviews`,
 `chat_threads`, `messages`, `promo_codes`, `bloggers`, `site_content`, `media`,
-`admin_audit_log`. RPC: `decrement_product_quantity`, `claim_promo_use`.
+`stock_notifications`, `admin_audit_log`. RPC: `decrement_product_quantity`, `claim_promo_use`.
 Storage-бакет: `public-media`. RLS и модель доступа описаны в комментариях внутри `schema.sql`.
+
+- `admin_products.old_price` — «цена до скидки»: если задана и больше `price`, на витрине показывается зачёркнутой + бейдж скидки.
+- `stock_notifications` — лист ожидания «сообщить о поступлении» (форма на странице товара при отсутствии в наличии; админ видит спрос во вкладке «Заявки»).
+
+Фичи на основе таблицы `site_content` (отдельная миграция не нужна, настраиваются из админки):
+- `promo_banner` — полоса акции с таймером вверху всех страниц (Промокоды → Баннер акции).
+- `bundles` — комплекты «Соберите сетап»; скидка вешается на промокод (Промокоды → Комплекты).
+
+Реферальная программа отдельной таблицы не требует — персональные коды живут в `promo_codes` (с заметкой «Реферал …»).

@@ -205,6 +205,18 @@ CREATE TABLE IF NOT EXISTS media (
 );
 CREATE INDEX IF NOT EXISTS media_uploaded_idx ON media (uploaded_at DESC);
 
+-- Лист ожидания «сообщить о поступлении». Покупатель оставляет email на товар,
+-- которого нет в наличии; админ видит спрос и кому написать при пополнении.
+CREATE TABLE IF NOT EXISTS stock_notifications (
+  id         BIGSERIAL PRIMARY KEY,
+  product_id BIGINT NOT NULL,
+  email      TEXT NOT NULL,
+  notified   BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (product_id, email)
+);
+CREATE INDEX IF NOT EXISTS stock_notifications_product_idx ON stock_notifications (product_id);
+
 -- Журнал действий администратора.
 CREATE TABLE IF NOT EXISTS admin_audit_log (
   id         BIGSERIAL PRIMARY KEY,

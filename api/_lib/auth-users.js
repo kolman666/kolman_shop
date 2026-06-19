@@ -70,6 +70,14 @@ export function issueToken(userId) {
   return `${payload}.${b64urlEncode(sig)}`
 }
 
+// Deterministic, non-guessable personal referral code for a user. Derived via
+// HMAC so it can't be enumerated (REF1, REF2…) but is stable across calls.
+// Format matches the promo-code regex [A-Z0-9_-]{2,32}.
+export function referralCode(userId) {
+  const sig = createHmac('sha256', getTokenSecret()).update(`ref:${userId}`).digest('hex')
+  return `REF${sig.slice(0, 6).toUpperCase()}`
+}
+
 // Returns the user id encoded in a valid, non-expired token, or null.
 export function verifyToken(token) {
   if (typeof token !== 'string' || token.length > 512) return null

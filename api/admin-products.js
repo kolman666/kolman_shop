@@ -42,6 +42,12 @@ function validateProductFields(fields) {
       return 'price must be a non-negative finite number (max 10,000,000)'
     }
   }
+  if (fields.old_price !== undefined && fields.old_price !== null) {
+    const op = fields.old_price
+    if (typeof op !== 'number' || !Number.isFinite(op) || op < 0 || op > 10_000_000) {
+      return 'old_price must be a non-negative finite number (max 10,000,000)'
+    }
+  }
   if (availability !== undefined && !VALID_AVAILABILITY.includes(availability)) {
     return `availability must be one of: ${VALID_AVAILABILITY.join(', ')}`
   }
@@ -142,6 +148,8 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const {
       brand, title, description, price, image, gallery, availability, category_key, specs, variant_groups, is_featured, quantity,
+      // "Before discount" price for regular products.
+      old_price,
       // Used-marketplace fields. is_used flips the product into the
       // /used catalog; the rest describe the second-hand condition.
       is_used, condition, defects, original_price,
@@ -151,7 +159,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'brand, title, and price are required' })
     }
 
-    const validationError = validateProductFields({ brand, title, price, availability, image, gallery, specs, quantity, variant_groups })
+    const validationError = validateProductFields({ brand, title, price, old_price, availability, image, gallery, specs, quantity, variant_groups })
     if (validationError) return res.status(400).json({ error: validationError })
     const normalizedVariantGroups = normalizeVariantGroups(variant_groups)
 
@@ -171,6 +179,8 @@ export default async function handler(req, res) {
       variant_groups: normalizedVariantGroups,
       is_featured: is_featured ?? false,
       quantity: quantity ?? 0,
+      // Optional sale "old price" — only set when a valid number is provided.
+      ...(typeof old_price === 'number' && Number.isFinite(old_price) ? { old_price } : {}),
       // Optional used-marketplace fields — only set when admin opted in.
       ...(is_used !== undefined ? { is_used: !!is_used } : {}),
       ...(typeof condition === 'string' ? { condition: condition.slice(0, 80) } : {}),
@@ -188,12 +198,13 @@ export default async function handler(req, res) {
 
     // Pre-migration deployments may not have the new columns yet — retry
     // without them so existing shops keep accepting products.
-    if (error && /is_used|condition|defects|original_price/i.test(error.message)) {
+    if (error && /is_used|condition|defects|original_price|old_price/i.test(error.message)) {
       const fallback = { ...insertRow }
       delete fallback.is_used
       delete fallback.condition
       delete fallback.defects
       delete fallback.original_price
+      delete fallback.old_price
       const retry = await supabase.from('admin_products').insert([fallback]).select().single()
       data = retry.data
       error = retry.error
@@ -215,7 +226,7 @@ export default async function handler(req, res) {
     const { id, ...updates } = req.body ?? {}
     if (!id || typeof id !== 'number') return res.status(400).json({ error: 'missing or invalid id' })
 
-    const allowedFields = ['brand', 'title', 'description', 'price', 'image', 'gallery', 'availability', 'category_key', 'specs', 'variant_groups', 'is_featured', 'quantity', 'is_used', 'condition', 'defects', 'original_price']
+    const allowedFields = ['brand', 'title', 'description', 'price', 'old_price', 'image', 'gallery', 'availability', 'category_key', 'specs', 'variant_groups', 'is_featured', 'quantity', 'is_used', 'condition', 'defects', 'original_price']
     const safeUpdates = Object.fromEntries(
       Object.entries(updates).filter(([k]) => allowedFields.includes(k))
     )
@@ -251,6 +262,7 @@ export default async function handler(req, res) {
       title: 'название',
       description: 'описание',
       price: 'цена',
+      old_price: 'цена до скидки',
       image: 'главное фото',
       gallery: 'галерея',
       availability: 'статус',

@@ -90,6 +90,49 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'database not configured' })
   }
 
+  // ── Back-in-stock waitlist (folded here to stay under Vercel's function cap) ──
+  //   POST /api/inquiries?resource=stock { product_id, email }   public
+  //   GET  /api/inquiries?resource=stock                          admin
+  if (req.query.resource === 'stock') {
+    if (req.method === 'POST') {
+      const ip = getIp(req)
+      if (rateLimited(ip)) return res.status(429).json({ error: 'too many requests' })
+      const body = req.body ?? {}
+      const productId = Number(body.product_id)
+      const email = s(body.email, 200).toLowerCase()
+      if (!Number.isInteger(productId) || productId <= 0) return res.status(400).json({ error: 'invalid product' })
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'invalid email' })
+      const { error } = await supabase
+        .from('stock_notifications')
+        .upsert({ product_id: productId, email }, { onConflict: 'product_id,email', ignoreDuplicates: true })
+      if (error) {
+        if (isTableMissing(error)) return res.status(503).json({ error: 'table_not_found' })
+        return res.status(500).json({ error: error.message })
+      }
+      // Tell the admin so demand is visible as it builds up.
+      await notifyTelegram([
+        '🔔 <b>ждут поступления</b>',
+        `📦 <b>товар:</b> #${productId}`,
+        `📧 <b>email:</b> ${escapeHtml(email)}`,
+      ].join('\n'))
+      return res.status(201).json({ ok: true })
+    }
+    if (req.method === 'GET') {
+      if (!isAuthorized(req)) return res.status(401).json({ error: 'unauthorized' })
+      const { data, error } = await supabase
+        .from('stock_notifications')
+        .select('id, product_id, email, notified, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1000)
+      if (error) {
+        if (isTableMissing(error)) return res.status(200).json([])
+        return res.status(500).json({ error: error.message })
+      }
+      return res.status(200).json(data ?? [])
+    }
+    return res.status(405).json({ error: 'method not allowed' })
+  }
+
   if (req.method === 'POST') {
     const ip = getIp(req)
     if (rateLimited(ip)) return res.status(429).json({ error: 'too many requests' })

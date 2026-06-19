@@ -15,6 +15,7 @@ import ShareCartImportToast from './components/ShareCartImportToast'
 import CookieConsent from './components/CookieConsent'
 import CartShareListener from './components/CartShareListener'
 import BloggersBlock from './components/BloggersBlock'
+import BundlesBlock from './components/BundlesBlock'
 import NewsBlock from './components/NewsBlock'
 import AuthModal from './components/AuthModal'
 import AccountPopover from './components/AccountPopover'
@@ -47,6 +48,34 @@ import NotFoundPage from './pages/NotFoundPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import { getCartCount } from './lib/cart'
 import SearchDropdown, { type SearchSection } from './components/SearchDropdown'
+import JsonLd from './components/JsonLd'
+import PromoBanner from './components/PromoBanner'
+import ReferralCapture from './components/ReferralCapture'
+
+// Site-wide structured data for SEO. Organization gives Google the brand
+// entity (name, socials); WebSite enables the sitelinks search box.
+const ORIGIN = typeof window !== 'undefined' ? window.location.origin : 'https://kolmanshop.vercel.app'
+const SITE_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'kolman shop',
+  url: ORIGIN,
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: `${ORIGIN}/catalog?q={search_term_string}`,
+    'query-input': 'required name=search_term_string',
+  },
+}
+const ORG_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'kolman shop',
+  url: ORIGIN,
+  sameAs: [
+    'https://t.me/kolman_shop_bot',
+    'https://www.avito.ru/brands/ff6ecb53876080972365fc0b263271ac',
+  ],
+}
 
 type SlideText = {
   tag: string
@@ -465,6 +494,8 @@ function HomePage() {
 
   return (
     <div className="app-shell">
+      <JsonLd data={SITE_LD} />
+      <JsonLd data={ORG_LD} />
       <div className="top-bar">
         <div className="container top-bar__inner">
           {topLinks.map((link, index) => (
@@ -807,6 +838,8 @@ function HomePage() {
 
       <BloggersBlock products={products} />
 
+      <BundlesBlock products={products} />
+
       <NewsBlock />
 
       <ProductRecommendations products={products.filter((product) => !product.isUsed)} />
@@ -990,6 +1023,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <PromoBanner />
+      <ReferralCapture />
       <CartShareListener />
       {/* All non-home routes are lazy-loaded; share a single Suspense boundary
         * so we don't ship multiple loading spinners. */}

@@ -5,6 +5,9 @@ export type Product = {
   slug: string
   brand: string
   price: number
+  // Optional "before discount" price for regular products. When set and higher
+  // than `price`, the card/product page show it struck through + a sale badge.
+  oldPrice?: number
   image: string
   gallery?: string[]
   availability: 'inStock' | 'preorder'

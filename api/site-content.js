@@ -43,7 +43,7 @@ const PAGE_KEY_RE = /^page_([a-z_]+)_(ru|en)$/
 const BRAND_KEY_RE = /^brand_data_([a-z0-9-]{1,40})_(ru|en)$/
 
 // Exact-match keys with no language variants.
-const EXACT_KEYS = new Set(['search_popular_sections', 'homepage_brand_spotlight'])
+const EXACT_KEYS = new Set(['search_popular_sections', 'homepage_brand_spotlight', 'promo_banner', 'bundles'])
 
 // Strip ASCII control characters and clamp length.
 const CONTROL_CHARS_RE = new RegExp('[\\u0000-\\u001F\\u007F]', 'g')
@@ -212,6 +212,61 @@ const VALIDATORS = {
       bannerImage,
       bannerUrl,
       buttonText: clean(value.buttonText, 100),
+    } }
+  },
+
+  // Curated "build your setup" bundles. Each references existing products by
+  // their client id + an optional promo code that auto-applies in the cart.
+  bundles(value) {
+    if (!Array.isArray(value)) return { ok: false, error: 'bundles must be an array' }
+    if (value.length > 12) return { ok: false, error: 'too many bundles' }
+    const cleaned = []
+    for (const item of value) {
+      if (!item || typeof item !== 'object') return { ok: false, error: 'each bundle must be an object' }
+      const productIds = Array.isArray(item.productIds)
+        ? item.productIds.filter((n) => Number.isInteger(n) && n > 0).slice(0, 12)
+        : []
+      const image = typeof item.image === 'string' ? item.image.trim() : ''
+      if (image && !isSafeHttpUrl(image, { allowEmpty: true })) {
+        return { ok: false, error: 'bundle image must be http(s)' }
+      }
+      const promoCode = typeof item.promoCode === 'string'
+        ? item.promoCode.trim().toUpperCase().slice(0, 32)
+        : ''
+      if (promoCode && !/^[A-Z0-9_-]{2,32}$/.test(promoCode)) {
+        return { ok: false, error: 'invalid bundle promoCode' }
+      }
+      cleaned.push({
+        title: clean(item.title, 120),
+        subtitle: clean(item.subtitle, 200),
+        productIds,
+        promoCode,
+        image,
+      })
+    }
+    return { ok: true, value: cleaned }
+  },
+
+  // Site-wide flash-sale banner with an optional live countdown. `until` is an
+  // ISO timestamp; the client hides the banner once it passes.
+  promo_banner(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return { ok: false, error: 'promo_banner must be an object' }
+    }
+    const until = typeof value.until === 'string' ? value.until.trim() : ''
+    if (until && Number.isNaN(Date.parse(until))) {
+      return { ok: false, error: 'until must be an ISO date' }
+    }
+    const url = typeof value.url === 'string' ? value.url.trim() : ''
+    if (url && !isSafeLinkOrPath(url, { allowEmpty: true })) {
+      return { ok: false, error: 'url must be /path or http(s) URL' }
+    }
+    return { ok: true, value: {
+      enabled: value.enabled === true,
+      text: clean(value.text, 200),
+      until,
+      url,
+      buttonText: clean(value.buttonText, 60),
     } }
   },
 

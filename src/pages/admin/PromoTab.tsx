@@ -3,6 +3,8 @@
 // inline is fine — no separate "edit" form, just upsert on save.
 
 import { useEffect, useState } from 'react'
+import { fetchSiteContent, updateSiteContent } from '../../lib/siteContent'
+import { useProducts } from '../../hooks/useProducts'
 
 type PromoRow = {
   code: string
@@ -82,6 +84,220 @@ async function deletePromo(code: string) {
   if (!r.ok) throw new Error(`${r.status}`)
 }
 
+type BannerState = { enabled: boolean; text: string; until: string; url: string; buttonText: string }
+const BLANK_BANNER: BannerState = { enabled: false, text: '', until: '', url: '', buttonText: '' }
+
+// Editor for the site-wide flash-sale banner (promo_banner site_content key).
+// Rendered by <PromoBanner /> at the top of every page.
+function PromoBannerEditor() {
+  const [b, setB] = useState<BannerState>(BLANK_BANNER)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    fetchSiteContent<Partial<BannerState>>('promo_banner').then((r) => {
+      if (cancelled) return
+      if (!r.error && r.data) {
+        setB({
+          enabled: r.data.enabled === true,
+          text: r.data.text ?? '',
+          until: r.data.until ?? '',
+          url: r.data.url ?? '',
+          buttonText: r.data.buttonText ?? '',
+        })
+      }
+      setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  async function save() {
+    setSaving(true); setError(''); setSaved(false)
+    try {
+      await updateSiteContent('promo_banner', b)
+      setSaved(true)
+      window.setTimeout(() => setSaved(false), 2000)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return null
+
+  return (
+    <div className="promo-admin-banner" style={{ marginBottom: 28, paddingBottom: 24, borderBottom: '1px solid var(--color-border)' }}>
+      <h3 className="admin__content-title" style={{ fontSize: 16 }}>Баннер акции</h3>
+      <p className="admin__content-subtitle">
+        Узкая полоса вверху всех страниц с таймером обратного отсчёта. Когда срок выйдет — баннер скроется сам.
+      </p>
+      <label className="admin__checkbox-field" style={{ margin: '10px 0' }}>
+        <input
+          type="checkbox"
+          className="admin__checkbox-input"
+          checked={b.enabled}
+          onChange={(e) => setB({ ...b, enabled: e.target.checked })}
+        />
+        <span className="admin__checkbox-label">Показывать баннер</span>
+      </label>
+      <div className="promo-admin-form">
+        <label className="promo-admin-form__field promo-admin-form__field--wide">
+          <span className="promo-admin-form__label">Текст</span>
+          <input
+            value={b.text}
+            maxLength={200}
+            placeholder="Чёрная пятница — скидки до 40%"
+            onChange={(e) => setB({ ...b, text: e.target.value })}
+          />
+        </label>
+        <label className="promo-admin-form__field">
+          <span className="promo-admin-form__label">Отсчёт до</span>
+          <input
+            type="datetime-local"
+            value={toDatetimeLocalValue(b.until || null)}
+            onChange={(e) => setB({ ...b, until: fromDatetimeLocalValue(e.target.value) ?? '' })}
+          />
+        </label>
+        <label className="promo-admin-form__field">
+          <span className="promo-admin-form__label">Ссылка (необязательно)</span>
+          <input
+            value={b.url}
+            maxLength={300}
+            placeholder="/catalog или https://…"
+            onChange={(e) => setB({ ...b, url: e.target.value })}
+          />
+        </label>
+        <label className="promo-admin-form__field promo-admin-form__field--narrow">
+          <span className="promo-admin-form__label">Текст кнопки</span>
+          <input
+            value={b.buttonText}
+            maxLength={60}
+            placeholder="В каталог →"
+            onChange={(e) => setB({ ...b, buttonText: e.target.value })}
+          />
+        </label>
+        <button
+          type="button"
+          className="admin__save-btn promo-admin-form__submit"
+          onClick={() => void save()}
+          disabled={saving}
+        >
+          {saving ? 'сохраняем…' : saved ? '✓ сохранено' : 'сохранить баннер'}
+        </button>
+      </div>
+      {error && <p className="admin__empty-text" style={{ color: 'var(--color-main)' }}>{error}</p>}
+    </div>
+  )
+}
+
+type BundleDraft = { title: string; subtitle: string; promoCode: string; image: string; productIds: number[] }
+const BLANK_BUNDLE: BundleDraft = { title: '', subtitle: '', promoCode: '', image: '', productIds: [] }
+
+// Editor for "build your setup" bundles (bundles site_content key). Each set
+// is 2+ products + an optional promo code that auto-applies in the cart.
+function BundlesEditor() {
+  const { products } = useProducts()
+  const [bundles, setBundles] = useState<BundleDraft[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    fetchSiteContent<Partial<BundleDraft>[]>('bundles').then((r) => {
+      if (cancelled) return
+      if (!r.error && Array.isArray(r.data)) {
+        setBundles(r.data.map((b) => ({
+          title: b.title ?? '',
+          subtitle: b.subtitle ?? '',
+          promoCode: b.promoCode ?? '',
+          image: b.image ?? '',
+          productIds: Array.isArray(b.productIds) ? b.productIds : [],
+        })))
+      }
+      setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  function update(idx: number, patch: Partial<BundleDraft>) {
+    setBundles((prev) => prev.map((b, i) => (i === idx ? { ...b, ...patch } : b)))
+  }
+  function addBundle() { setBundles((prev) => [...prev, { ...BLANK_BUNDLE }]) }
+  function removeBundle(idx: number) { setBundles((prev) => prev.filter((_, i) => i !== idx)) }
+
+  async function save() {
+    setSaving(true); setError(''); setSaved(false)
+    try {
+      const payload = bundles
+        .map((b) => ({ ...b, promoCode: b.promoCode.trim().toUpperCase() }))
+        .filter((b) => b.productIds.length >= 2)
+      await updateSiteContent('bundles', payload)
+      setSaved(true)
+      window.setTimeout(() => setSaved(false), 2000)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return null
+
+  return (
+    <div className="promo-admin-banner" style={{ marginBottom: 28, paddingBottom: 24, borderBottom: '1px solid var(--color-border)' }}>
+      <h3 className="admin__content-title" style={{ fontSize: 16 }}>Комплекты «Соберите сетап»</h3>
+      <p className="admin__content-subtitle">
+        Наборы из 2+ товаров. Скидку привяжите к промокоду — он применится в корзине автоматически. Показываются блоком на главной.
+      </p>
+      {bundles.map((b, idx) => (
+        <div key={idx} className="promo-admin-form" style={{ borderTop: '1px solid var(--color-border)', paddingTop: 16, marginTop: 12 }}>
+          <label className="promo-admin-form__field promo-admin-form__field--wide">
+            <span className="promo-admin-form__label">Название набора</span>
+            <input value={b.title} maxLength={120} placeholder="Старт-сетап для шутеров" onChange={(e) => update(idx, { title: e.target.value })} />
+          </label>
+          <label className="promo-admin-form__field promo-admin-form__field--wide">
+            <span className="promo-admin-form__label">Подпись</span>
+            <input value={b.subtitle} maxLength={200} placeholder="мышь + коврик + глайды" onChange={(e) => update(idx, { subtitle: e.target.value })} />
+          </label>
+          <label className="promo-admin-form__field promo-admin-form__field--narrow">
+            <span className="promo-admin-form__label">Промокод скидки</span>
+            <input value={b.promoCode} maxLength={32} placeholder="SETUP10" onChange={(e) => update(idx, { promoCode: e.target.value.toUpperCase() })} />
+          </label>
+          <label className="promo-admin-form__field promo-admin-form__field--wide">
+            <span className="promo-admin-form__label">Товары (Ctrl/Cmd — выбрать несколько)</span>
+            <select
+              multiple
+              size={6}
+              value={b.productIds.map(String)}
+              onChange={(e) => update(idx, { productIds: Array.from(e.target.selectedOptions).map((o) => Number(o.value)) })}
+            >
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.brand} {p.titleDirect ?? ''} — {p.price.toLocaleString('ru-RU')} ₽
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" className="admin__inbox-delete" onClick={() => removeBundle(idx)}>удалить набор</button>
+        </div>
+      ))}
+      <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+        <button type="button" className="accordion__btn" onClick={addBundle}>+ добавить набор</button>
+        <button type="button" className="admin__save-btn" onClick={() => void save()} disabled={saving}>
+          {saving ? 'сохраняем…' : saved ? '✓ сохранено' : 'сохранить комплекты'}
+        </button>
+      </div>
+      {error && <p className="admin__empty-text" style={{ color: 'var(--color-main)' }}>{error}</p>}
+    </div>
+  )
+}
+
 export default function PromoTab() {
   const [rows, setRows] = useState<PromoRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -138,6 +354,10 @@ export default function PromoTab() {
           Создавайте коды для блогеров, посевов или акций. Скидка применяется на этапе оформления заказа, считается на сервере.
         </p>
       </header>
+
+      <PromoBannerEditor />
+
+      <BundlesEditor />
 
       <div className="promo-admin-form">
         <label className="promo-admin-form__field">
